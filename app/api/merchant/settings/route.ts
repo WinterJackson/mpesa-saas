@@ -20,7 +20,7 @@ export async function PATCH(request: Request) {
 
     const body = await request.json();
 
-    const updateData: any = {};
+    const updateData: { environment?: string; webhookUrl?: string | null } = {};
 
     if (body.environment !== undefined) {
       if (body.environment !== 'sandbox' && body.environment !== 'live') {

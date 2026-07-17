@@ -57,8 +57,8 @@ export function TransactionsTable({ initialTransactions, onSummaryUpdate }: Tran
             }
           }
         }
-      } catch (error: any) {
-        if (error.name !== 'AbortError') {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name !== 'AbortError') {
           console.error("Failed to poll transactions:", error);
         }
       } finally {

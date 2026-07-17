@@ -3,6 +3,12 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
 
+interface TransactionGroupStat {
+  status: string;
+  _count: { id: number };
+  _sum: { amount: number | null };
+}
+
 export const metadata = {
   title: "Dashboard - PaySwift",
   description: "Monitor your M-Pesa collections",
@@ -52,7 +58,7 @@ export default async function DashboardPage() {
   let overallCompleted = 0;
   let overallPending = 0;
 
-  allStats.forEach((stat: { status: string; _count: { id: number }; _sum: { amount: number | null } }) => {
+  allStats.forEach((stat: TransactionGroupStat) => {
     const count = stat._count.id;
     overallTotal += count;
     if (stat.status === "completed") {
