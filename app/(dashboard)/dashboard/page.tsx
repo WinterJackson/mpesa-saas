@@ -52,7 +52,7 @@ export default async function DashboardPage() {
   let overallCompleted = 0;
   let overallPending = 0;
 
-  allStats.forEach((stat) => {
+  allStats.forEach((stat: { status: string; _count: { id: number }; _sum: { amount: number | null } }) => {
     const count = stat._count.id;
     overallTotal += count;
     if (stat.status === "completed") {
