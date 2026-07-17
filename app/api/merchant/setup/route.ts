@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
-import { Prisma } from '@prisma/client';
+
 
 /**
  * POST /api/merchant/setup
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     }
 
     // Create Merchant and initial API key atomically
-    const newMerchant = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const newMerchant = await prisma.$transaction(async (tx: any) => {
       const merchant = await tx.merchant.create({
         data: {
           clerkUserId: userId,
