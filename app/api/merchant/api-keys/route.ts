@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { prisma } from '@/lib/db';
+import { prisma, TransactionClient } from '@/lib/db';
 import crypto from 'crypto';
 
 function generateApiKey() {
@@ -25,7 +25,7 @@ export async function POST() {
 
     const newApiKey = generateApiKey();
 
-    const result = await prisma.$transaction(async (tx: any) => {
+    const result = await prisma.$transaction(async (tx: TransactionClient) => {
       // Invalidate existing active keys
       await tx.apiKey.updateMany({
         where: { merchantId: merchant.id, revoked: false },

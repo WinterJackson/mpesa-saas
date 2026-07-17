@@ -49,3 +49,12 @@ export const prisma = globalThis.prismaGlobal ?? createPrismaClient();
 if (process.env.NODE_ENV !== 'production') {
   globalThis.prismaGlobal = prisma;
 }
+
+// ─── Transaction Client Type ─────────────────────────────────────────────────
+// Prisma 7 with the Neon adapter does not export `Prisma.TransactionClient`
+// from `@prisma/client`. We derive the type from our own PrismaClient instance
+// to maintain full type safety inside `$transaction` callbacks.
+export type TransactionClient = Omit<
+  PrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>;
