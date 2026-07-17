@@ -1,0 +1,51 @@
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { PrismaNeon } from '@prisma/adapter-neon';
+import { PrismaClient } from '@prisma/client';
+
+// ─── Prisma 7 + NeonDB Serverless Adapter ────────────────────────────────────
+// Prisma 7 removed the built-in Rust query engine. All database connections
+// now go through explicit driver adapters. For NeonDB on Vercel serverless,
+// we use @prisma/adapter-neon which uses Neon's HTTP-based serverless driver
+// (no persistent TCP connections — perfect for serverless cold starts).
+//
+// In non-edge environments (Node.js), we need the 'ws' WebSocket library.
+// We only import it in Node environments to avoid breaking edge runtimes.
+
+if (typeof globalThis.WebSocket === 'undefined') {
+  try {
+    // Dynamic import to avoid bundling ws in edge environments
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    neonConfig.webSocketConstructor = require('ws');
+  } catch {
+    // If ws is not available (edge runtime), Neon falls back to HTTP fetch
+  }
+}
+
+function createPrismaClient(): PrismaClient {
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    throw new Error('DATABASE_URL environment variable is not set');
+  }
+
+  const pool = new Pool({ connectionString });
+  // @ts-expect-error type mismatch between @neondatabase/serverless versions
+  const adapter = new PrismaNeon(pool);
+
+  return new PrismaClient({ adapter });
+}
+
+// ─── Singleton Pattern ───────────────────────────────────────────────────────
+// Prevents connection pool exhaustion during Next.js hot reloads in development.
+// In production, globalThis is fresh per cold start, so only one client exists.
+
+declare global {
+  // eslint-disable-next-line no-var
+  var prismaGlobal: PrismaClient | undefined;
+}
+
+export const prisma = globalThis.prismaGlobal ?? createPrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalThis.prismaGlobal = prisma;
+}

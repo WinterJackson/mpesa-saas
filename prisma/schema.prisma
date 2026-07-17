@@ -1,13 +1,55 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model Merchant {
+  id           String        @id @default(cuid())
+  clerkUserId  String        @unique
+  businessName String
+  webhookUrl   String?
+  environment  String        @default("sandbox")
+  createdAt    DateTime      @default(now())
+  apiKeys      ApiKey[]
+  transactions Transaction[]
+}
+
+model ApiKey {
+  id         String   @id @default(cuid())
+  key        String   @unique @default(cuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  createdAt  DateTime @default(now())
+  revoked    Boolean  @default(false)
+}
+
+model Transaction {
+  id                String   @id @default(cuid())
+  merchantId        String
+  merchant          Merchant @relation(fields: [merchantId], references: [id])
+  amount            Int
+  phone             String
+  orderReference    String?
+  status            String   @default("pending")
+  checkoutRequestId String?  @unique
+  mpesaReceipt      String?
+  resultCode        Int?
+  resultDesc        String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([merchantId, createdAt(sort: Desc)])
+  @@index([merchantId, status])
+}
+
+model DarajaToken {
+  id          String   @id @default("singleton")
+  accessToken String
+  expiresAt   DateTime
 }

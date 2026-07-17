@@ -1,0 +1,142 @@
+import { NextResponse } from 'next/server';
+import { authenticateApiKey } from '@/lib/auth';
+import { validatePhone, validateAmount } from '@/lib/validation';
+import { initiateSTKPush } from '@/lib/daraja';
+import { prisma } from '@/lib/db';
+
+/**
+ * POST /api/v1/payments/initiate
+ *
+ * Merchant-facing endpoint that initiates an M-Pesa Express (STK Push) payment.
+ *
+ * Flow:
+ * 1. Authenticate merchant via x-api-key header
+ * 2. Validate phone number and amount
+ * 3. Create a pending Transaction record in the database
+ * 4. Initiate STK Push via Daraja API
+ * 5. Update transaction with CheckoutRequestID
+ * 6. If Daraja fails, mark transaction as failed
+ *
+ * Request Body:
+ * { phone: string, amount: number, orderReference?: string }
+ *
+ * Response:
+ * { success: true, data: { transactionId, checkoutRequestId, status, merchantRequestID, customerMessage } }
+ */
+export async function POST(request: Request) {
+  try {
+    // ── 1. Authenticate Request ───────────────────────────────────────────────
+    const authResult = await authenticateApiKey(request);
+    if (!authResult.success) {
+      return NextResponse.json(
+        { success: false, error: authResult.error },
+        { status: authResult.status }
+      );
+    }
+
+    const { merchant } = authResult;
+
+    // ── 2. Parse Body ─────────────────────────────────────────────────────────
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Invalid JSON payload' },
+        { status: 400 }
+      );
+    }
+
+    const { phone, amount, orderReference } = body;
+
+    // ── 3. Validate Inputs ────────────────────────────────────────────────────
+    const phoneValidation = validatePhone(phone as string);
+    if (!phoneValidation.valid) {
+      return NextResponse.json(
+        { success: false, error: phoneValidation.error },
+        { status: 400 }
+      );
+    }
+
+    const amountValidation = validateAmount(amount);
+    if (!amountValidation.valid) {
+      return NextResponse.json(
+        { success: false, error: amountValidation.error },
+        { status: 400 }
+      );
+    }
+
+    const sanitizedPhone = phoneValidation.sanitized!;
+    const sanitizedAmount = amountValidation.sanitized!;
+
+    // ── 4. Create Pending Transaction ─────────────────────────────────────────
+    const transaction = await prisma.transaction.create({
+      data: {
+        merchantId: merchant.id,
+        phone: sanitizedPhone,
+        amount: sanitizedAmount,
+        orderReference: orderReference ? String(orderReference).substring(0, 50) : null,
+        status: 'pending',
+      },
+    });
+
+    // ── 5. Initiate STK Push via Daraja ───────────────────────────────────────
+    try {
+      const darajaResponse = await initiateSTKPush({
+        phone: sanitizedPhone,
+        amount: sanitizedAmount,
+        accountReference: merchant.businessName.substring(0, 12),
+        transactionDesc: orderReference
+          ? `Pay ${String(orderReference).substring(0, 8)}`
+          : 'Payment',
+      });
+
+      // ── 6. Update Transaction with CheckoutRequestID ────────────────────────
+      await prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          checkoutRequestId: darajaResponse.CheckoutRequestID,
+        },
+      });
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            transactionId: transaction.id,
+            checkoutRequestId: darajaResponse.CheckoutRequestID,
+            status: 'pending',
+            merchantRequestID: darajaResponse.MerchantRequestID,
+            customerMessage: darajaResponse.CustomerMessage,
+          },
+        },
+        { status: 201 }
+      );
+    } catch (darajaError: unknown) {
+      // ── 7. Handle Daraja Failure ────────────────────────────────────────────
+      const errorMessage = darajaError instanceof Error
+        ? darajaError.message
+        : 'Payment gateway failed';
+
+      await prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: 'failed',
+          resultDesc: errorMessage,
+        },
+      });
+
+      return NextResponse.json(
+        { success: false, error: errorMessage },
+        { status: 502 }
+      );
+    }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[Payment Initiate Error]:', message);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error while processing payment' },
+      { status: 500 }
+    );
+  }
+}
