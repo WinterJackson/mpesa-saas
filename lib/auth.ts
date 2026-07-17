@@ -1,8 +1,26 @@
 import { timingSafeEqual } from 'node:crypto';
 import { prisma } from '@/lib/db';
-import type { Merchant, ApiKey } from '@prisma/client';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+// Locally defined to avoid importing model types from @prisma/client,
+// which are not reliably exported in Prisma 7 with the Neon adapter.
+
+interface Merchant {
+  id: string;
+  clerkUserId: string;
+  businessName: string;
+  webhookUrl: string | null;
+  environment: string;
+  createdAt: Date;
+}
+
+interface ApiKey {
+  id: string;
+  key: string;
+  merchantId: string;
+  createdAt: Date;
+  revoked: boolean;
+}
 
 export type AuthResult =
   | { success: true; merchant: Merchant; apiKey: ApiKey }
