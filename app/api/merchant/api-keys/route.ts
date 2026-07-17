@@ -25,7 +25,7 @@ export async function POST() {
 
     const newApiKey = generateApiKey();
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // Invalidate existing active keys
       await tx.apiKey.updateMany({
         where: { merchantId: merchant.id, revoked: false },
