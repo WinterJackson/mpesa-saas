@@ -2,6 +2,22 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 
+interface TransactionRow {
+  id: string;
+  amount: number;
+  phone: string;
+  status: string;
+  orderReference: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface TransactionGroupStat {
+  status: string;
+  _count: { id: number };
+  _sum: { amount: number | null };
+}
+
 export async function GET(request: Request) {
   try {
     const { userId } = await auth();
@@ -22,7 +38,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
 
-    const transactions = await prisma.transaction.findMany({
+    const transactions: TransactionRow[] = await prisma.transaction.findMany({
       where: { merchantId: merchant.id },
       orderBy: { createdAt: 'desc' },
       take: limit,
@@ -39,9 +55,9 @@ export async function GET(request: Request) {
 
     // Calculate summaries
     const totalTransactions = transactions.length;
-    const completedTransactions = transactions.filter(t => t.status === 'completed');
-    const totalRevenue = completedTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const pendingCount = transactions.filter(t => t.status === 'pending').length;
+    const completedTransactions = transactions.filter((t: TransactionRow) => t.status === 'completed');
+    const totalRevenue = completedTransactions.reduce((sum: number, t: TransactionRow) => sum + t.amount, 0);
+    const pendingCount = transactions.filter((t: TransactionRow) => t.status === 'pending').length;
     
     // Total historical metrics (we could query these from DB for full history, 
     // but for the demo we'll use the fetched ones or run aggregate queries)
@@ -57,7 +73,7 @@ export async function GET(request: Request) {
     let overallCompleted = 0;
     let overallPending = 0;
 
-    allStats.forEach(stat => {
+    allStats.forEach((stat: TransactionGroupStat) => {
       const count = stat._count.id;
       overallTotal += count;
       if (stat.status === 'completed') {
