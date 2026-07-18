@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ShoppingBag, Smartphone, Headphones, Cable, CheckCircle2, XCircle, Loader2, Info, Lock } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import Image from "next/image";
-import { DeveloperConsole } from "@/components/demo/developer-console";
+import { DeveloperConsole, ConsoleLogLine } from "@/components/demo/developer-console";
 
 type Product = {
   id: string;
@@ -36,6 +36,9 @@ export default function DemoStorePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
 
+  const [logs, setLogs] = useState<ConsoleLogLine[]>([]);
+  const pollCountRef = useRef(0);
+
   // Handle initiating checkout
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +46,23 @@ export default function DemoStorePage() {
 
     setPaymentState("initiating");
     setErrorMessage(null);
+    setLogs([]);
+    pollCountRef.current = 0;
+
+    const maskPhone = (phone: string) => {
+      if (!phone || phone.length < 8) return phone;
+      return `${phone.substring(0, 4)}***${phone.substring(phone.length - 4)}`;
+    };
+
+    setLogs((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        timestamp: new Date().toLocaleTimeString(),
+        type: "request",
+        content: `POST /api/demo/checkout  { phone: "${maskPhone(phoneNumber)}", amount: ${selectedProduct.price} }`,
+      },
+    ]);
 
     try {
       const res = await fetch("/api/demo/checkout", {
@@ -60,6 +80,16 @@ export default function DemoStorePage() {
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Failed to initiate payment");
       }
+
+      setLogs((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          timestamp: new Date().toLocaleTimeString(),
+          type: "response",
+          content: `200 OK — STK push sent. CheckoutRequestID: ${data.data?.checkoutRequestId || data.data?.transactionId || data.checkoutRequestId}`,
+        },
+      ]);
 
       setTransactionId(data.data.transactionId);
       setPaymentState("polling");
@@ -83,13 +113,44 @@ export default function DemoStorePage() {
         });
         const data = await res.json();
 
+        pollCountRef.current += 1;
+        if (pollCountRef.current === 1 || pollCountRef.current % 3 === 0) {
+          setLogs((prev) => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              timestamp: new Date().toLocaleTimeString(),
+              type: "info",
+              content: `GET /api/demo/status/${transactionId} → status: "pending" (waiting for Safaricom callback)`,
+            },
+          ]);
+        }
+
         if (res.ok && data.success) {
           const status = data.data.status;
           if (status === "completed") {
+            setLogs((prev) => [
+              ...prev,
+              {
+                id: crypto.randomUUID(),
+                timestamp: new Date().toLocaleTimeString(),
+                type: "response",
+                content: `POST /api/mpesa/callback received → status: "${status}", receipt: ${data.data.mpesaReceipt || "CONFIRMED"}`,
+              },
+            ]);
             setReceipt(data.data.mpesaReceipt || "CONFIRMED");
             setPaymentState("success");
             return; // Stop polling
           } else if (status === "failed" || status === "cancelled") {
+            setLogs((prev) => [
+              ...prev,
+              {
+                id: crypto.randomUUID(),
+                timestamp: new Date().toLocaleTimeString(),
+                type: "response",
+                content: `POST /api/mpesa/callback received → status: "${status}"`,
+              },
+            ]);
             setErrorMessage(data.data.resultDesc || "Payment failed or was cancelled by user.");
             setPaymentState("failed");
             return; // Stop polling
@@ -334,7 +395,7 @@ export default function DemoStorePage() {
         </div>
       </footer>
 
-      <DeveloperConsole logs={[]} isActive={false} />
+      <DeveloperConsole logs={logs} isActive={paymentState === "initiating" || paymentState === "polling"} />
     </div>
   );
 }

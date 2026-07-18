@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Terminal, ChevronUp, ChevronDown } from "lucide-react";
 
 export interface ConsoleLogLine {
@@ -16,6 +16,13 @@ interface DeveloperConsoleProps {
 
 export function DeveloperConsole({ logs, isActive }: DeveloperConsoleProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (logs.length === 1) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsOpen(true);
+    }
+  }, [logs.length]);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-[#0d1117] text-[#c9d1d9] shadow-2xl">
