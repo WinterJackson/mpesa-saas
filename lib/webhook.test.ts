@@ -8,7 +8,8 @@ describe('deliverWebhook', () => {
 
   beforeEach(() => {
     fetchMock = vi.fn();
-    global.fetch = fetchMock;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    global.fetch = fetchMock as any;
   });
 
   afterEach(() => {
