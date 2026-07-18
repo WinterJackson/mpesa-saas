@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { deliverWebhook } from '@/lib/webhook';
 import { markShopifyOrderPaid } from '@/lib/shopify';
 import type { DarajaCallbackPayload, DarajaCallbackMetadataItem } from '@/lib/types';
+import { mapResultCodeToStatus } from '@/lib/mpesa-status';
 
 /**
  * Safaricom STK Push Callback Endpoint.
@@ -86,12 +87,10 @@ export async function POST(request: Request) {
     // ResultCode 1037 = DS timeout (user didn't enter PIN)
     // ResultCode 2001 = Wrong PIN
     // Anything else   = Failed
-    let status: string;
+    const status: string = mapResultCodeToStatus(ResultCode);
     let mpesaReceipt: string | null = null;
 
     if (ResultCode === 0) {
-      status = 'completed';
-
       // Extract MpesaReceiptNumber from CallbackMetadata.Item[]
       if (CallbackMetadata?.Item && Array.isArray(CallbackMetadata.Item)) {
         const receiptItem = CallbackMetadata.Item.find(
@@ -101,10 +100,6 @@ export async function POST(request: Request) {
           mpesaReceipt = String(receiptItem.Value);
         }
       }
-    } else if (ResultCode === 1032) {
-      status = 'cancelled';
-    } else {
-      status = 'failed';
     }
 
     // ── 3. Update Transaction Atomically ──────────────────────────────────────
