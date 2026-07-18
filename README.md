@@ -37,6 +37,13 @@ MPESA_CONSUMER_SECRET="your_safaricom_consumer_secret"
 MPESA_PASSKEY="your_safaricom_passkey"
 MPESA_SHORTCODE="174379"
 
+# Only required if you complete Safaricom's Go-Live KYC process and want to enable Live mode
+# MPESA_CONSUMER_KEY_LIVE=""
+# MPESA_CONSUMER_SECRET_LIVE=""
+# MPESA_PASSKEY_LIVE=""
+# MPESA_SHORTCODE_LIVE=""
+# MPESA_CALLBACK_URL_LIVE=""
+
 # Webhook Domain (Use Ngrok for local testing)
 NEXT_PUBLIC_APP_URL="https://your-ngrok-domain.ngrok-free.app"
 

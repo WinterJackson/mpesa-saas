@@ -8,6 +8,7 @@ interface TransactionRow {
   phone: string;
   status: string;
   orderReference: string | null;
+  environment: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,6 +49,7 @@ export async function GET(request: Request) {
         phone: true,
         status: true,
         orderReference: true,
+        environment: true,
         createdAt: true,
         updatedAt: true,
       }

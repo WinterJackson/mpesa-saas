@@ -41,6 +41,7 @@ export default async function DashboardPage() {
       phone: true,
       status: true,
       orderReference: true,
+      environment: true,
       createdAt: true,
       updatedAt: true,
     },

@@ -77,6 +77,8 @@ export async function POST(request: Request) {
         amount: sanitizedAmount,
         orderReference: orderReference ? String(orderReference).substring(0, 50) : null,
         status: 'pending',
+        environment: merchant.environment,
+        source: 'api',
       },
     });
 
@@ -89,6 +91,7 @@ export async function POST(request: Request) {
         transactionDesc: orderReference
           ? `Pay ${String(orderReference).substring(0, 8)}`
           : 'Payment',
+        environment: merchant.environment as 'sandbox' | 'live',
       });
 
       // ── 6. Update Transaction with CheckoutRequestID ────────────────────────

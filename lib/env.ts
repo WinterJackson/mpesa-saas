@@ -14,6 +14,11 @@ const envSchema = z.object({
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1, 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required'),
   CLERK_SECRET_KEY: z.string().min(1, 'CLERK_SECRET_KEY is required'),
   DEMO_SEED_TOKEN: z.string().optional(),
+  MPESA_CONSUMER_KEY_LIVE: z.string().optional(),
+  MPESA_CONSUMER_SECRET_LIVE: z.string().optional(),
+  MPESA_SHORTCODE_LIVE: z.string().optional(),
+  MPESA_PASSKEY_LIVE: z.string().optional(),
+  MPESA_CALLBACK_URL_LIVE: z.string().url('MPESA_CALLBACK_URL_LIVE must be a valid URL').optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -39,6 +44,11 @@ function validateEnv(): Env {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
     DEMO_SEED_TOKEN: process.env.DEMO_SEED_TOKEN,
+    MPESA_CONSUMER_KEY_LIVE: process.env.MPESA_CONSUMER_KEY_LIVE,
+    MPESA_CONSUMER_SECRET_LIVE: process.env.MPESA_CONSUMER_SECRET_LIVE,
+    MPESA_SHORTCODE_LIVE: process.env.MPESA_SHORTCODE_LIVE,
+    MPESA_PASSKEY_LIVE: process.env.MPESA_PASSKEY_LIVE,
+    MPESA_CALLBACK_URL_LIVE: process.env.MPESA_CALLBACK_URL_LIVE,
   });
 
   if (!result.success) {

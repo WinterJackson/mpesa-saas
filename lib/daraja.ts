@@ -1,15 +1,46 @@
 import { env } from '@/lib/env';
 import { prisma } from '@/lib/db';
 
-// ─── Daraja API Endpoints ────────────────────────────────────────────────────
-// OAuth uses GET (confirmed via official Daraja docs).
-// STK Push and Query use POST.
-const DARAJA_OAUTH_URL = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
-const DARAJA_STK_PUSH_URL = 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
-const DARAJA_STK_QUERY_URL = 'https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query';
+const DARAJA_BASE_URLS = {
+  sandbox: 'https://sandbox.safaricom.co.ke',
+  live: 'https://api.safaricom.co.ke',
+} as const;
 
 // Safaricom token lifespan is 3599 seconds (~1 hour). We cache for 50 mins to be safe.
 const CACHE_TTL_MS = 50 * 60 * 1000;
+
+export function isLiveModeConfigured(): boolean {
+  return Boolean(
+    env.MPESA_CONSUMER_KEY_LIVE &&
+    env.MPESA_CONSUMER_SECRET_LIVE &&
+    env.MPESA_SHORTCODE_LIVE &&
+    env.MPESA_PASSKEY_LIVE &&
+    env.MPESA_CALLBACK_URL_LIVE
+  );
+}
+
+function getDarajaCredentials(environment: 'sandbox' | 'live') {
+  if (environment === 'live') {
+    if (!isLiveModeConfigured()) {
+      throw new Error('Live M-Pesa credentials are not configured on this server.');
+    }
+    return {
+      consumerKey: env.MPESA_CONSUMER_KEY_LIVE!,
+      consumerSecret: env.MPESA_CONSUMER_SECRET_LIVE!,
+      shortcode: env.MPESA_SHORTCODE_LIVE!,
+      passkey: env.MPESA_PASSKEY_LIVE!,
+      callbackUrl: env.MPESA_CALLBACK_URL_LIVE!,
+    };
+  }
+
+  return {
+    consumerKey: env.MPESA_CONSUMER_KEY,
+    consumerSecret: env.MPESA_CONSUMER_SECRET,
+    shortcode: env.MPESA_SHORTCODE,
+    passkey: env.MPESA_PASSKEY,
+    callbackUrl: env.MPESA_CALLBACK_URL,
+  };
+}
 
 // ─── Token Management ────────────────────────────────────────────────────────
 
@@ -19,8 +50,8 @@ const CACHE_TTL_MS = 50 * 60 * 1000;
  * If the cached token is still valid (expiresAt > now + 2min), returns it.
  * Otherwise, fetches a new token from Safaricom and upserts the cache row.
  */
-export async function getAccessToken(): Promise<string> {
-  const TOKEN_ID = 'singleton';
+export async function getAccessToken(environment: 'sandbox' | 'live'): Promise<string> {
+  const TOKEN_ID = `singleton_${environment}`;
 
   try {
     const cached = await prisma.darajaToken.findUnique({
@@ -37,14 +68,14 @@ export async function getAccessToken(): Promise<string> {
   }
 
   // Token missing, expired, or cache read failed — fetch a new one
-  const credentials = `${env.MPESA_CONSUMER_KEY}:${env.MPESA_CONSUMER_SECRET}`;
-  const base64Auth = Buffer.from(credentials).toString('base64');
+  const credentials = getDarajaCredentials(environment);
+  const base64Auth = Buffer.from(`${credentials.consumerKey}:${credentials.consumerSecret}`).toString('base64');
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
   try {
-    const response = await fetch(DARAJA_OAUTH_URL, {
+    const response = await fetch(`${DARAJA_BASE_URLS[environment]}/oauth/v1/generate?grant_type=client_credentials`, {
       method: 'GET', // Daraja OAuth endpoint uses GET
       headers: {
         Authorization: `Basic ${base64Auth}`,
@@ -125,12 +156,9 @@ function generateTimestamp(): string {
   return `${get('year')}${get('month')}${get('day')}${get('hour')}${get('minute')}${get('second')}`;
 }
 
-/**
- * Generates the Daraja API password.
- * Formula: base64(BusinessShortCode + Passkey + Timestamp)
- */
-function generatePassword(timestamp: string): string {
-  return Buffer.from(`${env.MPESA_SHORTCODE}${env.MPESA_PASSKEY}${timestamp}`).toString('base64');
+function generatePassword(timestamp: string, environment: 'sandbox' | 'live'): string {
+  const credentials = getDarajaCredentials(environment);
+  return Buffer.from(`${credentials.shortcode}${credentials.passkey}${timestamp}`).toString('base64');
 }
 
 // ─── STK Push ────────────────────────────────────────────────────────────────
@@ -144,6 +172,8 @@ export interface STKPushParams {
   accountReference?: string;
   /** Transaction description (max 13 chars) */
   transactionDesc?: string;
+  /** The target environment for the transaction */
+  environment: 'sandbox' | 'live';
 }
 
 export interface STKPushResponse {
@@ -168,21 +198,23 @@ export async function initiateSTKPush({
   amount,
   accountReference = 'PaySwift',
   transactionDesc = 'Payment',
+  environment,
 }: STKPushParams): Promise<STKPushResponse> {
-  const accessToken = await getAccessToken();
+  const accessToken = await getAccessToken(environment);
   const timestamp = generateTimestamp();
-  const password = generatePassword(timestamp);
+  const password = generatePassword(timestamp, environment);
+  const credentials = getDarajaCredentials(environment);
 
   const payload = {
-    BusinessShortCode: env.MPESA_SHORTCODE,
+    BusinessShortCode: credentials.shortcode,
     Password: password,
     Timestamp: timestamp,
     TransactionType: 'CustomerPayBillOnline',
     Amount: amount,
     PartyA: phone,
-    PartyB: env.MPESA_SHORTCODE,
+    PartyB: credentials.shortcode,
     PhoneNumber: phone,
-    CallBackURL: env.MPESA_CALLBACK_URL,
+    CallBackURL: credentials.callbackUrl,
     AccountReference: accountReference.substring(0, 12),
     TransactionDesc: transactionDesc.substring(0, 13),
   };
@@ -191,7 +223,7 @@ export async function initiateSTKPush({
   const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
   try {
-    const response = await fetch(DARAJA_STK_PUSH_URL, {
+    const response = await fetch(`${DARAJA_BASE_URLS[environment]}/mpesa/stkpush/v1/processrequest`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -242,13 +274,14 @@ export interface STKQueryResponse {
  * Queries the status of a previously initiated STK Push transaction.
  * Used as a fallback when the callback hasn't been received yet.
  */
-export async function querySTKPushStatus(checkoutRequestId: string): Promise<STKQueryResponse> {
-  const accessToken = await getAccessToken();
+export async function querySTKPushStatus(checkoutRequestId: string, environment: 'sandbox' | 'live'): Promise<STKQueryResponse> {
+  const accessToken = await getAccessToken(environment);
   const timestamp = generateTimestamp();
-  const password = generatePassword(timestamp);
+  const password = generatePassword(timestamp, environment);
+  const credentials = getDarajaCredentials(environment);
 
   const payload = {
-    BusinessShortCode: env.MPESA_SHORTCODE,
+    BusinessShortCode: credentials.shortcode,
     Password: password,
     Timestamp: timestamp,
     CheckoutRequestID: checkoutRequestId,
@@ -258,7 +291,7 @@ export async function querySTKPushStatus(checkoutRequestId: string): Promise<STK
   const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
   try {
-    const response = await fetch(DARAJA_STK_QUERY_URL, {
+    const response = await fetch(`${DARAJA_BASE_URLS[environment]}/mpesa/stkpushquery/v1/query`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Server, ShieldAlert } from "lucide-react";
@@ -23,8 +23,22 @@ export function EnvironmentCard({ initialEnvironment }: EnvironmentCardProps) {
   const [environment, setEnvironment] = useState<"sandbox" | "live">(initialEnvironment);
   const [isChanging, setIsChanging] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [liveReady, setLiveReady] = useState(false);
+  const [isLoadingReadiness, setIsLoadingReadiness] = useState(true);
 
   const isLive = environment === "live";
+
+  useEffect(() => {
+    fetch("/api/merchant/settings/live-readiness")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setLiveReady(data.data.liveReady);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setIsLoadingReadiness(false));
+  }, []);
 
   const toggleEnvironment = async () => {
     setIsChanging(true);
@@ -81,6 +95,12 @@ export function EnvironmentCard({ initialEnvironment }: EnvironmentCardProps) {
             <Button onClick={toggleEnvironment} disabled={isChanging} variant="outline">
               Switch to Sandbox
             </Button>
+          ) : isLoadingReadiness ? (
+            <Button disabled variant="outline">Loading...</Button>
+          ) : !liveReady ? (
+            <div title="Live payments are not yet configured on this platform. This will be enabled once the platform completes Safaricom's Go-Live process.">
+              <Button disabled>Go Live</Button>
+            </div>
           ) : (
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger render={<Button disabled={isChanging}>Go Live</Button>} />

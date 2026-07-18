@@ -20,6 +20,7 @@ export interface Transaction {
   phone: string;
   status: string;
   orderReference: string | null;
+  environment: string;
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -170,7 +171,14 @@ export function TransactionsTable({ initialTransactions, onSummaryUpdate }: Tran
                     </TableCell>
                     <TableCell>{maskPhone(t.phone)}</TableCell>
                     <TableCell>
-                      <StatusBadge status={t.status} />
+                      <div className="flex items-center">
+                        <StatusBadge status={t.status} />
+                        {t.environment === 'live' ? (
+                          <span className="ml-2 px-1.5 py-0.5 text-[10px] uppercase font-bold bg-destructive/10 text-destructive rounded-sm border border-destructive/20">Live</span>
+                        ) : (
+                          <span className="ml-2 px-1.5 py-0.5 text-[10px] uppercase font-bold bg-muted text-muted-foreground rounded-sm border border-border">Sandbox</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="max-w-[150px] truncate">
                       {t.orderReference || '-'}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
+import { isLiveModeConfigured } from '@/lib/daraja';
 
 export async function PATCH(request: Request) {
   try {
@@ -25,6 +26,9 @@ export async function PATCH(request: Request) {
     if (body.environment !== undefined) {
       if (body.environment !== 'sandbox' && body.environment !== 'live') {
         return NextResponse.json({ success: false, error: 'Invalid environment value' }, { status: 400 });
+      }
+      if (body.environment === 'live' && !isLiveModeConfigured()) {
+        return NextResponse.json({ success: false, error: 'Live M-Pesa payments are not yet configured on this platform. Contact the platform administrator.' }, { status: 400 });
       }
       updateData.environment = body.environment;
     }

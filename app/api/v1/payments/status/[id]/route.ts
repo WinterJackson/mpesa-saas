@@ -51,7 +51,10 @@ export async function GET(
 
     if (transaction.status === 'pending' && transaction.checkoutRequestId) {
       try {
-        const queryResult = await querySTKPushStatus(transaction.checkoutRequestId);
+        const queryResult = await querySTKPushStatus(
+          transaction.checkoutRequestId,
+          transaction.environment as 'sandbox' | 'live'
+        );
 
         if (queryResult.ResultCode === '0') {
           // Transaction completed successfully — self-heal the DB

@@ -1,0 +1,268 @@
+
+> payswift@0.1.0 lint
+> eslint
+
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/algorithmic-art/templates/generator_template.js
+   53:10  warning  'setup' is defined but never used             @typescript-eslint/no-unused-vars
+   70:10  warning  'draw' is defined but never used              @typescript-eslint/no-unused-vars
+   92:7   warning  'Entity' is defined but never used            @typescript-eslint/no-unused-vars
+  132:10  warning  'hexToRgb' is defined but never used          @typescript-eslint/no-unused-vars
+  141:10  warning  'colorFromPalette' is defined but never used  @typescript-eslint/no-unused-vars
+  146:10  warning  'mapRange' is defined but never used          @typescript-eslint/no-unused-vars
+  150:10  warning  'easeInOutCubic' is defined but never used    @typescript-eslint/no-unused-vars
+  155:10  warning  'wrapAround' is defined but never used        @typescript-eslint/no-unused-vars
+  165:10  warning  'updateParameter' is defined but never used   @typescript-eslint/no-unused-vars
+  171:10  warning  'regenerate' is defined but never used        @typescript-eslint/no-unused-vars
+  183:10  warning  'fadeBackground' is defined but never used    @typescript-eslint/no-unused-vars
+  190:10  warning  'getNoiseValue' is defined but never used     @typescript-eslint/no-unused-vars
+  195:10  warning  'vectorFromAngle' is defined but never used   @typescript-eslint/no-unused-vars
+  203:10  warning  'exportImage' is defined but never used       @typescript-eslint/no-unused-vars
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/apify-audience-analysis/reference/scripts/run_actor.js
+  295:25  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/apify-brand-reputation-monitoring/reference/scripts/run_actor.js
+  295:25  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/apify-competitor-intelligence/reference/scripts/run_actor.js
+  295:25  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/apify-content-analytics/reference/scripts/run_actor.js
+  295:25  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/apify-ecommerce/reference/scripts/run_actor.js
+  301:25  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/apify-influencer-discovery/reference/scripts/run_actor.js
+  295:25  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/apify-lead-generation/reference/scripts/run_actor.js
+  295:25  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/apify-market-research/reference/scripts/run_actor.js
+  295:25  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/apify-trend-analysis/reference/scripts/run_actor.js
+  295:25  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/apify-ultimate-scraper/reference/scripts/run_actor.js
+  295:25  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/claude-d3js-skill/assets/chart-template.jsx
+  1:29  warning  'useState' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/claude-d3js-skill/assets/interactive-template.jsx
+   56:11  warning  'xAxisGroup' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   61:11  warning  'yAxisGroup' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+  212:8   error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  210 |     id: i,
+  211 |     label: `Point ${i + 1}`,
+> 212 |     x: Math.random() * 100,
+      |        ^^^^^^^^^^^^^ Cannot call impure function
+  213 |     y: Math.random() * 100,
+  214 |     size: Math.random() * 30 + 5,
+  215 |     category: ['A', 'B', 'C', 'D'][Math.floor(Math.random() * 4)]  react-hooks/purity
+  213:8   error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  211 |     label: `Point ${i + 1}`,
+  212 |     x: Math.random() * 100,
+> 213 |     y: Math.random() * 100,
+      |        ^^^^^^^^^^^^^ Cannot call impure function
+  214 |     size: Math.random() * 30 + 5,
+  215 |     category: ['A', 'B', 'C', 'D'][Math.floor(Math.random() * 4)]
+  216 |   }));      react-hooks/purity
+  214:11  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  212 |     x: Math.random() * 100,
+  213 |     y: Math.random() * 100,
+> 214 |     size: Math.random() * 30 + 5,
+      |           ^^^^^^^^^^^^^ Cannot call impure function
+  215 |     category: ['A', 'B', 'C', 'D'][Math.floor(Math.random() * 4)]
+  216 |   }));
+  217 |                                react-hooks/purity
+  215:47  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  213 |     y: Math.random() * 100,
+  214 |     size: Math.random() * 30 + 5,
+> 215 |     category: ['A', 'B', 'C', 'D'][Math.floor(Math.random() * 4)]
+      |                                               ^^^^^^^^^^^^^ Cannot call impure function
+  216 |   }));
+  217 |   
+  218 |   return (          react-hooks/purity
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/loki-mode/scripts/take-screenshots.js
+  2:19  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  3:14  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  4:12  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/playwright-skill/lib/helpers.js
+    4:39  error    A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+   99:12  warning  'e' is defined but never used            @typescript-eslint/no-unused-vars
+  311:14  warning  'e' is defined but never used            @typescript-eslint/no-unused-vars
+  378:16  error    A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  390:35  warning  'reject' is defined but never used       @typescript-eslint/no-unused-vars
+  413:14  warning  'e' is defined but never used            @typescript-eslint/no-unused-vars
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/playwright-skill/run.js
+   13:12  error    A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+   14:14  error    A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+   15:22  error    A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+   27:12  warning  'e' is defined but never used            @typescript-eslint/no-unused-vars
+   96:18  warning  'e' is defined but never used            @typescript-eslint/no-unused-vars
+  101:12  warning  'e' is defined but never used            @typescript-eslint/no-unused-vars
+  209:5   error    A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/pptx-official/scripts/html2pptx.js
+   28:22  error    A `require()` style import is forbidden     @typescript-eslint/no-require-imports
+   29:14  error    A `require()` style import is forbidden     @typescript-eslint/no-require-imports
+   30:7   warning  'sharp' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   30:15  error    A `require()` style import is forbidden     @typescript-eslint/no-require-imports
+  121:54  warning  'tmpDir' is defined but never used          @typescript-eslint/no-unused-vars
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/radix-ui-design-system/examples/dialog-example.tsx
+   36:67  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  118:24  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/radix-ui-design-system/examples/dropdown-example.tsx
+  139:12  error  'DotsHorizontalIcon' is not defined  react/jsx-no-undef
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/spline-3d-integration/examples/interactive-scene.tsx
+  26:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  31:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/spline-3d-integration/examples/react-spline-wrapper.tsx
+  49:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/spline-3d-integration/examples/react-spline-wrapper.tsx:49:5
+  47 |
+  48 |   useEffect(() => {
+> 49 |     setCanLoad(shouldLoadSpline(mobileBreakpoint));
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  50 |   }, [mobileBreakpoint]);
+  51 |
+  52 |   useEffect(() => {  react-hooks/set-state-in-effect
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/telegram/assets/boilerplate/nodejs/src/bot-client.ts
+  45:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  70:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/telegram/assets/boilerplate/nodejs/src/handlers.ts
+  2:8  warning  'TelegramBot' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/typescript-expert/references/utility-types.ts
+   71:51  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   71:61  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  178:60  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  183:68  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  183:78  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  190:47  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  190:57  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  242:15  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  251:15  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  311:40  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  311:50  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  333:33  warning  '_value' is defined but never used        @typescript-eslint/no-unused-vars
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/whatsapp-cloud-api/assets/boilerplate/nodejs/src/template-manager.ts
+  22:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  37:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  38:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/whatsapp-cloud-api/assets/boilerplate/nodejs/src/types.ts
+  104:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/whatsapp-cloud-api/assets/boilerplate/nodejs/src/webhook-handler.ts
+  27:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  58:11  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/whatsapp-cloud-api/assets/boilerplate/nodejs/src/whatsapp-client.ts
+  173:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/.agent/skills/writing-skills/render-graphs.js
+  16:12  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  17:14  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  18:22  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/app/(public)/demo-store/page.tsx
+  6:16  warning  'CardContent' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/app/api/merchant/transactions/route.ts
+  57:11  warning  'totalTransactions' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  59:11  warning  'totalRevenue' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  60:11  warning  'pendingCount' is assigned a value but never used       @typescript-eslint/no-unused-vars
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/app/page.tsx
+    3:29   warning  'Globe' is defined but never used                                @typescript-eslint/no-unused-vars
+  197:106  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  220:45   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/components/code-snippet.tsx
+   5:10   warning  'cn' is defined but never used                                   @typescript-eslint/no-unused-vars
+  43:525  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  43:530  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  43:644  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  43:654  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  43:697  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  43:710  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  43:978  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  43:991  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/components/dashboard/transactions-table.tsx
+  3:38  warning  'useCallback' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/components/settings/api-key-card.tsx
+  38:14  warning  'err' is defined but never used    @typescript-eslint/no-unused-vars
+  58:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/components/settings/environment-card.tsx
+  48:14   warning  'error' is defined but never used                                @typescript-eslint/no-unused-vars
+  94:130  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/components/settings/webhook-card.tsx
+  47:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  76:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/components/theme-toggle.tsx
+  13:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/components/theme-toggle.tsx:13:5
+  11 |
+  12 |   React.useEffect(() => {
+> 13 |     setMounted(true);
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  14 |   }, []);
+  15 |
+  16 |   if (!mounted) {  react-hooks/set-state-in-effect
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/lib/db.ts
+  30:3   warning  Unused eslint-disable directive (no problems were reported from 'no-var')
+  44:23  error    Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+
+/home/kuzzi/Dev/C O D E/mpesa-saas/lib/types.ts
+  1:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 110 problems (69 errors, 41 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+
