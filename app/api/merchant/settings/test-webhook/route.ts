@@ -74,6 +74,21 @@ export async function POST() {
       }
     );
 
+    // Add audit log IF the transactionId doesn't start with "txn_" (which is our synthetic mock ID)
+    if (!payloadData.data.transactionId.startsWith('txn_')) {
+      await prisma.webhookDelivery.create({
+        data: {
+          transactionId: payloadData.data.transactionId,
+          url: merchant.webhookUrl,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          payload: payloadData as any,
+          statusCode: result.statusCode ?? null,
+          success: result.delivered,
+          attempt: result.attempts,
+        }
+      });
+    }
+
     return NextResponse.json({ 
       success: true, 
       data: { 

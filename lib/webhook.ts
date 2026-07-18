@@ -23,52 +23,70 @@ export async function deliverWebhook(
   payload: Record<string, unknown>,
   secretKey?: string,
   extraHeaders?: Record<string, string>,
-): Promise<{ delivered: boolean; statusCode?: number }> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5_000);
+  maxAttempts: number = 3,
+): Promise<{ delivered: boolean; statusCode?: number; attempts: number }> {
+  const payloadString = JSON.stringify(payload);
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'User-Agent': 'PaySwift-Webhook/1.0',
+    ...(extraHeaders || {}),
+  };
 
-  try {
-    const payloadString = JSON.stringify(payload);
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'User-Agent': 'PaySwift-Webhook/1.0',
-      ...(extraHeaders || {}),
-    };
-
-    // Generate HMAC-SHA256 signature so merchants can verify the payload
-    if (secretKey) {
-      const hmac = createHmac('sha256', secretKey);
-      hmac.update(payloadString);
-      headers['x-payswift-signature'] = hmac.digest('hex');
-    }
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: payloadString,
-      signal: controller.signal as AbortSignal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      console.error(`[Webhook] Delivery failed to ${url}: HTTP ${response.status}`);
-      return { delivered: false, statusCode: response.status };
-    }
-
-    console.log(`[Webhook] Successfully delivered to ${url}: HTTP ${response.status}`);
-    return { delivered: true, statusCode: response.status };
-  } catch (error: unknown) {
-    clearTimeout(timeoutId);
-
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      console.error(`[Webhook] Delivery to ${url} timed out after 5 seconds`);
-    } else {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[Webhook] Delivery error for ${url}:`, message);
-    }
-
-    return { delivered: false };
+  // Generate HMAC-SHA256 signature so merchants can verify the payload
+  if (secretKey) {
+    const hmac = createHmac('sha256', secretKey);
+    hmac.update(payloadString);
+    headers['x-payswift-signature'] = hmac.digest('hex');
   }
+
+  let attempts = 0;
+  let lastStatusCode: number | undefined;
+
+  while (attempts < maxAttempts) {
+    attempts++;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5_000);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: payloadString,
+        signal: controller.signal as AbortSignal,
+      });
+
+      clearTimeout(timeoutId);
+      lastStatusCode = response.status;
+
+      if (response.ok) {
+        console.log(`[Webhook] Successfully delivered to ${url} (Attempt ${attempts}): HTTP ${response.status}`);
+        return { delivered: true, statusCode: response.status, attempts };
+      }
+
+      console.warn(`[Webhook] Delivery failed to ${url} (Attempt ${attempts}): HTTP ${response.status}`);
+
+      // Do NOT retry on 4xx (merchant endpoint issue)
+      if (response.status >= 400 && response.status < 500) {
+        return { delivered: false, statusCode: response.status, attempts };
+      }
+    } catch (error: unknown) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        console.warn(`[Webhook] Delivery to ${url} timed out after 5 seconds (Attempt ${attempts})`);
+      } else {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.warn(`[Webhook] Delivery error for ${url} (Attempt ${attempts}):`, message);
+      }
+    }
+
+    if (attempts < maxAttempts) {
+      const delayMs = attempts === 1 ? 1000 : 3000;
+      console.log(`[Webhook] Retrying ${url} in ${delayMs}ms...`);
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+
+  console.error(`[Webhook] Exhausted ${maxAttempts} attempts for ${url}`);
+  return { delivered: false, statusCode: lastStatusCode, attempts };
 }

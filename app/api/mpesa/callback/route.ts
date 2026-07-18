@@ -145,6 +145,19 @@ export async function POST(request: Request) {
       after(async () => {
         try {
           const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, merchant.webhookSecret ?? undefined);
+          
+          await prisma.webhookDelivery.create({
+            data: {
+              transactionId: updatedTransaction.id,
+              url: merchant.webhookUrl!,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              payload: webhookPayload as any,
+              statusCode: result.statusCode ?? null,
+              success: result.delivered,
+              attempt: result.attempts,
+            }
+          });
+
           if (!result.delivered) {
             console.warn(`[Callback Webhook] Delivery failed to ${merchant.webhookUrl} (HTTP ${result.statusCode})`);
           }
