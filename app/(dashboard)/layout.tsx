@@ -34,18 +34,21 @@ export default async function DashboardLayout({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 md:pb-0">
         {/* Header */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border px-6">
-          <div className="flex items-center gap-4">
-            {/* On mobile, show business name in header */}
-            <h1 className="md:hidden text-lg font-semibold tracking-tight text-foreground truncate max-w-[200px]">
-              {merchant.businessName}
-            </h1>
-          </div>
-          <div className="flex items-center gap-4 ml-auto">
-            <ThemeToggle />
-            <UserButton />
-          </div>
-        </header>
+        <div className="w-full shrink-0 pt-floating-header px-floating-header pb-4">
+          <header className="w-full border border-primary rounded-floating-header bg-floating-header-bg backdrop-blur-md shadow-floating-header">
+            <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
+              <div className="flex items-center gap-4 min-w-0">
+                <h1 className="text-lg font-semibold tracking-tight text-foreground truncate max-w-[200px] md:max-w-[320px]">
+                  {merchant.businessName}
+                </h1>
+              </div>
+              <div className="flex items-center gap-4 ml-auto">
+                <ThemeToggle />
+                <UserButton />
+              </div>
+            </div>
+          </header>
+        </div>
 
         {/* Scrollable Main Area */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8">

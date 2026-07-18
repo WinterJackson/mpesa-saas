@@ -1,10 +1,11 @@
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowRight, Code2, LayoutDashboard, TestTube2, Workflow, CreditCard, Activity, GitBranch, BookOpen, Check } from "lucide-react";
+import { ArrowRight, Code2, LayoutDashboard, TestTube2, Workflow, CreditCard, Activity, Check } from "lucide-react";
 import { auth } from "@clerk/nextjs/server";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CodeSnippet } from "@/components/code-snippet";
+import { Logo } from "@/components/logo";
+import { SiteFooter } from "@/components/site-footer";
 
 export default async function Home() {
   const { userId } = await auth();
@@ -15,22 +16,7 @@ export default async function Home() {
       <div className="fixed top-0 z-50 w-full pt-floating-header px-floating-header">
         <header className="w-full border border-primary rounded-floating-header bg-floating-header-bg backdrop-blur-md shadow-floating-header">
           <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
-          <div className="flex items-center gap-2">
-            <Image 
-              src="/logo_d2.png" 
-              alt="PaySwift Logo" 
-              width={120} 
-              height={40} 
-              className="dark:hidden rounded-[10px]" 
-            />
-            <Image 
-              src="/logo_l2.png" 
-              alt="PaySwift Logo" 
-              width={120} 
-              height={40} 
-              className="hidden dark:block rounded-[10px]" 
-            />
-          </div>
+          <Logo />
           <nav className="flex items-center gap-4">
             <ThemeToggle />
             {userId ? (
@@ -260,63 +246,7 @@ export default async function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full py-16 border-t border-border bg-background">
-        <div className="container px-4 md:px-8 mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 lg:gap-24">
-            <div className="md:col-span-2 flex flex-col items-start gap-4">
-              <div className="flex items-center gap-2">
-                <Image 
-                  src="/logo_d2.png" 
-                  alt="PaySwift Logo" 
-                  width={120} 
-                  height={40} 
-                  className="dark:hidden rounded-[10px]" 
-                />
-                <Image 
-                  src="/logo_l2.png" 
-                  alt="PaySwift Logo" 
-                  width={120} 
-                  height={40} 
-                  className="hidden dark:block rounded-[10px]" 
-                />
-              </div>
-              <p className="text-muted-foreground leading-relaxed max-w-sm mt-2">
-                The developer-first M-Pesa integration platform. Seamlessly collect payments, automate reconciliation, and monitor revenue in real-time.
-              </p>
-              <p className="text-sm text-muted-foreground mt-8 uppercase tracking-wider font-medium">
-                &copy; {new Date().getFullYear()} PaySwift. All rights reserved.
-              </p>
-            </div>
-            
-            <div className="flex flex-col gap-6">
-              <h4 className="font-semibold text-foreground tracking-tight text-lg">Product</h4>
-              <div className="flex flex-col gap-4">
-                <Link href="/demo-store" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2 w-fit">
-                  Demo Store
-                </Link>
-                <Link href="/sign-in" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2 w-fit">
-                  Sign In
-                </Link>
-                <Link href="/sign-up" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2 w-fit">
-                  Get Started
-                </Link>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-6">
-              <h4 className="font-semibold text-foreground tracking-tight text-lg">Developers</h4>
-              <div className="flex flex-col gap-4">
-                <Link href="https://github.com/WinterJackson/mpesa-saas" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2 w-fit">
-                  <GitBranch className="size-4" /> GitHub Repository
-                </Link>
-                <Link href="https://github.com/WinterJackson/mpesa-saas/blob/main/README.md" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2 w-fit">
-                  <BookOpen className="size-4" /> Documentation
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

@@ -11,7 +11,7 @@ import { ShoppingBag, Smartphone, Headphones, Cable, CheckCircle2, XCircle, Load
 import { ThemeToggle } from "@/components/theme-toggle";
 import Image from "next/image";
 import { DeveloperConsole, ConsoleLogLine } from "@/components/demo/developer-console";
-
+import { SiteFooter } from "@/components/site-footer";
 type Product = {
   id: string;
   name: string;
@@ -374,26 +374,7 @@ export default function DemoStorePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Footer */}
-      <footer className="w-full border-t border-border mt-auto">
-        <div className="container mx-auto px-4 md:px-8 py-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-            <div>
-              <div className="font-bold text-lg tracking-tight mb-1">PaySwift</div>
-              <p className="text-sm text-muted-foreground">M-Pesa payment collection for developers.</p>
-            </div>
-            <nav className="flex flex-wrap gap-4 md:gap-6 text-sm text-muted-foreground">
-              <Link href="https://github.com/WinterJackson/mpesa-saas#readme" className="hover:text-foreground transition-colors" target="_blank" rel="noopener noreferrer">Documentation</Link>
-              <Link href="https://github.com/WinterJackson/mpesa-saas#api-reference" className="hover:text-foreground transition-colors" target="_blank" rel="noopener noreferrer">API Reference</Link>
-              <Link href="https://github.com/WinterJackson/mpesa-saas" className="hover:text-foreground transition-colors" target="_blank" rel="noopener noreferrer">GitHub</Link>
-              <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
-            </nav>
-          </div>
-          <div className="text-xs text-muted-foreground/60 text-center md:text-left">
-            Built with Next.js, Prisma, and Neon.
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
 
       <DeveloperConsole logs={logs} isActive={paymentState === "initiating" || paymentState === "polling"} />
     </div>
