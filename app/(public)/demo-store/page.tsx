@@ -187,7 +187,7 @@ export default function DemoStorePage() {
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-16">
       {/* Floating Header Wrapper */}
       <div className="sticky top-0 z-50 w-full pt-floating-header px-floating-header pb-4 bg-background/95 backdrop-blur-sm">
-        <header className="w-full border border-foreground rounded-floating-header bg-floating-header-bg backdrop-blur-md shadow-floating-header">
+        <header className="w-full rounded-floating-header bg-background/80 backdrop-blur-md shadow-floating-header">
           <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
             <div className="flex items-center gap-2">
               <ShoppingBag className="size-6 text-primary" />
