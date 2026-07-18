@@ -26,7 +26,7 @@ export function Sidebar() {
     <>
       {/* Desktop Sidebar */}
       <div className="hidden md:flex h-full shrink-0 pt-floating-header pl-floating-header pb-floating-header">
-        <aside className="flex flex-col w-64 rounded-floating-header bg-sidebar text-sidebar-foreground shadow-floating-header overflow-hidden">
+        <aside className="flex flex-col w-64 rounded-floating-header bg-floating-header-bg backdrop-blur-md text-sidebar-foreground shadow-floating-header overflow-hidden">
           <div className="p-6 border-b border-sidebar-border flex items-center">
             <Logo />
           </div>
