@@ -70,6 +70,20 @@ npm run dev
 
 ---
 
+## 🔑 Reviewer / Test Login
+
+To test the application without needing a real email address, you can use Clerk's test mode email bypass (enabled by default in development instances).
+
+1. Go to the sign-in or sign-up page (`/sign-in` or `/sign-up`).
+2. Enter any email address that includes the `+clerk_test` subaddress. For example: `reviewer+clerk_test@payswift.dev`
+3. When prompted for the verification code, enter the fixed code: **`424242`**
+4. This will bypass the email step and log you in.
+5. After your first sign-in, you will land on the `/onboarding` page. Enter any business name to complete the setup and reach the dashboard.
+
+> **Note:** This feature only works if the Clerk application has test mode/test email addresses enabled. You can enable this in the Clerk Dashboard under **Configure > Testing**.
+
+---
+
 ## 🧪 End-to-End Testing (M-Pesa Callbacks)
 
 To test the full lifecycle of a payment—including the Safaricom STK Push and the automated backend Webhooks—you must expose your local server to the public internet so Safaricom's servers can reach it.

@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/dashboard/status-badge";
-import { RefreshCw, ShoppingCart, ShoppingBag } from "lucide-react";
+import { RefreshCw, ShoppingCart, ShoppingBag, Database } from "lucide-react";
 import { SummaryData } from "./summary-cards";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export interface Transaction {
   id: string;
@@ -103,6 +105,28 @@ export function TransactionsTable({ initialTransactions, onSummaryUpdate }: Tran
     }
   };
 
+  const [isSeeding, setIsSeeding] = useState(false);
+  
+  const handleLoadSampleData = async () => {
+    try {
+      setIsSeeding(true);
+      const res = await fetch("/api/merchant/seed-demo-data", {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        toast.success(json.message || "Sample data loaded");
+        await handleManualRefresh();
+      } else {
+        toast.error(json.error || "Failed to load sample data");
+      }
+    } catch {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   // Mask phone number: 254712345678 -> 2547***5678
   const maskPhone = (phone: string) => {
     if (!phone || phone.length < 8) return phone;
@@ -147,6 +171,10 @@ export function TransactionsTable({ initialTransactions, onSummaryUpdate }: Tran
             <p className="text-sm text-muted-foreground max-w-sm mt-1 mb-4">
               When customers make payments, they will appear here in real-time.
             </p>
+            <Button onClick={handleLoadSampleData} disabled={isSeeding} variant="outline" className="mt-2">
+              <Database className="size-4 mr-2" />
+              {isSeeding ? "Loading..." : "Load Sample Data"}
+            </Button>
           </div>
         ) : (
           <div className="overflow-x-auto">

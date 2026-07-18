@@ -176,7 +176,7 @@ export async function POST(request: Request) {
           const result = await markShopifyOrderPaid({
             shopDomain: merchant.shopifyShopDomain!,
             accessToken: merchant.shopifyAdminAccessToken!,
-            orderId: updatedTransaction.orderReference, // Contains numeric orderId
+            orderId: updatedTransaction.orderReference!, // Contains numeric orderId
             mpesaReceipt: updatedTransaction.mpesaReceipt ?? 'N/A'
           });
           
