@@ -15,6 +15,7 @@ import { RefreshCw, ShoppingCart, ShoppingBag, Database } from "lucide-react";
 import { SummaryData } from "./summary-cards";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export interface Transaction {
   id: string;
@@ -31,12 +32,18 @@ export interface Transaction {
 interface TransactionsTableProps {
   initialTransactions: Transaction[];
   onSummaryUpdate?: (summary: SummaryData) => void;
+  showFilters?: boolean;
 }
 
-export function TransactionsTable({ initialTransactions, onSummaryUpdate }: TransactionsTableProps) {
+export function TransactionsTable({ initialTransactions, onSummaryUpdate, showFilters = false }: TransactionsTableProps) {
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const [filter, setFilter] = useState("All");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const previousSummaryRef = React.useRef<string | null>(null);
+
+  const filteredTransactions = filter === "All" 
+    ? transactions 
+    : transactions.filter(t => t.status.toLowerCase() === filter.toLowerCase());
 
   useEffect(() => {
     const controller = new AbortController();
@@ -161,8 +168,28 @@ export function TransactionsTable({ initialTransactions, onSummaryUpdate }: Tran
           <RefreshCw className={`size-5 ${isRefreshing ? 'animate-spin' : ''}`} />
         </button>
       </CardHeader>
+      
+      {showFilters && (
+        <div className="px-6 pb-4 flex flex-wrap gap-2 border-b border-border">
+          {["All", "Completed", "Pending", "Failed", "Cancelled"].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium rounded-full transition-colors",
+                filter === f 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+              )}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      )}
+
       <CardContent>
-        {transactions.length === 0 ? (
+        {filteredTransactions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="size-12 rounded-full bg-muted flex items-center justify-center mb-4">
               <ShoppingCart className="size-6 text-muted-foreground" />
@@ -190,7 +217,7 @@ export function TransactionsTable({ initialTransactions, onSummaryUpdate }: Tran
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transactions.map((t) => (
+                {filteredTransactions.map((t) => (
                   <TableRow key={t.id}>
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {t.id.split('_').pop()?.substring(0, 8) || t.id.substring(0, 8)}
