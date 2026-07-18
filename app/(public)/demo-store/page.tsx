@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -120,16 +121,25 @@ export default function DemoStorePage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
-      {/* Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between px-4 md:px-8 mx-auto">
-          <div className="flex items-center gap-2">
-            <ShoppingBag className="size-6 text-primary" />
-            <span className="text-xl font-bold tracking-tight">DemoTech Store</span>
+      {/* Floating Header Wrapper */}
+      <div className="sticky top-0 z-50 w-full pt-floating-header px-floating-header pb-4 bg-background/95 backdrop-blur-sm">
+        <header className="w-full border border-primary rounded-floating-header bg-floating-header-bg backdrop-blur-md shadow-floating-header">
+          <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="size-6 text-primary" />
+              <span className="text-xl font-bold tracking-tight">DemoTech Store</span>
+            </div>
+            <nav className="flex items-center gap-4">
+              <ThemeToggle />
+              <Link href="/">
+                <Button variant="outline" size="sm">
+                  Back to PaySwift
+                </Button>
+              </Link>
+            </nav>
           </div>
-          <ThemeToggle />
-        </div>
-      </header>
+        </header>
+      </div>
 
       {/* Banner */}
       <div className="bg-primary/10 border-b border-primary/20 text-primary px-4 py-3 text-center text-sm font-medium flex items-center justify-center gap-2">

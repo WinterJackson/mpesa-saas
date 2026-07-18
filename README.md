@@ -78,22 +78,25 @@ To manually verify this behavior:
    - `amount`: `100`
    - `phone`: `254700000000`
    - `status`: `pending`
-   - `checkoutRequestId`: `ws_CO_TEST_IDEMPOTENCY_001`
+   - `checkoutRequestId`: `ws_CO_TEST_SUCCESS_001`
 
 2. **Send the First Callback (Should Process)**  
-   Run this `curl` command to simulate Safaricom delivering the callback (you can run this against `localhost:3000` or your Vercel URL):
    ```bash
    curl -X POST http://localhost:3000/api/mpesa/callback \
      -H "Content-Type: application/json" \
      -d '{
      "Body": {
        "stkCallback": {
-         "CheckoutRequestID": "ws_CO_TEST_IDEMPOTENCY_001",
+         "MerchantRequestID": "test-merchant-req-success",
+         "CheckoutRequestID": "ws_CO_TEST_SUCCESS_001",
          "ResultCode": 0,
+         "ResultDesc": "The service request is processed successfully.",
          "CallbackMetadata": {
            "Item": [
-             { "Name": "MpesaReceiptNumber", "Value": "RGA1234567" },
-             { "Name": "Amount", "Value": 100 }
+             { "Name": "Amount", "Value": 100 },
+             { "Name": "MpesaReceiptNumber", "Value": "TES1234567" },
+             { "Name": "TransactionDate", "Value": 20260717120000 },
+             { "Name": "PhoneNumber", "Value": 254700000000 }
            ]
          }
        }
@@ -102,17 +105,25 @@ To manually verify this behavior:
    ```
    **Expected**: The transaction updates to `completed` in Prisma Studio.
 
-3. **Send the Second Callback (Should Skip)**  
-   Run the exact same `curl` command again.  
-   **Expected**: The server should log that it skipped the transaction. 
+3. **Send the Same Callback Two More Times (Should Skip Both Times)**  
+   Run the exact same `curl` command twice more, back to back.  
+   **Expected**: Both calls should log that they skipped the transaction, and no field on the transaction record should change.
 
-**Observed Result:**
+**Verified Result (production-code test, run after the Neon/Turbopack connection fix):**
+
+| Field | Before Duplicate Calls | After 1st Duplicate | After 2nd Duplicate |
+|---|---|---|---|
+| status | `completed` | `completed` (unchanged) | `completed` (unchanged) |
+| resultCode | `0` | `0` (unchanged) | `0` (unchanged) |
+| resultDesc | `"The service request is processed successfully."` | unchanged | unchanged |
+| mpesaReceipt | `"TES1234567"` | unchanged | unchanged |
+| updatedAt | `2026-07-18T09:50:05.514Z` | unchanged | unchanged |
+
+**Server log output for both duplicate deliveries:**
 ```
-[Callback] Transaction ws_CO_TEST_IDEMPOTENCY_001 updated to "completed" (ResultCode: 0)
-... (second execution)
-[Callback] Transaction ws_CO_TEST_IDEMPOTENCY_001 already in terminal state "completed". Skipping.
+[Callback] Transaction test_success_001 already in terminal state "completed". Skipping.
 ```
-*(Confirmed in Prisma Studio: the `updatedAt` timestamp remained unchanged after the second call, proving the idempotency lock prevented duplicate writes).*
+Both duplicate calls returned `{"success":true}` (HTTP 200) in ~1.0-1.05s, confirming Safaricom's retry mechanism is satisfied without any reprocessing occurring. The unchanged `updatedAt` timestamp across three total delivery attempts is direct proof the idempotency guard works correctly — a bug here would show up as a changed timestamp even if the response body looked identical.
 
 ### 3. Failure-Path Testing (ResultCode Simulation)
 
