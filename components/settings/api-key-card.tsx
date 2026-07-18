@@ -35,7 +35,7 @@ export function ApiKeyCard({ initialKey }: ApiKeyCardProps) {
       setIsCopied(true);
       toast.success("API Key copied to clipboard");
       setTimeout(() => setIsCopied(false), 2000);
-    } catch (err) {
+    } catch {
       toast.error("Failed to copy API key");
     }
   };
@@ -55,7 +55,7 @@ export function ApiKeyCard({ initialKey }: ApiKeyCardProps) {
       } else {
         toast.error(json.error || "Failed to generate new API key");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred");
     } finally {
       setIsGenerating(false);

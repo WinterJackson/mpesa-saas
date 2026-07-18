@@ -27,7 +27,6 @@ function createPrismaClient(): PrismaClient {
 // process.env, which previously caused DATABASE_URL to read as undefined.
 
 declare global {
-  // eslint-disable-next-line no-var
   var prismaGlobal: PrismaClient | undefined;
 }
 
@@ -41,7 +40,7 @@ function getPrismaClient(): PrismaClient {
 export const prisma = new Proxy({} as PrismaClient, {
   get(_target, prop: string | symbol) {
     const client = getPrismaClient();
-    return (client as any)[prop];
+    return (client as unknown as Record<string | symbol, unknown>)[prop];
   },
 });
 

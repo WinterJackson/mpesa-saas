@@ -42,6 +42,7 @@ NEXT_PUBLIC_APP_URL="https://your-ngrok-domain.ngrok-free.app"
 
 # API Key for the Demo Store
 DEMO_API_KEY="" # You will generate this automatically in step 4
+DEMO_SEED_TOKEN="" # Required in production to seed the demo store
 ```
 
 ### 3. Initialize the Database
@@ -55,7 +56,7 @@ Run the development server:
 ```bash
 npm run dev
 ```
-1. Open your browser to `http://localhost:3000/api/demo/seed`.
+1. Open your browser to `http://localhost:3000/api/demo/seed`. (In production, append `?token=<DEMO_SEED_TOKEN>` to the URL).
 2. This route will securely generate a mock merchant and output a `DEMO_API_KEY` on the screen.
 3. Copy that key into your `.env.local` file as `DEMO_API_KEY="your_copied_key_here"`.
 4. Restart your development server (`Ctrl+C` then `npm run dev`).

@@ -13,6 +13,7 @@ const envSchema = z.object({
   MPESA_CALLBACK_URL: z.string().url('MPESA_CALLBACK_URL must be a valid URL'),
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1, 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required'),
   CLERK_SECRET_KEY: z.string().min(1, 'CLERK_SECRET_KEY is required'),
+  DEMO_SEED_TOKEN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -37,6 +38,7 @@ function validateEnv(): Env {
     MPESA_CALLBACK_URL: process.env.MPESA_CALLBACK_URL,
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
+    DEMO_SEED_TOKEN: process.env.DEMO_SEED_TOKEN,
   });
 
   if (!result.success) {

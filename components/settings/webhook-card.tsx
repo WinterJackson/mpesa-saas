@@ -44,7 +44,7 @@ export function WebhookCard({ initialUrl }: WebhookCardProps) {
       } else {
         toast.error(json.error || "Failed to update webhook URL");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while saving");
     } finally {
       setIsSaving(false);
@@ -73,7 +73,7 @@ export function WebhookCard({ initialUrl }: WebhookCardProps) {
       } else {
         toast.error(json.error || "Failed to deliver test payload");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while testing the webhook");
     } finally {
       setIsTesting(false);

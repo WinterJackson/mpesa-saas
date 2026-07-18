@@ -45,7 +45,7 @@ export function EnvironmentCard({ initialEnvironment }: EnvironmentCardProps) {
       } else {
         toast.error(json.error || "Failed to update environment");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred");
     } finally {
       setIsChanging(false);
@@ -91,7 +91,7 @@ export function EnvironmentCard({ initialEnvironment }: EnvironmentCardProps) {
                     Switch to Live Environment
                   </DialogTitle>
                   <DialogDescription className="pt-3">
-                    Are you sure you want to go live? This means <strong>real money</strong> will be deducted from your customers' M-Pesa accounts. 
+                    Are you sure you want to go live? This means <strong>real money</strong> will be deducted from your customers&apos; M-Pesa accounts. 
                     Ensure you have completed all testing in the sandbox before proceeding.
                   </DialogDescription>
                 </DialogHeader>

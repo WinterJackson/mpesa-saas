@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
-import { cn } from "@/lib/utils";
+
 
 export function CodeSnippet() {
   const [copied, setCopied] = useState(false);
@@ -40,7 +40,7 @@ export function CodeSnippet() {
 
       {/* Code Body */}
       <div className="p-5 sm:p-6 text-[12px] sm:text-[14px] font-mono leading-relaxed text-zinc-300">
-        <pre className="whitespace-pre-wrap break-all"><code>{`\n`}<span className="text-[#ff7b72]">const</span> <span className="text-[#79c0ff]">API_URL</span> = {`\n`}  <span className="text-[#a5d6ff]">{`'https://mpesa-saas-two.vercel.app`}</span>{`\n`}  <span className="text-[#a5d6ff]">{`/api/v1/payments/initiate'`}</span>{`\n\n`}<span className="text-[#79c0ff]">fetch</span>(<span className="text-[#79c0ff]">API_URL</span>, {'{'}{`\n`}  <span className="text-[#7ee787]">method</span>: <span className="text-[#a5d6ff]">'POST'</span>,{`\n`}  <span className="text-[#7ee787]">headers</span>: {'{'}{`\n`}    <span className="text-[#a5d6ff]">'x-api-key'</span>: <span className="text-[#a5d6ff]">'YOUR_API_KEY'</span>{`\n`}  {'}'},  {`\n`}  <span className="text-[#7ee787]">body</span>: <span className="text-[#ffa657]">JSON</span>.<span className="text-[#d2a8ff]">stringify</span>({'{'}{`\n`}    <span className="text-[#7ee787]">phone</span>: <span className="text-[#a5d6ff]">'2547XXXXXXXX'</span>,{`\n`}    <span className="text-[#7ee787]">amount</span>: <span className="text-[#79c0ff]">500</span>{`\n`}  {'}'}){`\n`}{'}'})</code></pre>
+        <pre className="whitespace-pre-wrap break-all"><code>{`\n`}<span className="text-[#ff7b72]">const</span> <span className="text-[#79c0ff]">API_URL</span> = {`\n`}  <span className="text-[#a5d6ff]">{`'https://mpesa-saas-two.vercel.app`}</span>{`\n`}  <span className="text-[#a5d6ff]">{`/api/v1/payments/initiate'`}</span>{`\n\n`}<span className="text-[#79c0ff]">fetch</span>(<span className="text-[#79c0ff]">API_URL</span>, {'{'}{`\n`}  <span className="text-[#7ee787]">method</span>: <span className="text-[#a5d6ff]">&apos;POST&apos;</span>,{`\n`}  <span className="text-[#7ee787]">headers</span>: {'{'}{`\n`}    <span className="text-[#a5d6ff]">&apos;x-api-key&apos;</span>: <span className="text-[#a5d6ff]">&apos;YOUR_API_KEY&apos;</span>{`\n`}  {'}'},  {`\n`}  <span className="text-[#7ee787]">body</span>: <span className="text-[#ffa657]">JSON</span>.<span className="text-[#d2a8ff]">stringify</span>({'{'}{`\n`}    <span className="text-[#7ee787]">phone</span>: <span className="text-[#a5d6ff]">&apos;2547XXXXXXXX&apos;</span>,{`\n`}    <span className="text-[#7ee787]">amount</span>: <span className="text-[#79c0ff]">500</span>{`\n`}  {'}'}){`\n`}{'}'})</code></pre>
       </div>
     </div>
   );

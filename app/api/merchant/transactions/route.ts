@@ -53,12 +53,6 @@ export async function GET(request: Request) {
       }
     });
 
-    // Calculate summaries
-    const totalTransactions = transactions.length;
-    const completedTransactions = transactions.filter((t: TransactionRow) => t.status === 'completed');
-    const totalRevenue = completedTransactions.reduce((sum: number, t: TransactionRow) => sum + t.amount, 0);
-    const pendingCount = transactions.filter((t: TransactionRow) => t.status === 'pending').length;
-    
     // Total historical metrics (we could query these from DB for full history, 
     // but for the demo we'll use the fetched ones or run aggregate queries)
     const allStats = await prisma.transaction.groupBy({

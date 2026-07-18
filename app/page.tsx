@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Code2, Globe, LayoutDashboard, TestTube2, Workflow, CreditCard, Activity, GitBranch, BookOpen, Check } from "lucide-react";
+import { ArrowRight, Code2, LayoutDashboard, TestTube2, Workflow, CreditCard, Activity, GitBranch, BookOpen, Check } from "lucide-react";
 import { auth } from "@clerk/nextjs/server";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -194,7 +194,7 @@ export default async function Home() {
                   <CreditCard className="size-8 text-primary transition-transform duration-300 group-hover:scale-110" />
                 </div>
                 <h3 className="text-xl font-bold tracking-tight">Collect</h3>
-                <p className="text-muted-foreground">Trigger STK push prompts instantly to your customers' devices. They enter their PIN, you get paid.</p>
+                <p className="text-muted-foreground">Trigger STK push prompts instantly to your customers&apos; devices. They enter their PIN, you get paid.</p>
               </div>
 
               <div className="group relative z-10 flex flex-col items-center text-center gap-4 p-6 sm:p-8 border border-border bg-background rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-primary hover:shadow-floating-header">
@@ -217,7 +217,7 @@ export default async function Home() {
               <div className="flex-1 space-y-6 text-center lg:text-left">
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Developer-First by Design</h2>
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  Integrating M-Pesa shouldn't require a 50-page manual. Our unified API endpoint allows you to trigger payment requests instantly from any language or framework. 
+                  Integrating M-Pesa shouldn&apos;t require a 50-page manual. Our unified API endpoint allows you to trigger payment requests instantly from any language or framework. 
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
                   <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground bg-background px-4 py-2 rounded-lg border border-border">

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -160,7 +160,7 @@ export default function DemoStorePage() {
           {products.map((product) => {
             const Icon = product.icon;
             return (
-              <Card key={product.id} className="flex flex-col border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <Card key={product.id} className="group flex flex-col overflow-hidden border border-border bg-background rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-primary hover:shadow-floating-header">
                 <div className="h-48 bg-muted/30 flex items-center justify-center border-b border-border">
                   <Icon className="size-20 text-muted-foreground/50" />
                 </div>

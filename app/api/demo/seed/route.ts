@@ -1,8 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const token = req.nextUrl.searchParams.get('token');
+    
+    if (process.env.DEMO_SEED_TOKEN) {
+      if (token !== process.env.DEMO_SEED_TOKEN) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid or missing seed token' },
+          { status: 403 }
+        );
+      }
+    }
+
     // 1. Create or find the demo merchant
     const merchant = await prisma.merchant.upsert({
       where: { clerkUserId: 'demo_user_123' },
