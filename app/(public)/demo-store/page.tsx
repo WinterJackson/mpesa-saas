@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -149,6 +149,36 @@ export default function DemoStorePage() {
         This demonstrates the API integration a real Shopify or custom store would use.
       </div>
 
+      {/* How This Demo Works */}
+      <div className="container mx-auto px-4 md:px-8 pt-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="bg-muted/30 border-none shadow-none">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">1. Pick a Product</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Choose any item below to simulate a real checkout.</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-muted/30 border-none shadow-none">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">2. Enter Your Number</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Use any valid Kenyan number — this runs on Safaricom&apos;s sandbox, no real money moves.</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-muted/30 border-none shadow-none">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">3. Approve on Your Phone</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Watch the Developer Console below to see the exact API events firing in real time.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       {/* Main Content */}
       <main className="flex-1 container mx-auto px-4 md:px-8 py-12">
         <div className="mb-12 text-center max-w-2xl mx-auto">
@@ -281,6 +311,27 @@ export default function DemoStorePage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Footer */}
+      <footer className="w-full border-t border-border mt-auto">
+        <div className="container mx-auto px-4 md:px-8 py-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+            <div>
+              <div className="font-bold text-lg tracking-tight mb-1">PaySwift</div>
+              <p className="text-sm text-muted-foreground">M-Pesa payment collection for developers.</p>
+            </div>
+            <nav className="flex flex-wrap gap-4 md:gap-6 text-sm text-muted-foreground">
+              <Link href="https://github.com/WinterJackson/mpesa-saas#readme" className="hover:text-foreground transition-colors" target="_blank" rel="noopener noreferrer">Documentation</Link>
+              <Link href="https://github.com/WinterJackson/mpesa-saas#api-reference" className="hover:text-foreground transition-colors" target="_blank" rel="noopener noreferrer">API Reference</Link>
+              <Link href="https://github.com/WinterJackson/mpesa-saas" className="hover:text-foreground transition-colors" target="_blank" rel="noopener noreferrer">GitHub</Link>
+              <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
+            </nav>
+          </div>
+          <div className="text-xs text-muted-foreground/60 text-center md:text-left">
+            Built with Next.js, Prisma, and Neon.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
