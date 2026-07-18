@@ -13,8 +13,12 @@ model Merchant {
   id           String        @id @default(cuid())
   clerkUserId  String        @unique
   businessName String
-  webhookUrl   String?
-  environment  String        @default("sandbox")
+  webhookUrl              String?
+  webhookSecret           String?       @unique
+  shopifyShopDomain       String?
+  shopifyAdminAccessToken String?
+  shopifyWebhookSecret    String?
+  environment             String        @default("sandbox")
   createdAt    DateTime      @default(now())
   apiKeys      ApiKey[]
   transactions Transaction[]
@@ -37,6 +41,8 @@ model Transaction {
   phone             String
   orderReference    String?
   status            String   @default("pending")
+  environment       String   @default("sandbox")
+  source            String   @default("api")
   checkoutRequestId String?  @unique
   mpesaReceipt      String?
   resultCode        Int?
@@ -44,8 +50,24 @@ model Transaction {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  webhookDeliveries WebhookDelivery[]
+
   @@index([merchantId, createdAt(sort: Desc)])
   @@index([merchantId, status])
+}
+
+model WebhookDelivery {
+  id            String   @id @default(cuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  url           String
+  payload       Json
+  statusCode    Int?
+  success       Boolean  @default(false)
+  attempt       Int      @default(1)
+  createdAt     DateTime @default(now())
+
+  @@index([transactionId])
 }
 
 model DarajaToken {

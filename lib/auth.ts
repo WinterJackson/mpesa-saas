@@ -10,6 +10,10 @@ interface Merchant {
   clerkUserId: string;
   businessName: string;
   webhookUrl: string | null;
+  webhookSecret: string | null;
+  shopifyShopDomain: string | null;
+  shopifyAdminAccessToken: string | null;
+  shopifyWebhookSecret: string | null;
   environment: string;
   createdAt: Date;
 }
