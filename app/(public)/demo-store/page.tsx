@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ShoppingBag, Smartphone, Headphones, Cable, CheckCircle2, XCircle, Loader2, Info, Lock } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import Image from "next/image";
+import { DeveloperConsole } from "@/components/demo/developer-console";
 
 type Product = {
   id: string;
@@ -122,7 +123,7 @@ export default function DemoStorePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-16">
       {/* Floating Header Wrapper */}
       <div className="sticky top-0 z-50 w-full pt-floating-header px-floating-header pb-4 bg-background/95 backdrop-blur-sm">
         <header className="w-full border border-primary rounded-floating-header bg-floating-header-bg backdrop-blur-md shadow-floating-header">
@@ -332,6 +333,8 @@ export default function DemoStorePage() {
           </div>
         </div>
       </footer>
+
+      <DeveloperConsole logs={[]} isActive={false} />
     </div>
   );
 }
