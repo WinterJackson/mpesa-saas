@@ -4,6 +4,7 @@ import { UserButton } from "@clerk/nextjs";
 import { prisma } from "@/lib/db";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BookOpen } from "lucide-react";
 
 export default async function DashboardLayout({
   children,
@@ -44,7 +45,15 @@ export default async function DashboardLayout({
               </div>
               <div className="flex items-center gap-4 ml-auto">
                 <ThemeToggle />
-                <UserButton />
+                <UserButton>
+                  <UserButton.MenuItems>
+                    <UserButton.Link
+                      label="Documentation"
+                      labelIcon={<BookOpen className="size-4" />}
+                      href="https://github.com/WinterJackson/mpesa-saas#readme"
+                    />
+                  </UserButton.MenuItems>
+                </UserButton>
               </div>
             </div>
           </header>
