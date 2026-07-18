@@ -1,25 +1,12 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
 import { PrismaNeon } from '@prisma/adapter-neon';
 import { PrismaClient } from '@prisma/client';
 
-// ─── Prisma 7 + NeonDB Serverless Adapter ────────────────────────────────────
-// Prisma 7 removed the built-in Rust query engine. All database connections
-// now go through explicit driver adapters. For NeonDB on Vercel serverless,
-// we use @prisma/adapter-neon which uses Neon's HTTP-based serverless driver
-// (no persistent TCP connections — perfect for serverless cold starts).
-//
-// In non-edge environments (Node.js), we need the 'ws' WebSocket library.
-// We only import it in Node environments to avoid breaking edge runtimes.
-
-if (typeof globalThis.WebSocket === 'undefined') {
-  try {
-    // Dynamic import to avoid bundling ws in edge environments
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    neonConfig.webSocketConstructor = require('ws');
-  } catch {
-    // If ws is not available (edge runtime), Neon falls back to HTTP fetch
-  }
-}
+// ─── Prisma 7 + NeonDB Serverless Adapter (current, simplified API) ─────────
+// As of the current @prisma/adapter-neon release, PrismaNeon accepts a plain
+// { connectionString } object directly. Manual Pool construction, the `ws`
+// package, and neonConfig.webSocketConstructor setup are NO LONGER NEEDED —
+// @prisma/adapter-neon bundles everything required internally. Keeping the
+// old manual setup actively causes hanging/broken WebSocket connections.
 
 function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
@@ -28,18 +15,16 @@ function createPrismaClient(): PrismaClient {
     throw new Error('DATABASE_URL environment variable is not set');
   }
 
-  const pool = new Pool({ connectionString });
-  // @ts-expect-error type mismatch between @neondatabase/serverless versions
-  const adapter = new PrismaNeon(pool);
+  const adapter = new PrismaNeon({ connectionString });
 
   return new PrismaClient({ adapter });
 }
 
-// ─── Lazy Singleton Pattern ──────────────────────────────────────────────────
-// The Prisma client is created lazily on first use, NOT at module import time.
-// This ensures process.env.DATABASE_URL is available (Next.js loads .env.local
-// after module initialization in some cases, especially during Turbopack dev).
-// In production on Vercel, this is safe because env vars are always set.
+// ─── Lazy Singleton Pattern ───────────────────────────────────────────────
+// Prisma client is created on first actual use (via the Proxy below), not at
+// module import time. This avoids a race condition where this module could
+// otherwise be evaluated before Next.js has finished loading .env.local into
+// process.env, which previously caused DATABASE_URL to read as undefined.
 
 declare global {
   // eslint-disable-next-line no-var
@@ -47,32 +32,24 @@ declare global {
 }
 
 function getPrismaClient(): PrismaClient {
-  if (globalThis.prismaGlobal) return globalThis.prismaGlobal;
-
-  const client = createPrismaClient();
-
-  if (process.env.NODE_ENV !== 'production') {
-    globalThis.prismaGlobal = client;
+  if (!globalThis.prismaGlobal) {
+    globalThis.prismaGlobal = createPrismaClient();
   }
-
-  return client;
+  return globalThis.prismaGlobal;
 }
 
 export const prisma = new Proxy({} as PrismaClient, {
   get(_target, prop: string | symbol) {
     const client = getPrismaClient();
-    const value = (client as Record<string | symbol, unknown>)[prop];
-    if (typeof value === 'function') {
-      return value.bind(client);
-    }
-    return value;
+    return (client as any)[prop];
   },
 });
 
-// ─── Transaction Client Type ─────────────────────────────────────────────────
-// Prisma 7 with the Neon adapter does not export `Prisma.TransactionClient`
-// from `@prisma/client`. We derive the type from our own PrismaClient instance
-// to maintain full type safety inside `$transaction` callbacks.
+// ─── Transaction Client Type ─────────────────────────────────────────────
+// Prisma 7 with the Neon adapter does not export Prisma.TransactionClient
+// from @prisma/client. Derived from PrismaClient for use inside
+// $transaction callbacks (used in app/api/merchant/setup/route.ts and
+// app/api/merchant/api-keys/route.ts — do not remove this export).
 export type TransactionClient = Omit<
   PrismaClient,
   '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
