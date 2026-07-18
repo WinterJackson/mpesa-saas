@@ -35,20 +35,39 @@ function createPrismaClient(): PrismaClient {
   return new PrismaClient({ adapter });
 }
 
-// ─── Singleton Pattern ───────────────────────────────────────────────────────
-// Prevents connection pool exhaustion during Next.js hot reloads in development.
-// In production, globalThis is fresh per cold start, so only one client exists.
+// ─── Lazy Singleton Pattern ──────────────────────────────────────────────────
+// The Prisma client is created lazily on first use, NOT at module import time.
+// This ensures process.env.DATABASE_URL is available (Next.js loads .env.local
+// after module initialization in some cases, especially during Turbopack dev).
+// In production on Vercel, this is safe because env vars are always set.
 
 declare global {
   // eslint-disable-next-line no-var
   var prismaGlobal: PrismaClient | undefined;
 }
 
-export const prisma = globalThis.prismaGlobal ?? createPrismaClient();
+function getPrismaClient(): PrismaClient {
+  if (globalThis.prismaGlobal) return globalThis.prismaGlobal;
 
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.prismaGlobal = prisma;
+  const client = createPrismaClient();
+
+  if (process.env.NODE_ENV !== 'production') {
+    globalThis.prismaGlobal = client;
+  }
+
+  return client;
 }
+
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop: string | symbol) {
+    const client = getPrismaClient();
+    const value = (client as Record<string | symbol, unknown>)[prop];
+    if (typeof value === 'function') {
+      return value.bind(client);
+    }
+    return value;
+  },
+});
 
 // ─── Transaction Client Type ─────────────────────────────────────────────────
 // Prisma 7 with the Neon adapter does not export `Prisma.TransactionClient`
