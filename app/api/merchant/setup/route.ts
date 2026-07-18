@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { prisma, TransactionClient } from '@/lib/db';
+import crypto from 'node:crypto';
 
 /**
  * POST /api/merchant/setup
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
           clerkUserId: userId,
           businessName: businessName.trim(),
           environment: 'sandbox',
+          webhookSecret: `whsec_${crypto.randomBytes(24).toString('hex')}`,
         },
       });
 

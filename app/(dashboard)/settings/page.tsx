@@ -44,7 +44,7 @@ export default async function SettingsPage() {
 
       <div className="grid gap-6">
         <ApiKeyCard initialKey={activeKey} />
-        <WebhookCard initialUrl={merchant.webhookUrl} />
+        <WebhookCard initialUrl={merchant.webhookUrl} initialSecret={merchant.webhookSecret} />
         <EnvironmentCard initialEnvironment={merchant.environment as "sandbox" | "live"} />
       </div>
     </div>

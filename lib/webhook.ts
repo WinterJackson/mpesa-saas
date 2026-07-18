@@ -22,6 +22,7 @@ export async function deliverWebhook(
   url: string,
   payload: Record<string, unknown>,
   secretKey?: string,
+  extraHeaders?: Record<string, string>,
 ): Promise<{ delivered: boolean; statusCode?: number }> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5_000);
@@ -32,6 +33,7 @@ export async function deliverWebhook(
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'User-Agent': 'PaySwift-Webhook/1.0',
+      ...(extraHeaders || {}),
     };
 
     // Generate HMAC-SHA256 signature so merchants can verify the payload

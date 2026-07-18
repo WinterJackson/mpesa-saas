@@ -144,7 +144,7 @@ export async function POST(request: Request) {
       // Guarantees execution completes in Vercel Serverless without blocking the 200 OK response
       after(async () => {
         try {
-          const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload);
+          const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, merchant.webhookSecret ?? undefined);
           if (!result.delivered) {
             console.warn(`[Callback Webhook] Delivery failed to ${merchant.webhookUrl} (HTTP ${result.statusCode})`);
           }

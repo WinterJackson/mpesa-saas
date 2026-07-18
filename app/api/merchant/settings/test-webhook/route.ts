@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import crypto from 'crypto';
+import { deliverWebhook } from '@/lib/webhook';
 
 export async function POST() {
   try {
@@ -62,26 +63,22 @@ export async function POST() {
       }
     };
 
-    // Calculate signature if we want to simulate the real webhook (x-payswift-signature)
-    // We would need the merchant's active API key or Webhook Secret.
-    // For now, we'll just send the payload.
-
-    const response = await fetch(merchant.webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'PaySwift-Webhook-Tester/1.0',
+    // Use deliverWebhook to ensure signatures and timeouts are consistent
+    const result = await deliverWebhook(
+      merchant.webhookUrl,
+      payloadData,
+      merchant.webhookSecret ?? undefined,
+      {
         'x-payswift-event': 'payment.completed',
         'x-payswift-test': 'true'
-      },
-      body: JSON.stringify(payloadData),
-    });
+      }
+    );
 
     return NextResponse.json({ 
       success: true, 
       data: { 
-        statusCode: response.status,
-        delivered: response.ok
+        statusCode: result.statusCode,
+        delivered: result.delivered
       } 
     }, { status: 200 });
 

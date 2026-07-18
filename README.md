@@ -356,6 +356,44 @@ When a payment succeeds or fails, PaySwift triggers an internal webhook to updat
 }
 ```
 
+### Verifying Webhook Authenticity
+
+PaySwift secures all outbound webhooks using HMAC-SHA256 signatures to ensure payloads are not tampered with and originate from PaySwift.
+
+1. **Obtain your Signing Secret:** Navigate to **Settings > Webhook Configuration** in the Dashboard to view your `whsec_...` secret.
+2. **Read the Signature:** Every webhook request includes an `x-payswift-signature` header.
+3. **Verify the Payload:** Compute the HMAC-SHA256 hash of the raw request body using your signing secret, and compare it against the header.
+
+**Node.js / TypeScript Example:**
+```typescript
+import crypto from 'crypto';
+
+const signatureHeader = req.headers['x-payswift-signature'];
+// Must be the raw JSON string exactly as received
+const rawBody = await req.text(); 
+const signingSecret = process.env.PAYSWIFT_WEBHOOK_SECRET;
+
+const expectedSignature = crypto
+  .createHmac('sha256', signingSecret)
+  .update(rawBody)
+  .digest('hex');
+
+if (crypto.timingSafeEqual(Buffer.from(signatureHeader), Buffer.from(expectedSignature))) {
+  // Signature is valid, process payload
+} else {
+  // Invalid signature, reject request
+}
+```
+
+---
+
+## 🛠️ Maintenance Scripts
+
+The repository includes utility scripts for operational maintenance:
+
+- `npm run db:seed` (via `scripts/seed-transactions.ts`): Safely seeds mock transactions into a local development database.
+- `npx tsx scripts/backfill-webhook-secrets.ts`: Operational script to backfill `webhookSecret` fields for existing merchants who registered prior to HMAC signature enforcement.
+
 ---
 
 ## ⚠️ Known Limitations
