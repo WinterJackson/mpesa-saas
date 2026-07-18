@@ -7,20 +7,22 @@ import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/comp
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShoppingBag, Smartphone, Headphones, Cable, CheckCircle2, XCircle, Loader2, Info } from "lucide-react";
+import { ShoppingBag, Smartphone, Headphones, Cable, CheckCircle2, XCircle, Loader2, Info, Lock } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import Image from "next/image";
 
 type Product = {
   id: string;
   name: string;
   price: number;
   icon: React.ElementType;
+  image: string;
 };
 
 const products: Product[] = [
-  { id: "p_1", name: "Wireless Earbuds", price: 2500, icon: Headphones },
-  { id: "p_2", name: "Phone Case", price: 800, icon: Smartphone },
-  { id: "p_3", name: "USB Cable", price: 350, icon: Cable },
+  { id: "p_1", name: "Wireless Earbuds", price: 2500, icon: Headphones, image: "/images/demo-products/earbuds.webp" },
+  { id: "p_2", name: "Phone Case", price: 800, icon: Smartphone, image: "/images/demo-products/phone-case.webp" },
+  { id: "p_3", name: "USB Cable", price: 350, icon: Cable, image: "/images/demo-products/usb-cable.webp" },
 ];
 
 export default function DemoStorePage() {
@@ -158,11 +160,16 @@ export default function DemoStorePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {products.map((product) => {
-            const Icon = product.icon;
             return (
               <Card key={product.id} className="group flex flex-col overflow-hidden border border-border bg-background rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-primary hover:shadow-floating-header">
-                <div className="h-48 bg-muted/30 flex items-center justify-center border-b border-border">
-                  <Icon className="size-20 text-muted-foreground/50" />
+                <div className="h-48 bg-muted/10 relative flex items-center justify-center border-b border-border overflow-hidden">
+                  <Image 
+                    src={product.image} 
+                    alt={product.name}
+                    width={400}
+                    height={400}
+                    className="object-cover w-full h-full mix-blend-multiply dark:mix-blend-normal"
+                  />
                 </div>
                 <CardHeader>
                   <CardTitle>{product.name}</CardTitle>
@@ -226,6 +233,10 @@ export default function DemoStorePage() {
                   )}
                 </Button>
               </form>
+              <div className="flex items-center justify-center gap-1.5 pt-3 border-t border-border mt-3">
+                <Lock className="size-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Secured by PaySwift</span>
+              </div>
             </>
           ) : paymentState === "polling" ? (
             <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
