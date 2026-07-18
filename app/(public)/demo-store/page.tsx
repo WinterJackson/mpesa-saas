@@ -187,7 +187,7 @@ export default function DemoStorePage() {
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-16">
       {/* Floating Header Wrapper */}
       <div className="sticky top-0 z-50 w-full pt-floating-header px-floating-header pb-4 bg-background/95 backdrop-blur-sm">
-        <header className="w-full border border-primary rounded-floating-header bg-floating-header-bg backdrop-blur-md shadow-floating-header">
+        <header className="w-full border border-foreground rounded-floating-header bg-floating-header-bg backdrop-blur-md shadow-floating-header">
           <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
             <div className="flex items-center gap-2">
               <ShoppingBag className="size-6 text-primary" />
@@ -206,7 +206,7 @@ export default function DemoStorePage() {
       </div>
 
       {/* Banner */}
-      <div className="bg-primary/10 border-b border-primary/20 text-primary px-4 py-3 text-center text-sm font-medium flex items-center justify-center gap-2">
+      <div className="bg-primary/10 border-b border-foreground/20 text-primary px-4 py-3 text-center text-sm font-medium flex items-center justify-center gap-2">
         <Info className="size-4" />
         This demonstrates the API integration a real Shopify or custom store would use.
       </div>
@@ -253,7 +253,7 @@ export default function DemoStorePage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {products.map((product) => {
             return (
-              <Card key={product.id} className="group flex flex-col overflow-hidden border border-border bg-background rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-primary hover:shadow-floating-header">
+              <Card key={product.id} className="group flex flex-col overflow-hidden border border-border bg-background rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-foreground hover:shadow-floating-header">
                 <div className="h-48 bg-muted/10 relative flex items-center justify-center border-b border-border overflow-hidden">
                   <Image 
                     src={product.image} 

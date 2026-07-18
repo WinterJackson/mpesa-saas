@@ -147,7 +147,7 @@
   /* Floating Header Constraints */
   --spacing-floating-header: 10px;
   --radius-floating-header: var(--radius);
-  --shadow-floating-header: 0 10px 40px -10px oklch(from var(--primary) l c h / 40%);
+  --shadow-floating-header: 0 10px 40px -10px oklch(from var(--foreground) l c h / 15%);
   --color-floating-header-bg: var(--bg-floating-header);
 
   /* Hero Background Integration */

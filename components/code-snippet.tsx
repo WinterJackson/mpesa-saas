@@ -20,7 +20,7 @@ export function CodeSnippet() {
   };
 
   return (
-    <div className="rounded-lg overflow-hidden border border-zinc-800 shadow-2xl bg-[#0d1117] w-full mx-auto transition-all duration-300 hover:shadow-floating-header hover:border-primary/50">
+    <div className="rounded-lg overflow-hidden border border-zinc-800 shadow-2xl bg-[#0d1117] w-full mx-auto transition-all duration-300 hover:shadow-floating-header hover:border-foreground/50">
       {/* Mac-style Window Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-[#161b22] border-b border-zinc-800/50">
         <div className="flex items-center gap-2">

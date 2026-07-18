@@ -14,7 +14,7 @@ export default async function Home() {
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground">
       {/* Floating Header Wrapper */}
       <div className="fixed top-0 z-50 w-full pt-floating-header px-floating-header">
-        <header className="w-full border border-primary rounded-floating-header bg-floating-header-bg backdrop-blur-md shadow-floating-header">
+        <header className="w-full border border-foreground rounded-floating-header bg-floating-header-bg backdrop-blur-md shadow-floating-header">
           <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
           <Logo />
           <nav className="flex items-center gap-4">
@@ -69,7 +69,7 @@ export default async function Home() {
                 </Link>
               )}
               <Link href="/demo-store" className="w-full sm:w-auto">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto px-8 py-6 text-lg h-14 bg-background border-primary shadow-floating-header">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto px-8 py-6 text-lg h-14 bg-background border-foreground shadow-floating-header">
                   Try Demo
                 </Button>
               </Link>
@@ -109,8 +109,8 @@ export default async function Home() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {/* Feature 1 */}
-              <div className="group flex flex-col items-start gap-4 p-6 border border-border bg-background rounded-lg transition-all duration-300 hover:-translate-y-2 hover:border-primary hover:shadow-floating-header">
-                <div className="p-3 border border-border bg-muted/50 rounded-lg transition-colors duration-300 group-hover:bg-primary/10 group-hover:border-primary/20">
+              <div className="group flex flex-col items-start gap-4 p-6 border border-border bg-background rounded-lg transition-all duration-300 hover:-translate-y-2 hover:border-foreground hover:shadow-floating-header">
+                <div className="p-3 border border-border bg-muted/50 rounded-lg transition-colors duration-300 group-hover:bg-primary/10 group-hover:border-foreground/20">
                   <Code2 className="size-6 text-primary transition-transform duration-300 group-hover:scale-110" />
                 </div>
                 <h3 className="text-xl font-bold tracking-tight">API Integration</h3>
@@ -119,8 +119,8 @@ export default async function Home() {
                 </p>
               </div>
               {/* Feature 2 */}
-              <div className="group flex flex-col items-start gap-4 p-6 border border-border bg-background rounded-lg transition-all duration-300 hover:-translate-y-2 hover:border-primary hover:shadow-floating-header">
-                <div className="p-3 border border-border bg-muted/50 rounded-lg transition-colors duration-300 group-hover:bg-primary/10 group-hover:border-primary/20">
+              <div className="group flex flex-col items-start gap-4 p-6 border border-border bg-background rounded-lg transition-all duration-300 hover:-translate-y-2 hover:border-foreground hover:shadow-floating-header">
+                <div className="p-3 border border-border bg-muted/50 rounded-lg transition-colors duration-300 group-hover:bg-primary/10 group-hover:border-foreground/20">
                   <Workflow className="size-6 text-primary transition-transform duration-300 group-hover:scale-110" />
                 </div>
                 <h3 className="text-xl font-bold tracking-tight">Real-time Webhooks</h3>
@@ -129,8 +129,8 @@ export default async function Home() {
                 </p>
               </div>
               {/* Feature 3 */}
-              <div className="group flex flex-col items-start gap-4 p-6 border border-border bg-background rounded-lg transition-all duration-300 hover:-translate-y-2 hover:border-primary hover:shadow-floating-header">
-                <div className="p-3 border border-border bg-muted/50 rounded-lg transition-colors duration-300 group-hover:bg-primary/10 group-hover:border-primary/20">
+              <div className="group flex flex-col items-start gap-4 p-6 border border-border bg-background rounded-lg transition-all duration-300 hover:-translate-y-2 hover:border-foreground hover:shadow-floating-header">
+                <div className="p-3 border border-border bg-muted/50 rounded-lg transition-colors duration-300 group-hover:bg-primary/10 group-hover:border-foreground/20">
                   <LayoutDashboard className="size-6 text-primary transition-transform duration-300 group-hover:scale-110" />
                 </div>
                 <h3 className="text-xl font-bold tracking-tight">Merchant Dashboard</h3>
@@ -139,8 +139,8 @@ export default async function Home() {
                 </p>
               </div>
               {/* Feature 4 */}
-              <div className="group flex flex-col items-start gap-4 p-6 border border-border bg-background rounded-lg transition-all duration-300 hover:-translate-y-2 hover:border-primary hover:shadow-floating-header">
-                <div className="p-3 border border-border bg-muted/50 rounded-lg transition-colors duration-300 group-hover:bg-primary/10 group-hover:border-primary/20">
+              <div className="group flex flex-col items-start gap-4 p-6 border border-border bg-background rounded-lg transition-all duration-300 hover:-translate-y-2 hover:border-foreground hover:shadow-floating-header">
+                <div className="p-3 border border-border bg-muted/50 rounded-lg transition-colors duration-300 group-hover:bg-primary/10 group-hover:border-foreground/20">
                   <TestTube2 className="size-6 text-primary transition-transform duration-300 group-hover:scale-110" />
                 </div>
                 <h3 className="text-xl font-bold tracking-tight">Test & Live Modes</h3>
@@ -161,33 +161,33 @@ export default async function Home() {
               <p className="mt-4 text-lg text-muted-foreground">Go from zero to collecting payments in three steps.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 relative">
-              <div className="group relative z-10 flex flex-col items-center text-center gap-4 p-6 sm:p-8 border border-border bg-background rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-primary hover:shadow-floating-header">
-                <div className="w-16 h-16 rounded-full border border-border bg-background flex items-center justify-center text-2xl font-bold mb-2 shadow-sm transition-all duration-300 group-hover:border-primary group-hover:text-primary group-hover:scale-110">
+              <div className="group relative z-10 flex flex-col items-center text-center gap-4 p-6 sm:p-8 border border-border bg-background rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-foreground hover:shadow-floating-header">
+                <div className="w-16 h-16 rounded-full border border-border bg-background flex items-center justify-center text-2xl font-bold mb-2 shadow-sm transition-all duration-300 group-hover:border-foreground group-hover:text-primary group-hover:scale-110">
                   1
                 </div>
-                <div className="p-4 border border-border bg-muted/30 rounded-full transition-colors duration-300 group-hover:bg-primary/10 group-hover:border-primary/20">
+                <div className="p-4 border border-border bg-muted/30 rounded-full transition-colors duration-300 group-hover:bg-primary/10 group-hover:border-foreground/20">
                   <Code2 className="size-8 text-primary transition-transform duration-300 group-hover:scale-110" />
                 </div>
                 <h3 className="text-xl font-bold tracking-tight">Integrate</h3>
                 <p className="text-muted-foreground">Add our robust REST API to your codebase and securely authenticate with your merchant keys.</p>
               </div>
 
-              <div className="group relative z-10 flex flex-col items-center text-center gap-4 p-6 sm:p-8 border border-border bg-background rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-primary hover:shadow-floating-header">
-                <div className="w-16 h-16 rounded-full border border-border bg-background flex items-center justify-center text-2xl font-bold mb-2 shadow-sm transition-all duration-300 group-hover:border-primary group-hover:text-primary group-hover:scale-110">
+              <div className="group relative z-10 flex flex-col items-center text-center gap-4 p-6 sm:p-8 border border-border bg-background rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-foreground hover:shadow-floating-header">
+                <div className="w-16 h-16 rounded-full border border-border bg-background flex items-center justify-center text-2xl font-bold mb-2 shadow-sm transition-all duration-300 group-hover:border-foreground group-hover:text-primary group-hover:scale-110">
                   2
                 </div>
-                <div className="p-4 border border-border bg-muted/30 rounded-full transition-colors duration-300 group-hover:bg-primary/10 group-hover:border-primary/20">
+                <div className="p-4 border border-border bg-muted/30 rounded-full transition-colors duration-300 group-hover:bg-primary/10 group-hover:border-foreground/20">
                   <CreditCard className="size-8 text-primary transition-transform duration-300 group-hover:scale-110" />
                 </div>
                 <h3 className="text-xl font-bold tracking-tight">Collect</h3>
                 <p className="text-muted-foreground">Trigger STK push prompts instantly to your customers&apos; devices. They enter their PIN, you get paid.</p>
               </div>
 
-              <div className="group relative z-10 flex flex-col items-center text-center gap-4 p-6 sm:p-8 border border-border bg-background rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-primary hover:shadow-floating-header">
-                <div className="w-16 h-16 rounded-full border border-border bg-background flex items-center justify-center text-2xl font-bold mb-2 shadow-sm transition-all duration-300 group-hover:border-primary group-hover:text-primary group-hover:scale-110">
+              <div className="group relative z-10 flex flex-col items-center text-center gap-4 p-6 sm:p-8 border border-border bg-background rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-foreground hover:shadow-floating-header">
+                <div className="w-16 h-16 rounded-full border border-border bg-background flex items-center justify-center text-2xl font-bold mb-2 shadow-sm transition-all duration-300 group-hover:border-foreground group-hover:text-primary group-hover:scale-110">
                   3
                 </div>
-                <div className="p-4 border border-border bg-muted/30 rounded-full transition-colors duration-300 group-hover:bg-primary/10 group-hover:border-primary/20">
+                <div className="p-4 border border-border bg-muted/30 rounded-full transition-colors duration-300 group-hover:bg-primary/10 group-hover:border-foreground/20">
                   <Activity className="size-8 text-primary transition-transform duration-300 group-hover:scale-110" />
                 </div>
                 <h3 className="text-xl font-bold tracking-tight">Monitor</h3>
