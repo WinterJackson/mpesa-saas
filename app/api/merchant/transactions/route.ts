@@ -9,6 +9,7 @@ interface TransactionRow {
   status: string;
   orderReference: string | null;
   environment: string;
+  source: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +51,7 @@ export async function GET(request: Request) {
         status: true,
         orderReference: true,
         environment: true,
+        source: true,
         createdAt: true,
         updatedAt: true,
       }

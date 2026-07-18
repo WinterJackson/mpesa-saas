@@ -42,6 +42,7 @@ export default async function DashboardPage() {
       status: true,
       orderReference: true,
       environment: true,
+      source: true,
       createdAt: true,
       updatedAt: true,
     },

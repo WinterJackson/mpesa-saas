@@ -21,7 +21,13 @@ export async function PATCH(request: Request) {
 
     const body = await request.json();
 
-    const updateData: { environment?: string; webhookUrl?: string | null } = {};
+    const updateData: { 
+      environment?: string; 
+      webhookUrl?: string | null;
+      shopifyShopDomain?: string | null;
+      shopifyAdminAccessToken?: string | null;
+      shopifyWebhookSecret?: string | null;
+    } = {};
 
     if (body.environment !== undefined) {
       if (body.environment !== 'sandbox' && body.environment !== 'live') {
@@ -47,6 +53,19 @@ export async function PATCH(request: Request) {
       updateData.webhookUrl = body.webhookUrl;
     }
 
+    if (body.shopifyShopDomain !== undefined) {
+      if (body.shopifyShopDomain && !body.shopifyShopDomain.endsWith('.myshopify.com')) {
+        return NextResponse.json({ success: false, error: 'Shopify Store Domain must end in .myshopify.com' }, { status: 400 });
+      }
+      updateData.shopifyShopDomain = body.shopifyShopDomain;
+    }
+    if (body.shopifyAdminAccessToken !== undefined) {
+      updateData.shopifyAdminAccessToken = body.shopifyAdminAccessToken;
+    }
+    if (body.shopifyWebhookSecret !== undefined) {
+      updateData.shopifyWebhookSecret = body.shopifyWebhookSecret;
+    }
+
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });
     }
@@ -60,7 +79,10 @@ export async function PATCH(request: Request) {
       success: true, 
       data: {
         environment: updatedMerchant.environment,
-        webhookUrl: updatedMerchant.webhookUrl
+        webhookUrl: updatedMerchant.webhookUrl,
+        shopifyShopDomain: updatedMerchant.shopifyShopDomain,
+        shopifyAdminAccessToken: updatedMerchant.shopifyAdminAccessToken,
+        shopifyWebhookSecret: updatedMerchant.shopifyWebhookSecret
       }
     }, { status: 200 });
 

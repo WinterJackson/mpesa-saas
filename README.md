@@ -387,6 +387,40 @@ if (crypto.timingSafeEqual(Buffer.from(signatureHeader), Buffer.from(expectedSig
 
 ---
 
+## 🛍️ Shopify Integration Guide
+
+1. In Shopify Admin, go to Settings → Apps and sales channels → Develop apps → Create an app.
+2. Under Configuration → Admin API scopes, grant `read_orders` and `write_orders`.
+3. Install the app to the store and copy the generated Admin API access token.
+4. Under the app's API credentials tab, copy the webhook signing secret.
+5. In PaySwift's dashboard → Settings → Shopify Integration, paste the store domain, access token, and webhook secret, then click Save, then Test Connection to confirm.
+6. Copy the "Webhook URL to register in Shopify" value from that same card.
+7. In Shopify Admin → Settings → Notifications → Webhooks (or via the custom app's Webhooks subscription tab, depending on Shopify's current UI), add a new webhook: Event = `Order creation`, Format = JSON, URL = the copied URL from step 6, API version = `2026-07`.
+8. Place a test order in the Shopify store with a valid Kenyan phone number on the order (customer phone or shipping address phone) and a KES total. Confirm an M-Pesa STK prompt is sent to that number, and that once paid, the order in Shopify gets a note "Paid via M-Pesa — Receipt: XXXX" and an `mpesa-paid` tag.
+9. Note explicitly: this integration does NOT create a formal Shopify "payment gateway" entry in checkout — it triggers payment AFTER an order is created via any existing checkout/payment method Shopify already supports (e.g. "Cash on Delivery" or a manual payment method), and then confirms M-Pesa payment on top. This is intentional: building a true Shopify Payments App requires Shopify's formal review process, which is out of scope for this MVP.
+
+### Simulating a Shopify Webhook Locally
+
+To verify your Shopify webhook receiver locally without a real Shopify store, you can simulate a payload and its HMAC signature using `curl` and `openssl`.
+
+1. Generate a valid HMAC signature for your test payload:
+```bash
+# Replace YOUR_WEBHOOK_SECRET with your configured test secret
+echo -n '{"id": 999999, "name": "#1001", "currency": "KES", "total_price": "100.00", "phone": "254700000000"}' | openssl dgst -sha256 -hmac "YOUR_WEBHOOK_SECRET" -binary | base64
+```
+
+2. Send the simulated webhook with the generated signature:
+```bash
+curl -X POST http://localhost:3000/api/integrations/shopify/webhook \
+  -H "Content-Type: application/json" \
+  -H "X-Shopify-Topic: orders/create" \
+  -H "X-Shopify-Shop-Domain: your-store.myshopify.com" \
+  -H "X-Shopify-Hmac-Sha256: THE_BASE64_SIGNATURE_FROM_ABOVE" \
+  -d '{"id": 999999, "name": "#1001", "currency": "KES", "total_price": "100.00", "phone": "254700000000"}'
+```
+
+---
+
 ## 🛠️ Maintenance Scripts
 
 The repository includes utility scripts for operational maintenance:

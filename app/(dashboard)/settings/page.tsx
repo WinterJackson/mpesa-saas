@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { ApiKeyCard } from "@/components/settings/api-key-card";
 import { WebhookCard } from "@/components/settings/webhook-card";
 import { EnvironmentCard } from "@/components/settings/environment-card";
+import { ShopifyCard } from "@/components/settings/shopify-card";
 
 export const metadata = {
   title: "Settings - PaySwift",
@@ -46,6 +47,11 @@ export default async function SettingsPage() {
         <ApiKeyCard initialKey={activeKey} />
         <WebhookCard initialUrl={merchant.webhookUrl} initialSecret={merchant.webhookSecret} />
         <EnvironmentCard initialEnvironment={merchant.environment as "sandbox" | "live"} />
+        <ShopifyCard 
+          initialDomain={merchant.shopifyShopDomain} 
+          initialToken={merchant.shopifyAdminAccessToken} 
+          initialSecret={merchant.shopifyWebhookSecret} 
+        />
       </div>
     </div>
   );

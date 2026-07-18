@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/dashboard/status-badge";
-import { RefreshCw, ShoppingCart } from "lucide-react";
+import { RefreshCw, ShoppingCart, ShoppingBag } from "lucide-react";
 import { SummaryData } from "./summary-cards";
 
 export interface Transaction {
@@ -21,6 +21,7 @@ export interface Transaction {
   status: string;
   orderReference: string | null;
   environment: string;
+  source: string;
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -177,6 +178,11 @@ export function TransactionsTable({ initialTransactions, onSummaryUpdate }: Tran
                           <span className="ml-2 px-1.5 py-0.5 text-[10px] uppercase font-bold bg-destructive/10 text-destructive rounded-sm border border-destructive/20">Live</span>
                         ) : (
                           <span className="ml-2 px-1.5 py-0.5 text-[10px] uppercase font-bold bg-muted text-muted-foreground rounded-sm border border-border">Sandbox</span>
+                        )}
+                        {t.source === 'shopify' && (
+                          <span title="via Shopify" className="ml-2 flex items-center text-muted-foreground">
+                            <ShoppingBag className="size-3.5" />
+                          </span>
                         )}
                       </div>
                     </TableCell>

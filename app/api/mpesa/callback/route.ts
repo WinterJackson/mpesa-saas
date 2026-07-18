@@ -1,6 +1,7 @@
 import { NextResponse, after } from 'next/server';
 import { prisma } from '@/lib/db';
 import { deliverWebhook } from '@/lib/webhook';
+import { markShopifyOrderPaid } from '@/lib/shopify';
 import type { DarajaCallbackPayload, DarajaCallbackMetadataItem } from '@/lib/types';
 
 /**
@@ -164,6 +165,27 @@ export async function POST(request: Request) {
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : 'Unknown error';
           console.error(`[Callback Webhook] Uncaught error for ${merchant.webhookUrl}: ${msg}`);
+        }
+      });
+    }
+
+    // ── 5. Outbound Shopify Confirmation (Fire-and-Forget) ────────────────────
+    if (updatedTransaction.status === 'completed' && updatedTransaction.source === 'shopify' && merchant.shopifyShopDomain && merchant.shopifyAdminAccessToken && updatedTransaction.orderReference) {
+      after(async () => {
+        try {
+          const result = await markShopifyOrderPaid({
+            shopDomain: merchant.shopifyShopDomain!,
+            accessToken: merchant.shopifyAdminAccessToken!,
+            orderId: updatedTransaction.orderReference, // Contains numeric orderId
+            mpesaReceipt: updatedTransaction.mpesaReceipt ?? 'N/A'
+          });
+          
+          if (!result.success) {
+            console.error(`[Callback Shopify] Failed to update Shopify order ${updatedTransaction.orderReference}: ${result.error}`);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : 'Unknown error';
+          console.error(`[Callback Shopify] Uncaught error updating Shopify order ${updatedTransaction.orderReference}: ${msg}`);
         }
       });
     }

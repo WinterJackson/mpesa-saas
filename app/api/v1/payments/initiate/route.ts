@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { authenticateApiKey } from '@/lib/auth';
 import { validatePhone, validateAmount } from '@/lib/validation';
-import { initiateSTKPush } from '@/lib/daraja';
-import { prisma } from '@/lib/db';
+import { createAndInitiatePayment } from '@/lib/payments';
 
 /**
  * POST /api/v1/payments/initiate
@@ -69,71 +68,35 @@ export async function POST(request: Request) {
     const sanitizedPhone = phoneValidation.sanitized!;
     const sanitizedAmount = amountValidation.sanitized!;
 
-    // ── 4. Create Pending Transaction ─────────────────────────────────────────
-    const transaction = await prisma.transaction.create({
-      data: {
-        merchantId: merchant.id,
-        phone: sanitizedPhone,
-        amount: sanitizedAmount,
-        orderReference: orderReference ? String(orderReference).substring(0, 50) : null,
-        status: 'pending',
-        environment: merchant.environment,
-        source: 'api',
-      },
+    // ── 4. Initiate Payment ─────────────────────────────────────────
+    const result = await createAndInitiatePayment({
+      merchant,
+      phone: sanitizedPhone,
+      amount: sanitizedAmount,
+      orderReference: orderReference ? String(orderReference).substring(0, 50) : null,
+      source: 'api',
     });
 
-    // ── 5. Initiate STK Push via Daraja ───────────────────────────────────────
-    try {
-      const darajaResponse = await initiateSTKPush({
-        phone: sanitizedPhone,
-        amount: sanitizedAmount,
-        accountReference: merchant.businessName.substring(0, 12),
-        transactionDesc: orderReference
-          ? `Pay ${String(orderReference).substring(0, 8)}`
-          : 'Payment',
-        environment: merchant.environment as 'sandbox' | 'live',
-      });
-
-      // ── 6. Update Transaction with CheckoutRequestID ────────────────────────
-      await prisma.transaction.update({
-        where: { id: transaction.id },
-        data: {
-          checkoutRequestId: darajaResponse.CheckoutRequestID,
-        },
-      });
-
+    if (!result.success) {
       return NextResponse.json(
-        {
-          success: true,
-          data: {
-            transactionId: transaction.id,
-            checkoutRequestId: darajaResponse.CheckoutRequestID,
-            status: 'pending',
-            merchantRequestID: darajaResponse.MerchantRequestID,
-            customerMessage: darajaResponse.CustomerMessage,
-          },
-        },
-        { status: 201 }
-      );
-    } catch (darajaError: unknown) {
-      // ── 7. Handle Daraja Failure ────────────────────────────────────────────
-      const errorMessage = darajaError instanceof Error
-        ? darajaError.message
-        : 'Payment gateway failed';
-
-      await prisma.transaction.update({
-        where: { id: transaction.id },
-        data: {
-          status: 'failed',
-          resultDesc: errorMessage,
-        },
-      });
-
-      return NextResponse.json(
-        { success: false, error: errorMessage },
+        { success: false, error: result.error },
         { status: 502 }
       );
     }
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          transactionId: result.transaction!.id,
+          checkoutRequestId: result.checkoutRequestId,
+          status: 'pending',
+          merchantRequestID: result.merchantRequestID,
+          customerMessage: result.customerMessage,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[Payment Initiate Error]:', message);
