@@ -26,7 +26,7 @@ export function Sidebar() {
     <>
       {/* Desktop Sidebar */}
       <div className="hidden md:flex h-full shrink-0 pt-floating-header pl-floating-header pb-floating-header">
-        <aside className="flex flex-col w-64 rounded-floating-header bg-floating-header-bg backdrop-blur-md text-sidebar-foreground shadow-floating-header overflow-hidden">
+        <aside className="flex flex-col w-64 rounded-floating-header bg-background/80 backdrop-blur-md text-sidebar-foreground shadow-floating-header overflow-hidden">
           <div className="p-6 border-b border-sidebar-border flex items-center">
             <Logo />
           </div>
@@ -55,7 +55,7 @@ export function Sidebar() {
 
       {/* Mobile Bottom Nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-floating-header pb-[calc(var(--spacing-floating-header)+env(safe-area-inset-bottom))]">
-        <nav className="flex items-center justify-around rounded-floating-header bg-floating-header-bg backdrop-blur-md shadow-floating-header p-3">
+        <nav className="flex items-center justify-around rounded-floating-header bg-background/80 backdrop-blur-md shadow-floating-header p-3">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
