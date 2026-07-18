@@ -55,7 +55,7 @@ export function Sidebar() {
 
       {/* Mobile Bottom Nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-floating-header pb-[calc(var(--spacing-floating-header)+env(safe-area-inset-bottom))]">
-        <nav className="flex items-center justify-around rounded-floating-header bg-background/80 backdrop-blur-md shadow-floating-header p-3">
+        <nav className="flex items-center justify-around rounded-floating-header bg-foreground shadow-floating-header p-3">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -64,7 +64,7 @@ export function Sidebar() {
                 href={item.href}
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 p-2 rounded-md transition-colors",
-                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  isActive ? "text-primary" : "text-background/60 hover:text-background"
                 )}
               >
                 <item.icon className="size-6" />
