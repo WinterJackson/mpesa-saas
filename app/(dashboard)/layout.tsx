@@ -35,7 +35,7 @@ export default async function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 md:pb-0">
         {/* Header */}
         <div className="w-full shrink-0 pt-floating-header px-floating-header pb-4">
-          <header className="w-full border border-primary rounded-floating-header bg-floating-header-bg backdrop-blur-md shadow-floating-header">
+          <header className="w-full rounded-floating-header bg-floating-header-bg backdrop-blur-md shadow-floating-header">
             <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
               <div className="flex items-center gap-4 min-w-0">
                 <h1 className="text-lg font-semibold tracking-tight text-foreground truncate max-w-[200px] md:max-w-[320px]">
