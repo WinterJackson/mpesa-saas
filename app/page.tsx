@@ -14,7 +14,7 @@ export default async function Home() {
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground">
       {/* Floating Header Wrapper */}
       <div className="fixed top-0 z-50 w-full pt-floating-header px-floating-header">
-        <header className="w-full border border-foreground rounded-floating-header bg-floating-header-bg backdrop-blur-md shadow-floating-header">
+        <header className="w-full rounded-floating-header bg-background/80 backdrop-blur-md shadow-floating-header">
           <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
           <Logo />
           <nav className="flex items-center gap-4">
