@@ -157,6 +157,23 @@ export default function DemoStorePage() {
           }
         }
         
+        // Timeout after ~90 seconds (45 polls at 2s each) — matches Safaricom's own
+        // ~60s STK prompt expiry with a reasonable buffer for callback delivery lag.
+        if (pollCountRef.current >= 45) {
+          setLogs((prev) => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              timestamp: new Date().toLocaleTimeString(),
+              type: "info",
+              content: `GET /api/demo/status/${transactionId} → timed out waiting for callback`,
+            },
+          ]);
+          setErrorMessage("Still waiting for confirmation. Check your phone, or try again shortly.");
+          setPaymentState("failed"); // reuses existing failed-state UI, but with honest neutral copy
+          return;
+        }
+        
         // If still pending, poll again after 2s
         timeoutId = setTimeout(pollStatus, 2000);
       } catch (err: unknown) {
