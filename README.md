@@ -84,6 +84,22 @@ To test the application without needing a real email address, you can use Clerk'
 
 ---
 
+## 🧪 Testing the Full Payment Flow (Start to Finish)
+
+1. Sign up for an account (or use the Reviewer Login credentials above).
+2. Complete onboarding by entering a business name.
+3. You'll land on your dashboard — currently empty for a new account.
+4. IMPORTANT: Stay signed in for the rest of this flow — this is what links your test transactions to your own dashboard.
+5. Go to the Demo Store (via the nav bar, or "Try Demo" on the landing page).
+6. Pick any product and click "Buy with M-Pesa."
+7. Enter a phone number — you can use your own real Safaricom number to receive a genuine STK Push prompt on your phone, or use Safaricom's shared sandbox test number 254708374149 if you'd rather not use your own. *(Note: The Daraja Sandbox for testing does not cut real money from the person's M-Pesa account).*
+8. Check your phone and enter your M-Pesa PIN to complete the payment.
+9. Return to your Dashboard (or the Transactions page) — the transaction will appear there, reflecting the real result from Safaricom.
+
+Note: if you test the Demo Store while NOT signed in, transactions are recorded under a shared demo account instead, and won't appear on any personal dashboard. Sign in first if you want to see your own results.
+
+---
+
 ## 🧪 End-to-End Testing (M-Pesa Callbacks)
 
 To test the full lifecycle of a payment—including the Safaricom STK Push and the automated backend Webhooks—you must expose your local server to the public internet so Safaricom's servers can reach it.
