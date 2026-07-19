@@ -89,8 +89,29 @@ export function ShopifyCard({ initialDomain, initialToken, initialSecret }: Shop
           <Plug className="size-5" />
           Shopify Integration
         </CardTitle>
-        <CardDescription>
-          Connect a custom Shopify app to automatically trigger M-Pesa payments for new orders.
+        <CardDescription className="space-y-4">
+          <p>
+            Connect your existing Shopify store so new orders automatically trigger an
+            M-Pesa payment prompt to the customer — no manual work needed once it&apos;s set up.
+          </p>
+          <div className="text-sm text-muted-foreground">
+            <p className="font-medium mb-1">Quick setup:</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>In Shopify Admin, go to Settings → Apps and sales channels → Develop apps → Create an app</li>
+              <li>Grant Admin API scopes: <code className="bg-muted px-1 py-0.5 rounded text-xs">read_orders</code> and <code className="bg-muted px-1 py-0.5 rounded text-xs">write_orders</code></li>
+              <li>Copy your Access Token and Webhook Signing Secret from the app&apos;s API credentials tab</li>
+              <li>Paste them below along with your store domain, then click Save</li>
+              <li>Copy the Webhook URL below and register it in Shopify under Webhooks, for the Order creation event</li>
+            </ol>
+            <a 
+              href="https://github.com/WinterJackson/mpesa-saas#-shopify-integration-guide" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2 w-fit mt-3"
+            >
+              <Link2 className="size-4" /> Full step-by-step guide
+            </a>
+          </div>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

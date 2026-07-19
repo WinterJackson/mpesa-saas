@@ -74,7 +74,7 @@ export function EnvironmentCard({ initialEnvironment }: EnvironmentCardProps) {
           Environment Mode
         </CardTitle>
         <CardDescription>
-          Toggle between Sandbox (for testing) and Live (for processing real payments).
+          Sandbox mode lets you test the full payment flow safely — no real money moves, and it uses Safaricom&apos;s official testing environment. To enable Live mode and start accepting real customer payments, you&apos;ll need to complete Safaricom&apos;s Go-Live business verification process (typically 2-4 weeks), then contact us to activate it on your account.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

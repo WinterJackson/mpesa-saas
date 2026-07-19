@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -17,7 +16,6 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function OnboardingForm() {
-  const router = useRouter();
   const [businessName, setBusinessName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,10 +46,17 @@ export function OnboardingForm() {
       }
 
       toast.success('Account created successfully!');
-      // router.refresh() forces the server to re-evaluate the session,
-      // picking up the updated publicMetadata from Clerk.
-      router.refresh();
-      router.push('/dashboard');
+      // IMPORTANT: Do NOT use router.push() here. Clerk's session JWT (read by
+      // proxy.ts middleware via sessionClaims.publicMetadata) is NOT retroactively
+      // updated when updateUserMetadata() is called server-side — the existing
+      // browser session token remains stale for up to ~60 seconds. router.refresh()
+      // does not force a new Clerk token, only a Next.js RSC refetch using the same
+      // stale token, so client-side navigation gets bounced back to /onboarding by
+      // the middleware. A hard, full-page navigation forces Clerk's client SDK to
+      // establish a completely fresh session on load — this is the exact mechanism
+      // that a manual browser reload uses, which is confirmed to work. Replicating
+      // it here removes the race condition entirely rather than trying to time around it.
+      window.location.href = '/dashboard';
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : 'An unexpected error occurred.';

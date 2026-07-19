@@ -178,7 +178,12 @@ export function WebhookCard({ initialUrl, initialSecret }: WebhookCardProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="webhook-url">Endpoint URL</Label>
+          <div>
+            <Label htmlFor="webhook-url">Endpoint URL</Label>
+            <p className="text-sm text-muted-foreground mt-1">
+              An endpoint on your server to receive instant payment updates. Optional—payments work without it, but you won&apos;t get automatic notifications.
+            </p>
+          </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <Input
               id="webhook-url"
@@ -276,6 +281,9 @@ export function WebhookCard({ initialUrl, initialSecret }: WebhookCardProps) {
               Refresh
             </Button>
           </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            A log of webhook notifications sent by PaySwift. Use this to verify your server receives updates correctly.
+          </p>
           
           {deliveries.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">No recent deliveries found.</p>

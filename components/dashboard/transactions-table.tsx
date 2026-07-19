@@ -33,9 +33,10 @@ interface TransactionsTableProps {
   initialTransactions: Transaction[];
   onSummaryUpdate?: (summary: SummaryData) => void;
   showFilters?: boolean;
+  limit?: number;
 }
 
-export function TransactionsTable({ initialTransactions, onSummaryUpdate, showFilters = false }: TransactionsTableProps) {
+export function TransactionsTable({ initialTransactions, onSummaryUpdate, showFilters = false, limit = 50 }: TransactionsTableProps) {
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [filter, setFilter] = useState("All");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -52,7 +53,7 @@ export function TransactionsTable({ initialTransactions, onSummaryUpdate, showFi
     const poll = async () => {
       try {
         setIsRefreshing(true);
-        const res = await fetch("/api/merchant/transactions?limit=50", {
+        const res = await fetch(`/api/merchant/transactions?limit=${limit}`, {
           signal: controller.signal
         });
         if (res.ok) {
@@ -86,12 +87,12 @@ export function TransactionsTable({ initialTransactions, onSummaryUpdate, showFi
       controller.abort();
       clearTimeout(timeoutId);
     };
-  }, [onSummaryUpdate]);
+  }, [onSummaryUpdate, limit]);
 
   const handleManualRefresh = async () => {
     try {
       setIsRefreshing(true);
-      const res = await fetch("/api/merchant/transactions?limit=50");
+      const res = await fetch(`/api/merchant/transactions?limit=${limit}`);
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {

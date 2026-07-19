@@ -40,7 +40,7 @@ export default async function TransactionsPage() {
           Full history of all payments through your account.
         </p>
       </div>
-      <TransactionsTable initialTransactions={transactions} showFilters={true} />
+      <TransactionsTable initialTransactions={transactions} showFilters={true} limit={100} />
     </div>
   );
 }

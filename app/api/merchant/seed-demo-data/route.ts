@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'node:crypto';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 
@@ -35,7 +36,7 @@ export async function POST() {
         phone: '254712345678',
         orderReference: 'ORD-77A9B1',
         status: 'completed',
-        checkoutRequestId: 'ws_CO_160720261623456781',
+        checkoutRequestId: `ws_CO_demo_${merchant.id}_${crypto.randomBytes(4).toString('hex')}_1`,
         mpesaReceipt: 'QEG12A3B4C',
         resultCode: 0,
         resultDesc: 'The service request is processed successfully.',
@@ -48,7 +49,7 @@ export async function POST() {
         phone: '254798765432',
         orderReference: 'ORD-88B9C2',
         status: 'pending',
-        checkoutRequestId: 'ws_CO_160720261625456782',
+        checkoutRequestId: `ws_CO_demo_${merchant.id}_${crypto.randomBytes(4).toString('hex')}_2`,
         mpesaReceipt: null,
         resultCode: null,
         resultDesc: null,
@@ -61,7 +62,7 @@ export async function POST() {
         phone: '254700112233',
         orderReference: 'ORD-99C9D3',
         status: 'cancelled',
-        checkoutRequestId: 'ws_CO_160720261627456783',
+        checkoutRequestId: `ws_CO_demo_${merchant.id}_${crypto.randomBytes(4).toString('hex')}_3`,
         mpesaReceipt: null,
         resultCode: 1032,
         resultDesc: 'Request cancelled by user',
@@ -74,7 +75,7 @@ export async function POST() {
         phone: '254744556677',
         orderReference: 'ORD-11D9E4',
         status: 'completed',
-        checkoutRequestId: 'ws_CO_160720261629456784',
+        checkoutRequestId: `ws_CO_demo_${merchant.id}_${crypto.randomBytes(4).toString('hex')}_4`,
         mpesaReceipt: 'QEG98Z7Y6X',
         resultCode: 0,
         resultDesc: 'The service request is processed successfully.',
@@ -87,7 +88,7 @@ export async function POST() {
         phone: '254799887766',
         orderReference: 'ORD-22E9F5',
         status: 'failed',
-        checkoutRequestId: 'ws_CO_160720261631456785',
+        checkoutRequestId: `ws_CO_demo_${merchant.id}_${crypto.randomBytes(4).toString('hex')}_5`,
         mpesaReceipt: null,
         resultCode: 1,
         resultDesc: 'Insufficient funds',
@@ -107,6 +108,13 @@ export async function POST() {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[Seed Demo Data Error]:', message);
+    // Surface unique constraint violations distinctly for easier debugging
+    if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: unknown }).code === 'P2002') {
+      return NextResponse.json(
+        { success: false, error: 'Seed data collision — please try again.' },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

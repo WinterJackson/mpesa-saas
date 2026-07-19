@@ -70,8 +70,10 @@ export function ApiKeyCard({ initialKey }: ApiKeyCardProps) {
           API Key
         </CardTitle>
         <CardDescription>
-          Use this key to authenticate your backend requests to the PaySwift API.
-          Keep it secure and never expose it in client-side code.
+          This key lets your own website&apos;s backend authenticate with PaySwift. Include
+          it as the x-api-key header on every request to /api/v1/payments/initiate.
+          Never use it in browser or mobile app code where customers could see it — it
+          belongs only on your server.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
