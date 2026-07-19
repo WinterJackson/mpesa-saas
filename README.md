@@ -403,10 +403,21 @@ if (crypto.timingSafeEqual(Buffer.from(signatureHeader), Buffer.from(expectedSig
 
 ## 🛍️ Shopify Integration Guide
 
-1. In Shopify Admin, go to Settings → Apps and sales channels → Develop apps → Create an app.
-2. Under Configuration → Admin API scopes, grant `read_orders` and `write_orders`.
-3. Install the app to the store and copy the generated Admin API access token.
-4. Under the app's API credentials tab, copy the webhook signing secret.
+1. In Shopify Admin, go to **Settings → Apps and sales channels → Develop apps**. If an app already exists there from before 2026 with a visible API credentials tab, use it and skip to step 5 below — the old flow still works for that app.
+2. Otherwise you'll be sent to the **Dev Dashboard** to create a new app. Set Distribution to **Custom**, install target: this store. Grant scopes `read_orders` and `write_orders`.
+3. Copy the app's **Client ID** and **Client Secret**. Build this URL (replace `{shop}`, `{client_id}`, and use this integration's Webhook URL shown below as the `redirect_uri`, with a random string as `state`), and open it in a browser while logged in as the store admin:
+   `https://{shop}.myshopify.com/admin/oauth/authorize?client_id={client_id}&scope=read_orders,write_orders&redirect_uri={redirect_uri}&state={random_string}`
+   Approve the install. Shopify redirects to your `redirect_uri` with a `code` parameter in the URL — copy that code.
+4. Exchange the code for a permanent token:
+   ```bash
+   curl -X POST https://{shop}.myshopify.com/admin/oauth/access_token \
+     -H 'Content-Type: application/x-www-form-urlencoded' \
+     -H 'Accept: application/json' \
+     -d 'client_id={client_id}' \
+     -d 'client_secret={client_secret}' \
+     -d 'code={code}'
+   ```
+   The response's `access_token` field (starts with `shpat_`) is what goes in the Admin API Access Token field below. Do not add an `expiring` parameter to this request — omitting it is what makes the token permanent. Your **Client Secret** from step 3 is your Webhook Signing Secret (it signs both this exchange and incoming webhooks — the Dev Dashboard has no separately-labeled "webhook secret").
 5. In PaySwift's dashboard → Settings → Shopify Integration, paste the store domain, access token, and webhook secret, then click Save, then Test Connection to confirm.
 6. Copy the "Webhook URL to register in Shopify" value from that same card.
 7. In Shopify Admin → Settings → Notifications → Webhooks (or via the custom app's Webhooks subscription tab, depending on Shopify's current UI), add a new webhook: Event = `Order creation`, Format = JSON, URL = the copied URL from step 6, API version = `2026-07`.

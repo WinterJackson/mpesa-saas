@@ -96,12 +96,33 @@ export function ShopifyCard({ initialDomain, initialToken, initialSecret }: Shop
           </p>
           <div className="text-sm text-muted-foreground">
             <p className="font-medium mb-1">Quick setup:</p>
-            <ol className="list-decimal list-inside space-y-1">
-              <li>In Shopify Admin, go to Settings → Apps and sales channels → Develop apps → Create an app</li>
-              <li>Grant Admin API scopes: <code className="bg-muted px-1 py-0.5 rounded text-xs">read_orders</code> and <code className="bg-muted px-1 py-0.5 rounded text-xs">write_orders</code></li>
-              <li>Copy your Access Token and Webhook Signing Secret from the app&apos;s API credentials tab</li>
-              <li>Paste them below along with your store domain, then click Save</li>
-              <li>Copy the Webhook URL below and register it in Shopify under Webhooks, for the Order creation event</li>
+            <ol className="list-decimal list-inside space-y-2">
+              <li>
+                In Shopify Admin, go to <strong>Settings → Apps and sales channels → Develop apps</strong>. If an app already exists there from before 2026 with a visible API credentials tab, use it and skip to step 5 below — the old flow still works for that app.
+              </li>
+              <li>
+                Otherwise you&apos;ll be sent to the <strong>Dev Dashboard</strong> to create a new app. Set Distribution to <strong>Custom</strong>, install target: this store. Grant scopes <code className="bg-muted px-1 py-0.5 rounded text-xs">read_orders</code> and <code className="bg-muted px-1 py-0.5 rounded text-xs">write_orders</code>.
+              </li>
+              <li>
+                Copy the app&apos;s <strong>Client ID</strong> and <strong>Client Secret</strong>. Build this URL (replace <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;shop&#125;</code>, <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;client_id&#125;</code>, and use this integration&apos;s Webhook URL shown below as the <code className="bg-muted px-1 py-0.5 rounded text-xs">redirect_uri</code>, with a random string as <code className="bg-muted px-1 py-0.5 rounded text-xs">state</code>), and open it in a browser while logged in as the store admin:<br />
+                <code className="bg-muted px-1 py-0.5 rounded text-xs break-all mt-1 mb-1 inline-block">https://&#123;shop&#125;.myshopify.com/admin/oauth/authorize?client_id=&#123;client_id&#125;&amp;scope=read_orders,write_orders&amp;redirect_uri=&#123;redirect_uri&#125;&amp;state=&#123;random_string&#125;</code><br />
+                Approve the install. Shopify redirects to your <code className="bg-muted px-1 py-0.5 rounded text-xs">redirect_uri</code> with a <code className="bg-muted px-1 py-0.5 rounded text-xs">code</code> parameter in the URL — copy that code.
+              </li>
+              <li>
+                Exchange the code for a permanent token:
+                <pre className="bg-muted p-2 rounded text-xs overflow-x-auto mt-1 mb-1 whitespace-pre-wrap">
+                  <code>{`curl -X POST https://{shop}.myshopify.com/admin/oauth/access_token \\
+  -H 'Content-Type: application/x-www-form-urlencoded' \\
+  -H 'Accept: application/json' \\
+  -d 'client_id={client_id}' \\
+  -d 'client_secret={client_secret}' \\
+  -d 'code={code}'`}</code>
+                </pre>
+                The response&apos;s <code className="bg-muted px-1 py-0.5 rounded text-xs">access_token</code> field (starts with <code className="bg-muted px-1 py-0.5 rounded text-xs">shpat_</code>) is what goes in the Admin API Access Token field below. Do not add an <code className="bg-muted px-1 py-0.5 rounded text-xs">expiring</code> parameter to this request — omitting it is what makes the token permanent.
+              </li>
+              <li>
+                Paste the shop domain, the <code className="bg-muted px-1 py-0.5 rounded text-xs">access_token</code> from step 4 as the Admin API Access Token, and the app&apos;s <strong>Client Secret</strong> from step 3 as the Webhook Signing Secret (it signs both this exchange and incoming webhooks — the Dev Dashboard has no separately-labeled &quot;webhook secret&quot;). Save, then click Test Connection.
+              </li>
             </ol>
             <a 
               href="https://github.com/WinterJackson/mpesa-saas#-shopify-integration-guide" 
