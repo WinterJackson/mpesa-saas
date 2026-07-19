@@ -314,7 +314,11 @@ If the merchant has a `webhookUrl` configured, PaySwift fires outbound webhook e
 3. Copy the public HTTPS URL provided by Ngrok (e.g., `https://a1b2-c3d4.ngrok-free.app`).
 4. Update `NEXT_PUBLIC_APP_URL` in your `.env.local` file to match this Ngrok URL.
 5. Restart your Next.js server.
-6. Test a payment using the Demo Store! When you send the prompt, Safaricom will send the success callback to your Ngrok URL, which forwards it to your local database, updating the Dashboard in real-time.
+6. Test a payment using the Demo Store! 
+   - **Note:** If you're signed in with your own merchant account, transactions from the Demo Store will automatically appear on your dashboard in real time. If you're just browsing without an account, demo transactions use a shared test account instead.
+   - **Phone Number:** You can enter your own Safaricom number to receive a real STK Push prompt on your phone, or use Safaricom's shared sandbox test number `254708374149` if you prefer not to use your own.
+
+   When you send the prompt, Safaricom will send the success callback to your Ngrok URL, which forwards it to your local database, updating the Dashboard in real-time.
 
 ---
 
