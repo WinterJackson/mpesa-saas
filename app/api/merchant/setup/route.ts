@@ -82,10 +82,18 @@ export async function POST(request: Request) {
       publicMetadata: { onboarded: true },
     });
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       { success: true, data: newMerchant },
       { status: 201 }
     );
+    response.cookies.set('payswift_just_onboarded', '1', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60,
+      path: '/',
+    });
+    return response;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[Merchant Setup Error]:', message);

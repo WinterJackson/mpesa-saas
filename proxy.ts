@@ -39,9 +39,10 @@ export default clerkMiddleware(async (auth, req) => {
     //   { "publicMetadata": "{{user.public_metadata}}" }
     const onboarded = (sessionClaims?.publicMetadata as { onboarded?: boolean } | undefined)
       ?.onboarded;
+    const justOnboarded = req.cookies.get('payswift_just_onboarded');
 
     // Authenticated + NOT onboarded + NOT on /onboarding → redirect to onboarding
-    if (!onboarded && pathname !== '/onboarding') {
+    if (!onboarded && !justOnboarded && pathname !== '/onboarding') {
       return NextResponse.redirect(new URL('/onboarding', req.url));
     }
 
