@@ -36,8 +36,10 @@ MPESA_CONSUMER_KEY="your_safaricom_consumer_key"
 MPESA_CONSUMER_SECRET="your_safaricom_consumer_secret"
 MPESA_PASSKEY="your_safaricom_passkey"
 MPESA_SHORTCODE="174379"
+MPESA_CALLBACK_URL="https://your-ngrok-domain.ngrok-free.app/api/mpesa/callback"
 
 # REQUIRED Infrastructure Variables (System will fail to start without these)
+ENCRYPTION_KEY="..." # 32-byte base64 AES-256-GCM key — generate with: openssl rand -base64 32
 UPSTASH_REDIS_REST_URL="https://..."
 UPSTASH_REDIS_REST_TOKEN="..."
 CRON_SECRET="..."

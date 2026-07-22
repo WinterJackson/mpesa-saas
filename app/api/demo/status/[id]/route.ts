@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 
 export async function GET(
@@ -16,18 +17,47 @@ export async function GET(
       );
     }
 
-    // Direct database fetch to avoid hitting edge network limits from internal self-referencing
+    // Determine which merchant is allowed to see this transaction — mirrors
+    // the same resolution order used in app/api/demo/checkout/route.ts:
+    // the signed-in merchant if authenticated, otherwise the shared demo
+    // merchant used for anonymous visitors.
+    let merchantToUse = null;
+
+    const { userId } = await auth();
+    if (userId) {
+      merchantToUse = await prisma.merchant.findUnique({
+        where: { clerkUserId: userId },
+      });
+    }
+
+    if (!merchantToUse) {
+      merchantToUse = await prisma.merchant.findUnique({
+        where: { clerkUserId: 'demo_user_123' },
+      });
+    }
+
+    if (!merchantToUse) {
+      return NextResponse.json(
+        { success: false, error: 'Transaction not found' },
+        { status: 404 }
+      );
+    }
+
     const tx = await prisma.transaction.findUnique({
       where: { id },
       select: {
         id: true,
+        merchantId: true,
         checkoutRequestId: true,
         status: true,
         resultDesc: true,
-      }
+      },
     });
 
-    if (!tx) {
+    // Return 404 (not 403) both when the transaction doesn't exist AND when
+    // it exists but belongs to a different merchant — this avoids confirming
+    // to an unauthenticated caller that a given transaction ID is valid.
+    if (!tx || tx.merchantId !== merchantToUse.id) {
       return NextResponse.json(
         { success: false, error: 'Transaction not found' },
         { status: 404 }
