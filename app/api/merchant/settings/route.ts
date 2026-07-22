@@ -28,8 +28,8 @@ export async function PATCH(request: Request) {
       if (body.environment !== 'sandbox' && body.environment !== 'live') {
         return NextResponse.json({ success: false, error: 'Invalid environment value' }, { status: 400 });
       }
-      if (body.environment === 'live' && !isLiveModeConfigured()) {
-        return NextResponse.json({ success: false, error: 'Live M-Pesa payments are not yet configured on this platform. Contact the platform administrator.' }, { status: 400 });
+      if (body.environment === 'live' && !(await isLiveModeConfigured(organization.id))) {
+        return NextResponse.json({ success: false, error: 'Live M-Pesa credentials are not yet configured for your organization. Add them under Settings first.' }, { status: 400 });
       }
       updateData.environment = body.environment;
     }

@@ -61,7 +61,8 @@ describe('Cron Reconcile Transactions', () => {
       id: 'tx-1',
       checkoutRequestId: 'ws_123',
       createdAt: new Date(Date.now() - 5 * 60 * 1000), // 5 mins old
-      merchant: { environment: 'sandbox' },
+      organizationId: 'org-1',
+      merchant: { environment: 'sandbox', organizationId: 'org-1' },
     };
 
     vi.mocked(prisma.transaction.findMany).mockResolvedValueOnce([mockTx] as never);
@@ -75,12 +76,36 @@ describe('Cron Reconcile Transactions', () => {
     const data = await response.json();
 
     expect(data.successCount).toBe(1);
+    expect(querySTKPushStatus).toHaveBeenCalledWith('ws_123', 'org-1', 'sandbox');
     expect(prisma.transaction.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: 'completed', resultCode: 0 }),
       })
     );
     expect(finalizeTransactionAsync).toHaveBeenCalled();
+  });
+
+  it('skips a transaction with no organizationId rather than querying with an undefined org', async () => {
+    const request = new Request('http://localhost/api/cron', {
+      headers: { authorization: 'Bearer test-secret' },
+    });
+
+    const mockTx = {
+      id: 'tx-1',
+      checkoutRequestId: 'ws_123',
+      createdAt: new Date(Date.now() - 5 * 60 * 1000),
+      organizationId: null,
+      merchant: { environment: 'sandbox', organizationId: null },
+    };
+
+    vi.mocked(prisma.transaction.findMany).mockResolvedValueOnce([mockTx] as never);
+
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(querySTKPushStatus).not.toHaveBeenCalled();
+    expect(data.successCount).toBe(0);
+    expect(data.failCount).toBe(0);
   });
 
   it('leaves transaction pending if < 30mins old and non-zero ResultCode', async () => {
@@ -92,7 +117,8 @@ describe('Cron Reconcile Transactions', () => {
       id: 'tx-1',
       checkoutRequestId: 'ws_123',
       createdAt: new Date(Date.now() - 10 * 60 * 1000), // 10 mins old
-      merchant: { environment: 'sandbox' },
+      organizationId: 'org-1',
+      merchant: { environment: 'sandbox', organizationId: 'org-1' },
     };
 
     vi.mocked(prisma.transaction.findMany).mockResolvedValueOnce([mockTx] as never);
@@ -119,7 +145,8 @@ describe('Cron Reconcile Transactions', () => {
       id: 'tx-1',
       checkoutRequestId: 'ws_123',
       createdAt: new Date(Date.now() - 35 * 60 * 1000), // 35 mins old
-      merchant: { environment: 'sandbox' },
+      organizationId: 'org-1',
+      merchant: { environment: 'sandbox', organizationId: 'org-1' },
     };
 
     vi.mocked(prisma.transaction.findMany).mockResolvedValueOnce([mockTx] as never);

@@ -41,11 +41,18 @@ export async function GET(request: Request) {
     for (const tx of pendingTransactions) {
       if (!tx.checkoutRequestId) continue;
 
+      const organizationId = tx.organizationId ?? tx.merchant.organizationId;
+      if (!organizationId) {
+        logger.warn(`[Reconcile Cron] Transaction ${tx.id} has no organizationId — skipping until the Organization backfill runs.`);
+        continue;
+      }
+
       const isOlderThan30Mins = (Date.now() - tx.createdAt.getTime()) >= 30 * 60 * 1000;
 
       try {
         const result = await querySTKPushStatus(
           tx.checkoutRequestId,
+          organizationId,
           (tx.merchant.environment as 'sandbox' | 'live') || 'sandbox'
         );
 

@@ -33,6 +33,7 @@ export async function createAndInitiatePayment(params: {
   // 2. Initiate STK Push via Daraja
   try {
     const darajaResponse = await initiateSTKPush({
+      organizationId,
       phone,
       amount,
       accountReference: merchant.businessName.substring(0, 12),

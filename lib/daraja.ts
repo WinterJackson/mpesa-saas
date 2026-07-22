@@ -1,6 +1,6 @@
-import { env } from '@/lib/env';
 import { prisma } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { getDecryptedCredentials, isLiveCredentialConfigured, type DarajaCredentialSet } from '@/lib/repositories/daraja-credentials';
 
 const DARAJA_BASE_URLS = {
   sandbox: 'https://sandbox.safaricom.co.ke',
@@ -10,49 +10,41 @@ const DARAJA_BASE_URLS = {
 // Safaricom token lifespan is 3599 seconds (~1 hour). We cache for 50 mins to be safe.
 const CACHE_TTL_MS = 50 * 60 * 1000;
 
-export function isLiveModeConfigured(): boolean {
-  return Boolean(
-    env.MPESA_CONSUMER_KEY_LIVE &&
-    env.MPESA_CONSUMER_SECRET_LIVE &&
-    env.MPESA_SHORTCODE_LIVE &&
-    env.MPESA_PASSKEY_LIVE &&
-    env.MPESA_CALLBACK_URL_LIVE
-  );
+/**
+ * Whether the given organization has configured its own live Daraja
+ * credentials (Model B — live credentials are always the organization's own,
+ * never pooled/platform-wide).
+ */
+export async function isLiveModeConfigured(organizationId: string): Promise<boolean> {
+  return isLiveCredentialConfigured(organizationId);
 }
 
-function getDarajaCredentials(environment: 'sandbox' | 'live') {
-  if (environment === 'live') {
-    if (!isLiveModeConfigured()) {
-      throw new Error('Live M-Pesa credentials are not configured on this server.');
+async function getDarajaCredentials(
+  organizationId: string,
+  environment: 'sandbox' | 'live'
+): Promise<DarajaCredentialSet> {
+  const credentials = await getDecryptedCredentials(organizationId, environment);
+
+  if (!credentials) {
+    if (environment === 'live') {
+      throw new Error('Live M-Pesa credentials are not configured for this organization.');
     }
-    return {
-      consumerKey: env.MPESA_CONSUMER_KEY_LIVE!,
-      consumerSecret: env.MPESA_CONSUMER_SECRET_LIVE!,
-      shortcode: env.MPESA_SHORTCODE_LIVE!,
-      passkey: env.MPESA_PASSKEY_LIVE!,
-      callbackUrl: env.MPESA_CALLBACK_URL_LIVE!,
-    };
+    throw new Error('Sandbox M-Pesa credentials are not configured for this organization.');
   }
 
-  return {
-    consumerKey: env.MPESA_CONSUMER_KEY,
-    consumerSecret: env.MPESA_CONSUMER_SECRET,
-    shortcode: env.MPESA_SHORTCODE,
-    passkey: env.MPESA_PASSKEY,
-    callbackUrl: env.MPESA_CALLBACK_URL,
-  };
+  return credentials;
 }
 
 // ─── Token Management ────────────────────────────────────────────────────────
 
 /**
- * Retrieves a valid Daraja OAuth access token.
- * Uses a DB-backed singleton cache with a 2-minute expiry buffer.
+ * Retrieves a valid Daraja OAuth access token for the given organization.
+ * Uses a DB-backed per-organization cache with a 2-minute expiry buffer.
  * If the cached token is still valid (expiresAt > now + 2min), returns it.
  * Otherwise, fetches a new token from Safaricom and upserts the cache row.
  */
-export async function getAccessToken(environment: 'sandbox' | 'live'): Promise<string> {
-  const TOKEN_ID = `singleton_${environment}`;
+export async function getAccessToken(organizationId: string, environment: 'sandbox' | 'live'): Promise<string> {
+  const TOKEN_ID = `${organizationId}_${environment}`;
 
   try {
     const cached = await prisma.darajaToken.findUnique({
@@ -69,7 +61,7 @@ export async function getAccessToken(environment: 'sandbox' | 'live'): Promise<s
   }
 
   // Token missing, expired, or cache read failed — fetch a new one
-  const credentials = getDarajaCredentials(environment);
+  const credentials = await getDarajaCredentials(organizationId, environment);
   const base64Auth = Buffer.from(`${credentials.consumerKey}:${credentials.consumerSecret}`).toString('base64');
 
   const controller = new AbortController();
@@ -157,14 +149,15 @@ function generateTimestamp(): string {
   return `${get('year')}${get('month')}${get('day')}${get('hour')}${get('minute')}${get('second')}`;
 }
 
-function generatePassword(timestamp: string, environment: 'sandbox' | 'live'): string {
-  const credentials = getDarajaCredentials(environment);
+function generatePassword(timestamp: string, credentials: DarajaCredentialSet): string {
   return Buffer.from(`${credentials.shortcode}${credentials.passkey}${timestamp}`).toString('base64');
 }
 
 // ─── STK Push ────────────────────────────────────────────────────────────────
 
 export interface STKPushParams {
+  /** The organization initiating this push — resolves its own Daraja credentials (Model B) */
+  organizationId: string;
   /** Phone number in 2547XXXXXXXX format (already validated via lib/validation.ts) */
   phone: string;
   /** Transaction amount in KES (integer > 0, already validated) */
@@ -191,20 +184,22 @@ export interface STKPushResponse {
  *
  * SECURITY:
  * - Timestamp/password generated server-side only
+ * - Credentials resolved per-organization (Model B) — never a global constant
  * - 10-second timeout on the external HTTP call
  * - Errors are logged server-side but sanitized before returning to callers
  */
 export async function initiateSTKPush({
+  organizationId,
   phone,
   amount,
   accountReference = 'PaySwift',
   transactionDesc = 'Payment',
   environment,
 }: STKPushParams): Promise<STKPushResponse> {
-  const accessToken = await getAccessToken(environment);
+  const credentials = await getDarajaCredentials(organizationId, environment);
+  const accessToken = await getAccessToken(organizationId, environment);
   const timestamp = generateTimestamp();
-  const password = generatePassword(timestamp, environment);
-  const credentials = getDarajaCredentials(environment);
+  const password = generatePassword(timestamp, credentials);
 
   const payload = {
     BusinessShortCode: credentials.shortcode,
@@ -275,11 +270,15 @@ export interface STKQueryResponse {
  * Queries the status of a previously initiated STK Push transaction.
  * Used as a fallback when the callback hasn't been received yet.
  */
-export async function querySTKPushStatus(checkoutRequestId: string, environment: 'sandbox' | 'live'): Promise<STKQueryResponse> {
-  const accessToken = await getAccessToken(environment);
+export async function querySTKPushStatus(
+  checkoutRequestId: string,
+  organizationId: string,
+  environment: 'sandbox' | 'live'
+): Promise<STKQueryResponse> {
+  const credentials = await getDarajaCredentials(organizationId, environment);
+  const accessToken = await getAccessToken(organizationId, environment);
   const timestamp = generateTimestamp();
-  const password = generatePassword(timestamp, environment);
-  const credentials = getDarajaCredentials(environment);
+  const password = generatePassword(timestamp, credentials);
 
   const payload = {
     BusinessShortCode: credentials.shortcode,

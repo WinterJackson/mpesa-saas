@@ -16,10 +16,36 @@ model Organization {
   environment    String   @default("sandbox")
   createdAt      DateTime @default(now())
 
-  merchant     Merchant?
-  memberships  Membership[]
-  apiKeys      ApiKey[]
-  transactions Transaction[]
+  merchant         Merchant?
+  memberships      Membership[]
+  apiKeys          ApiKey[]
+  transactions     Transaction[]
+  darajaCredential OrganizationDarajaCredential?
+}
+
+model OrganizationDarajaCredential {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  // Sandbox — pooled/PaySwift-managed by default (master plan Section 16.2);
+  // an org may optionally override with its own sandbox app.
+  consumerKeyEncrypted    String
+  consumerSecretEncrypted String
+  shortcode               String
+  passkeyEncrypted        String
+  callbackUrl             String
+  isPooledSandbox         Boolean @default(true)
+
+  // Live — always the organization's own, never pooled (Model B). Null until
+  // the org completes onboarding's Payment Setup step for live mode.
+  consumerKeyLiveEncrypted    String?
+  consumerSecretLiveEncrypted String?
+  shortcodeLive               String?
+  passkeyLiveEncrypted        String?
+  callbackUrlLive              String?
+
+  updatedAt DateTime @updatedAt
 }
 
 model Membership {
