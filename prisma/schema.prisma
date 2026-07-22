@@ -26,7 +26,8 @@ model Merchant {
 
 model ApiKey {
   id         String   @id @default(cuid())
-  key        String   @unique @default(cuid())
+  keyHash    String   @unique
+  keyPrefix  String
   merchantId String
   merchant   Merchant @relation(fields: [merchantId], references: [id])
   createdAt  DateTime @default(now())

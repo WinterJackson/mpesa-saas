@@ -1,5 +1,6 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
+import { paymentApiRateLimit, callbackRateLimit, generalRateLimit } from '@/lib/rate-limit';
 
 /**
  * Proxy (Middleware) for M-Pesa SaaS Platform
@@ -20,12 +21,31 @@ export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth();
   const pathname = req.nextUrl.pathname;
 
+  // Rate Limiting for all /api/* routes
+  if (pathname.startsWith('/api/')) {
+    const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? '127.0.0.1';
+    let limitResult;
+    
+    if (pathname.startsWith('/api/v1/payments')) {
+      limitResult = await paymentApiRateLimit.limit(ip);
+    } else if (pathname.startsWith('/api/mpesa/callback') || pathname.startsWith('/api/integrations/')) {
+      limitResult = await callbackRateLimit.limit(ip);
+    } else {
+      limitResult = await generalRateLimit.limit(userId ?? ip);
+    }
+
+    if (!limitResult.success) {
+      return NextResponse.json({ success: false, error: 'Too many requests. Please slow down.' }, { status: 429 });
+    }
+  }
+
   // Skip onboarding logic for public routes, API routes, and static assets
   if (
     pathname === '/' ||
     pathname.startsWith('/sign-in') ||
     pathname.startsWith('/sign-up') ||
     pathname.startsWith('/demo-store') ||
+    pathname.startsWith('/legal') ||
     pathname.startsWith('/api/') ||
     pathname.startsWith('/__clerk')
   ) {

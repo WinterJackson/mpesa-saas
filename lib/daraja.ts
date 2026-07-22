@@ -1,5 +1,6 @@
 import { env } from '@/lib/env';
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 const DARAJA_BASE_URLS = {
   sandbox: 'https://sandbox.safaricom.co.ke',
@@ -64,7 +65,7 @@ export async function getAccessToken(environment: 'sandbox' | 'live'): Promise<s
     }
   } catch (dbError) {
     // If the DB read fails (e.g. table doesn't exist yet), we fall through to fetch a new token
-    console.warn('DarajaToken cache read failed, fetching fresh token:', dbError);
+    logger.warn('DarajaToken cache read failed, fetching fresh token:', dbError);
   }
 
   // Token missing, expired, or cache read failed — fetch a new one
@@ -87,14 +88,14 @@ export async function getAccessToken(environment: 'sandbox' | 'live'): Promise<s
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'No response body');
-      console.error(`Daraja OAuth Error [${response.status}]:`, errorText);
+      logger.error(`Daraja OAuth Error [${response.status}]:`, errorText);
       throw new Error(`Daraja authentication failed with status ${response.status}`);
     }
 
     const data = await response.json();
 
     if (!data.access_token) {
-      console.error('Daraja OAuth returned no access_token:', data);
+      logger.error('Daraja OAuth returned no access_token:', data);
       throw new Error('Daraja returned an invalid token response');
     }
 
@@ -118,7 +119,7 @@ export async function getAccessToken(environment: 'sandbox' | 'live'): Promise<s
   } catch (error: unknown) {
     clearTimeout(timeoutId);
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Daraja token generation failed:', message);
+    logger.error('Daraja token generation failed:', message);
 
     // Sanitize error — never leak credentials or internal details to callers
     if (message.includes('AbortError') || (error instanceof DOMException && error.name === 'AbortError')) {
@@ -238,7 +239,7 @@ export async function initiateSTKPush({
     const responseData = await response.json();
 
     if (!response.ok) {
-      console.error(`Daraja STK Push Error [${response.status}]:`, JSON.stringify(responseData));
+      logger.error(`Daraja STK Push Error [${response.status}]:`, JSON.stringify(responseData));
       throw new Error(`Payment gateway rejected request: ${response.status}`);
     }
 
@@ -246,7 +247,7 @@ export async function initiateSTKPush({
   } catch (error: unknown) {
     clearTimeout(timeoutId);
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Daraja STK Push failed:', message);
+    logger.error('Daraja STK Push failed:', message);
 
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw new Error('Payment gateway timed out. Please try again.');
@@ -306,7 +307,7 @@ export async function querySTKPushStatus(checkoutRequestId: string, environment:
     const data = await response.json();
 
     if (!response.ok) {
-      console.error(`Daraja STK Query Error [${response.status}]:`, JSON.stringify(data));
+      logger.error(`Daraja STK Query Error [${response.status}]:`, JSON.stringify(data));
       throw new Error(`Failed to query transaction status: ${response.status}`);
     }
 
@@ -314,7 +315,7 @@ export async function querySTKPushStatus(checkoutRequestId: string, environment:
   } catch (error: unknown) {
     clearTimeout(timeoutId);
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Daraja status query failed:', message);
+    logger.error('Daraja status query failed:', message);
 
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw new Error('Transaction status query timed out. Please try again.');

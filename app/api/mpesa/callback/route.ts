@@ -1,9 +1,9 @@
-import { NextResponse, after } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { deliverWebhook } from '@/lib/webhook';
-import { markShopifyOrderPaid } from '@/lib/shopify';
+import { finalizeTransactionAsync } from '@/lib/transaction-finalization';
 import type { DarajaCallbackPayload, DarajaCallbackMetadataItem } from '@/lib/types';
 import { mapResultCodeToStatus } from '@/lib/mpesa-status';
+import { logger } from '@/lib/logger';
 
 /**
  * Safaricom STK Push Callback Endpoint.
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     try {
       body = await request.json();
     } catch {
-      console.error('[Callback] Failed to parse request body as JSON');
+      logger.error('[Callback] Failed to parse request body as JSON');
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     const stkCallback = body?.Body?.stkCallback;
 
     if (!stkCallback || !stkCallback.CheckoutRequestID) {
-      console.error('[Callback] Invalid payload shape — missing stkCallback or CheckoutRequestID:', JSON.stringify(body));
+      logger.error('[Callback] Invalid payload shape — missing stkCallback or CheckoutRequestID:', JSON.stringify(body));
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
@@ -71,13 +71,13 @@ export async function POST(request: Request) {
     });
 
     if (!transaction) {
-      console.warn(`[Callback] No transaction found for CheckoutRequestID: ${CheckoutRequestID}`);
+      logger.warn(`[Callback] No transaction found for CheckoutRequestID: ${CheckoutRequestID}`);
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
     // If already in a terminal state, return immediately (idempotent)
     if (transaction.status === 'completed' || transaction.status === 'cancelled' || transaction.status === 'failed') {
-      console.log(`[Callback] Transaction ${transaction.id} already in terminal state "${transaction.status}". Skipping.`);
+      logger.info(`[Callback] Transaction ${transaction.id} already in terminal state "${transaction.status}". Skipping.`);
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
@@ -113,83 +113,17 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log(`[Callback] Transaction ${transaction.id} updated to "${status}" (ResultCode: ${ResultCode})`);
+    logger.info(`[Callback] Transaction ${transaction.id} updated to "${status}" (ResultCode: ${ResultCode})`);
 
-    // ── 4. Outbound Webhook (Fire-and-Forget) ─────────────────────────────────
-    // If the merchant has a webhook URL configured, deliver the event asynchronously.
-    // We use .then()/.catch() instead of await so the 200 response returns immediately.
+    // ── 4. Finalize Async (Webhooks & Shopify) ───────────────────────────────
     const { merchant } = transaction;
-    if (merchant.webhookUrl) {
-      const webhookPayload = {
-        event: `payment.${status}`,
-        data: {
-          transactionId: updatedTransaction.id,
-          amount: updatedTransaction.amount,
-          phone: updatedTransaction.phone,
-          orderReference: updatedTransaction.orderReference,
-          status: updatedTransaction.status,
-          mpesaReceipt: updatedTransaction.mpesaReceipt,
-          resultCode: updatedTransaction.resultCode,
-          resultDesc: updatedTransaction.resultDesc,
-          createdAt: updatedTransaction.createdAt,
-          updatedAt: updatedTransaction.updatedAt,
-        },
-      };
-
-      // Fire-and-forget background execution via Next.js after()
-      // Guarantees execution completes in Vercel Serverless without blocking the 200 OK response
-      after(async () => {
-        try {
-          const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, merchant.webhookSecret ?? undefined);
-          
-          await prisma.webhookDelivery.create({
-            data: {
-              transactionId: updatedTransaction.id,
-              url: merchant.webhookUrl!,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              payload: webhookPayload as any,
-              statusCode: result.statusCode ?? null,
-              success: result.delivered,
-              attempt: result.attempts,
-            }
-          });
-
-          if (!result.delivered) {
-            console.warn(`[Callback Webhook] Delivery failed to ${merchant.webhookUrl} (HTTP ${result.statusCode})`);
-          }
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : 'Unknown error';
-          console.error(`[Callback Webhook] Uncaught error for ${merchant.webhookUrl}: ${msg}`);
-        }
-      });
-    }
-
-    // ── 5. Outbound Shopify Confirmation (Fire-and-Forget) ────────────────────
-    if (updatedTransaction.status === 'completed' && updatedTransaction.source === 'shopify' && merchant.shopifyShopDomain && merchant.shopifyAdminAccessToken && updatedTransaction.orderReference) {
-      after(async () => {
-        try {
-          const result = await markShopifyOrderPaid({
-            shopDomain: merchant.shopifyShopDomain!,
-            accessToken: merchant.shopifyAdminAccessToken!,
-            orderId: updatedTransaction.orderReference!, // Contains numeric orderId
-            mpesaReceipt: updatedTransaction.mpesaReceipt ?? 'N/A'
-          });
-          
-          if (!result.success) {
-            console.error(`[Callback Shopify] Failed to update Shopify order ${updatedTransaction.orderReference}: ${result.error}`);
-          }
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : 'Unknown error';
-          console.error(`[Callback Shopify] Uncaught error updating Shopify order ${updatedTransaction.orderReference}: ${msg}`);
-        }
-      });
-    }
+    finalizeTransactionAsync(updatedTransaction, merchant);
 
     // Safaricom ALWAYS needs 200 OK — even if our internal processing fails
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Callback Processing Error]:', message);
+    logger.error('[Callback Processing Error]:', message);
     // MUST return 200 to Safaricom even on internal errors to prevent retry storms
     return NextResponse.json({ success: true }, { status: 200 });
   }

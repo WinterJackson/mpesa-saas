@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { isLiveModeConfigured } from '@/lib/daraja';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -15,7 +16,7 @@ export async function GET() {
     );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Live Readiness Error]:', message);
+    logger.error('[Live Readiness Error]:', message);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

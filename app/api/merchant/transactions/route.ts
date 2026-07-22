@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 interface TransactionRow {
   id: string;
@@ -102,7 +103,7 @@ export async function GET(request: Request) {
     );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Merchant Transactions GET Error]:', message);
+    logger.error('[Merchant Transactions GET Error]:', message);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

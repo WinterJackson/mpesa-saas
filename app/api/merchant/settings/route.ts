@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { isLiveModeConfigured } from '@/lib/daraja';
+import { encryptSecret, decryptSecret } from '@/lib/crypto';
+import { logger } from '@/lib/logger';
 
 export async function PATCH(request: Request) {
   try {
@@ -60,10 +62,10 @@ export async function PATCH(request: Request) {
       updateData.shopifyShopDomain = body.shopifyShopDomain;
     }
     if (body.shopifyAdminAccessToken !== undefined) {
-      updateData.shopifyAdminAccessToken = body.shopifyAdminAccessToken;
+      updateData.shopifyAdminAccessToken = body.shopifyAdminAccessToken ? encryptSecret(body.shopifyAdminAccessToken) : null;
     }
     if (body.shopifyWebhookSecret !== undefined) {
-      updateData.shopifyWebhookSecret = body.shopifyWebhookSecret;
+      updateData.shopifyWebhookSecret = body.shopifyWebhookSecret ? encryptSecret(body.shopifyWebhookSecret) : null;
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -81,14 +83,14 @@ export async function PATCH(request: Request) {
         environment: updatedMerchant.environment,
         webhookUrl: updatedMerchant.webhookUrl,
         shopifyShopDomain: updatedMerchant.shopifyShopDomain,
-        shopifyAdminAccessToken: updatedMerchant.shopifyAdminAccessToken,
-        shopifyWebhookSecret: updatedMerchant.shopifyWebhookSecret
+        shopifyAdminAccessToken: updatedMerchant.shopifyAdminAccessToken ? decryptSecret(updatedMerchant.shopifyAdminAccessToken) : null,
+        shopifyWebhookSecret: updatedMerchant.shopifyWebhookSecret ? decryptSecret(updatedMerchant.shopifyWebhookSecret) : null
       }
     }, { status: 200 });
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Settings Update Error]:', message);
+    logger.error('[Settings Update Error]:', message);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

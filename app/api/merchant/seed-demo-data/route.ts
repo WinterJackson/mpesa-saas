@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 export async function POST() {
   try {
@@ -107,7 +108,7 @@ export async function POST() {
     );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Seed Demo Data Error]:', message);
+    logger.error('[Seed Demo Data Error]:', message);
     // Surface unique constraint violations distinctly for easier debugging
     if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: unknown }).code === 'P2002') {
       return NextResponse.json(

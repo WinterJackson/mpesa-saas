@@ -2,7 +2,9 @@ import { NextResponse, after } from 'next/server';
 import { prisma } from '@/lib/db';
 import { verifyShopifyWebhook } from '@/lib/shopify';
 import { createAndInitiatePayment } from '@/lib/payments';
+import { decryptSecret } from '@/lib/crypto';
 import { validatePhone } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -23,7 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
     }
 
-    if (!merchant.shopifyWebhookSecret || !verifyShopifyWebhook(rawBody, hmacHeader, merchant.shopifyWebhookSecret)) {
+    if (!merchant.shopifyWebhookSecret || !verifyShopifyWebhook(rawBody, hmacHeader, decryptSecret(merchant.shopifyWebhookSecret)!)) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -42,19 +44,19 @@ export async function POST(request: Request) {
     const shopifyOrderName = order.name;
 
     if (order.currency !== 'KES') {
-      console.warn(`[Shopify] Skipping non-KES order ${shopifyOrderName} (${shopifyOrderId})`);
+      logger.warn(`[Shopify] Skipping non-KES order ${shopifyOrderName} (${shopifyOrderId})`);
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
     const phoneRaw = order.phone || order.customer?.phone || order.shipping_address?.phone;
     if (!phoneRaw) {
-      console.warn(`[Shopify] Skipping order ${shopifyOrderName} (${shopifyOrderId}) - missing phone`);
+      logger.warn(`[Shopify] Skipping order ${shopifyOrderName} (${shopifyOrderId}) - missing phone`);
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
     const phoneValidation = validatePhone(String(phoneRaw));
     if (!phoneValidation.valid) {
-      console.warn(`[Shopify] Skipping order ${shopifyOrderName} (${shopifyOrderId}) - invalid phone: ${phoneValidation.error}`);
+      logger.warn(`[Shopify] Skipping order ${shopifyOrderName} (${shopifyOrderId}) - invalid phone: ${phoneValidation.error}`);
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
@@ -71,13 +73,13 @@ export async function POST(request: Request) {
         });
 
         if (!result.success) {
-          console.error(`[Shopify] Payment initiation failed for order ${shopifyOrderName}: ${result.error}`);
+          logger.error(`[Shopify] Payment initiation failed for order ${shopifyOrderName}: ${result.error}`);
         } else {
-          console.log(`[Shopify] Initiated M-Pesa STK push for order ${shopifyOrderName} (${shopifyOrderId})`);
+          logger.info(`[Shopify] Initiated M-Pesa STK push for order ${shopifyOrderName} (${shopifyOrderId})`);
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
-        console.error(`[Shopify] Background processing error for order ${shopifyOrderName}: ${msg}`);
+        logger.error(`[Shopify] Background processing error for order ${shopifyOrderName}: ${msg}`);
       }
     });
 
@@ -85,7 +87,7 @@ export async function POST(request: Request) {
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Shopify Webhook Error]:', message);
+    logger.error('[Shopify Webhook Error]:', message);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

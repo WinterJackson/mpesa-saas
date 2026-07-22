@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { verifyShopifyCredentials } from '@/lib/shopify';
+import { decryptSecret } from '@/lib/crypto';
+import { logger } from '@/lib/logger';
 
 export async function POST() {
   try {
@@ -23,12 +25,12 @@ export async function POST() {
       return NextResponse.json({ success: false, error: 'Missing Shopify configuration' }, { status: 400 });
     }
 
-    const result = await verifyShopifyCredentials(merchant.shopifyShopDomain, merchant.shopifyAdminAccessToken);
+    const result = await verifyShopifyCredentials(merchant.shopifyShopDomain, decryptSecret(merchant.shopifyAdminAccessToken)!);
     
     return NextResponse.json({ success: true, data: result }, { status: 200 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Shopify Test Connection Error]:', message);
+    logger.error('[Shopify Test Connection Error]:', message);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

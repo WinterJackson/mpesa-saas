@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { decryptSecret } from "@/lib/crypto";
 import { ApiKeyCard } from "@/components/settings/api-key-card";
 import { WebhookCard } from "@/components/settings/webhook-card";
 import { EnvironmentCard } from "@/components/settings/environment-card";
@@ -24,6 +25,7 @@ export default async function SettingsPage() {
       apiKeys: {
         where: { revoked: false },
         take: 1,
+        select: { keyPrefix: true },
       },
     },
   });
@@ -32,7 +34,7 @@ export default async function SettingsPage() {
     redirect("/onboarding");
   }
 
-  const activeKey = merchant.apiKeys[0]?.key || "";
+  const activeKeyPrefix = merchant.apiKeys[0]?.keyPrefix || "";
 
   return (
     <div className="space-y-6">
@@ -44,13 +46,13 @@ export default async function SettingsPage() {
       </div>
 
       <div className="grid gap-6">
-        <ApiKeyCard initialKey={activeKey} />
-        <WebhookCard initialUrl={merchant.webhookUrl} initialSecret={merchant.webhookSecret} />
+        <ApiKeyCard initialKeyPrefix={activeKeyPrefix} />
+        <WebhookCard initialUrl={merchant.webhookUrl} initialSecret={merchant.webhookSecret ? decryptSecret(merchant.webhookSecret) : null} />
         <EnvironmentCard initialEnvironment={merchant.environment as "sandbox" | "live"} />
         <ShopifyCard 
           initialDomain={merchant.shopifyShopDomain} 
-          initialToken={merchant.shopifyAdminAccessToken} 
-          initialSecret={merchant.shopifyWebhookSecret} 
+          initialToken={merchant.shopifyAdminAccessToken ? decryptSecret(merchant.shopifyAdminAccessToken) : null} 
+          initialSecret={merchant.shopifyWebhookSecret ? decryptSecret(merchant.shopifyWebhookSecret) : null} 
         />
       </div>
     </div>

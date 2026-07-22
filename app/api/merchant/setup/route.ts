@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { prisma, TransactionClient } from '@/lib/db';
 import crypto from 'node:crypto';
+import { generateApiKey } from '@/lib/api-keys';
+import { encryptSecret } from '@/lib/crypto';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/merchant/setup
@@ -55,23 +58,29 @@ export async function POST(request: Request) {
 
     // Create Merchant and initial API key atomically
     const newMerchant = await prisma.$transaction(async (tx: TransactionClient) => {
+      const rawWebhookSecret = `whsec_${crypto.randomBytes(24).toString('hex')}`;
       const merchant = await tx.merchant.create({
         data: {
           clerkUserId: userId,
           businessName: businessName.trim(),
           environment: 'sandbox',
-          webhookSecret: `whsec_${crypto.randomBytes(24).toString('hex')}`,
+          webhookSecret: encryptSecret(rawWebhookSecret),
         },
       });
 
+      const newKey = generateApiKey();
       const apiKey = await tx.apiKey.create({
         data: {
           merchantId: merchant.id,
+          keyHash: newKey.keyHash,
+          keyPrefix: newKey.keyPrefix,
         },
       });
 
       return {
         ...merchant,
+        webhookSecret: rawWebhookSecret,
+        apiKeyRaw: newKey.raw,
         apiKeys: [apiKey],
       };
     });
@@ -96,7 +105,7 @@ export async function POST(request: Request) {
     return response;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Merchant Setup Error]:', message);
+    logger.error('[Merchant Setup Error]:', message);
     return NextResponse.json(
       { success: false, error: 'Internal server error during merchant setup' },
       { status: 500 }

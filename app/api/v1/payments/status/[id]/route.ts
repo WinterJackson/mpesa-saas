@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { authenticateApiKey } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   request: Request,
@@ -61,7 +62,7 @@ export async function GET(
     );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Payment Status Error]:', message);
+    logger.error('[Payment Status Error]:', message);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

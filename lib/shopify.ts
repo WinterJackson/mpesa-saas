@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { logger } from '@/lib/logger';
 
 const SHOPIFY_API_VERSION = '2026-07';
 
@@ -55,20 +56,20 @@ export async function markShopifyOrderPaid(params: {
     
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'No response body');
-      console.error(`[Shopify] Failed to mark order ${orderId} as paid: HTTP ${response.status} - ${errorText}`);
+      logger.error(`[Shopify] Failed to mark order ${orderId} as paid: HTTP ${response.status} - ${errorText}`);
       return { success: false, error: `HTTP ${response.status}` };
     }
     
-    console.log(`[Shopify] Successfully marked order ${orderId} as paid`);
+    logger.info(`[Shopify] Successfully marked order ${orderId} as paid`);
     return { success: true };
   } catch (error: unknown) {
     clearTimeout(timeoutId);
     if (error instanceof DOMException && error.name === 'AbortError') {
-      console.error(`[Shopify] Timeout marking order ${orderId} as paid`);
+      logger.error(`[Shopify] Timeout marking order ${orderId} as paid`);
       return { success: false, error: 'Timeout' };
     }
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[Shopify] Error marking order ${orderId} as paid: ${message}`);
+    logger.error(`[Shopify] Error marking order ${orderId} as paid: ${message}`);
     return { success: false, error: message };
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
+import { generateApiKey } from '@/lib/api-keys';
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,25 +26,27 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // 2. Check if API key exists, otherwise create
-    let apiKey = await prisma.apiKey.findFirst({
+    // 2. Check if API key exists, revoke, and always create fresh
+    await prisma.apiKey.updateMany({
       where: { merchantId: merchant.id, revoked: false },
+      data: { revoked: true },
     });
 
-    if (!apiKey) {
-      apiKey = await prisma.apiKey.create({
-        data: {
-          merchantId: merchant.id,
-        },
-      });
-    }
+    const newKey = generateApiKey();
+    await prisma.apiKey.create({
+      data: {
+        merchantId: merchant.id,
+        keyHash: newKey.keyHash,
+        keyPrefix: newKey.keyPrefix,
+      },
+    });
 
     return NextResponse.json({
       success: true,
       message: "Demo Merchant Seeded Successfully. Add DEMO_API_KEY to your .env.local file to use the demo store.",
       data: {
         merchantId: merchant.id,
-        demoApiKey: apiKey.key,
+        demoApiKey: newKey.raw,
       }
     });
   } catch (error: unknown) {

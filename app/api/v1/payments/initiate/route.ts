@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { authenticateApiKey } from '@/lib/auth';
 import { validatePhone, validateAmount } from '@/lib/validation';
 import { createAndInitiatePayment } from '@/lib/payments';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/v1/payments/initiate
@@ -35,7 +36,20 @@ export async function POST(request: Request) {
 
     const { merchant } = authResult;
 
-    // ── 2. Parse Body ─────────────────────────────────────────────────────────
+    // ── 2. Idempotency Check ──────────────────────────────────────────────────
+    const idempotencyKey = request.headers.get('Idempotency-Key');
+    if (idempotencyKey) {
+      const { checkIdempotency } = await import('@/lib/rate-limit');
+      const isNewRequest = await checkIdempotency(idempotencyKey);
+      if (!isNewRequest) {
+        return NextResponse.json(
+          { success: false, error: 'Duplicate request. A request with this Idempotency-Key is already being processed.' },
+          { status: 409 }
+        );
+      }
+    }
+
+    // ── 3. Parse Body ─────────────────────────────────────────────────────────
     let body: Record<string, unknown>;
     try {
       body = await request.json();
@@ -99,7 +113,7 @@ export async function POST(request: Request) {
     );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Payment Initiate Error]:', message);
+    logger.error('[Payment Initiate Error]:', message);
     return NextResponse.json(
       { success: false, error: 'Internal server error while processing payment' },
       { status: 500 }

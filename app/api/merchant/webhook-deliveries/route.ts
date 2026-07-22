@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, data: deliveries }, { status: 200 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Get Webhook Deliveries Error]:', message);
+    logger.error('[Get Webhook Deliveries Error]:', message);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

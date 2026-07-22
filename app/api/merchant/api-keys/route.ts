@@ -1,11 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma, TransactionClient } from '@/lib/db';
-import crypto from 'crypto';
-
-function generateApiKey() {
-  return `pk_${crypto.randomBytes(24).toString('hex')}`;
-}
+import { generateApiKey } from '@/lib/api-keys';
+import { logger } from '@/lib/logger';
 
 export async function POST() {
   try {
@@ -36,22 +33,23 @@ export async function POST() {
       const keyRecord = await tx.apiKey.create({
         data: {
           merchantId: merchant.id,
-          key: newApiKey,
+          keyHash: newApiKey.keyHash,
+          keyPrefix: newApiKey.keyPrefix,
           revoked: false,
         },
       });
 
-      return keyRecord;
+      return { keyRecord, rawKey: newApiKey.raw };
     });
 
     return NextResponse.json({ 
       success: true, 
-      data: { key: result.key } 
+      data: { key: result.rawKey } 
     }, { status: 200 });
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[API Key Regeneration Error]:', message);
+    logger.error('[API Key Regeneration Error]:', message);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // ─── Environment Variable Schema ─────────────────────────────────────────────
 // Every variable consumed by the backend is validated here.
@@ -19,6 +20,11 @@ const envSchema = z.object({
   MPESA_SHORTCODE_LIVE: z.string().optional(),
   MPESA_PASSKEY_LIVE: z.string().optional(),
   MPESA_CALLBACK_URL_LIVE: z.string().url('MPESA_CALLBACK_URL_LIVE must be a valid URL').optional(),
+  ENCRYPTION_KEY: z.string().min(44, 'ENCRYPTION_KEY must be a 32-byte base64 string'),
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+  CRON_SECRET: z.string().min(1).optional(),
+  NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -49,10 +55,15 @@ function validateEnv(): Env {
     MPESA_SHORTCODE_LIVE: process.env.MPESA_SHORTCODE_LIVE,
     MPESA_PASSKEY_LIVE: process.env.MPESA_PASSKEY_LIVE,
     MPESA_CALLBACK_URL_LIVE: process.env.MPESA_CALLBACK_URL_LIVE,
+    ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
+    UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
+    CRON_SECRET: process.env.CRON_SECRET,
+    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
   });
 
   if (!result.success) {
-    console.error('❌ Invalid environment variables:', result.error.format());
+    logger.error('❌ Invalid environment variables:', result.error.format());
     throw new Error('Missing or invalid environment variables. Check server logs for details.');
   }
 

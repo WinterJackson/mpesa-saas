@@ -1,4 +1,5 @@
 import { createHmac } from 'node:crypto';
+import { logger } from '@/lib/logger';
 
 // ─── Webhook Delivery ────────────────────────────────────────────────────────
 
@@ -59,11 +60,11 @@ export async function deliverWebhook(
       lastStatusCode = response.status;
 
       if (response.ok) {
-        console.log(`[Webhook] Successfully delivered to ${url} (Attempt ${attempts}): HTTP ${response.status}`);
+        logger.info(`[Webhook] Successfully delivered to ${url} (Attempt ${attempts}): HTTP ${response.status}`);
         return { delivered: true, statusCode: response.status, attempts };
       }
 
-      console.warn(`[Webhook] Delivery failed to ${url} (Attempt ${attempts}): HTTP ${response.status}`);
+      logger.warn(`[Webhook] Delivery failed to ${url} (Attempt ${attempts}): HTTP ${response.status}`);
 
       // Do NOT retry on 4xx (merchant endpoint issue)
       if (response.status >= 400 && response.status < 500) {
@@ -73,20 +74,20 @@ export async function deliverWebhook(
       clearTimeout(timeoutId);
 
       if (error instanceof DOMException && error.name === 'AbortError') {
-        console.warn(`[Webhook] Delivery to ${url} timed out after 5 seconds (Attempt ${attempts})`);
+        logger.warn(`[Webhook] Delivery to ${url} timed out after 5 seconds (Attempt ${attempts})`);
       } else {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.warn(`[Webhook] Delivery error for ${url} (Attempt ${attempts}):`, message);
+        logger.warn(`[Webhook] Delivery error for ${url} (Attempt ${attempts}):`, message);
       }
     }
 
     if (attempts < maxAttempts) {
       const delayMs = attempts === 1 ? 1000 : 3000;
-      console.log(`[Webhook] Retrying ${url} in ${delayMs}ms...`);
+      logger.info(`[Webhook] Retrying ${url} in ${delayMs}ms...`);
       await new Promise(r => setTimeout(r, delayMs));
     }
   }
 
-  console.error(`[Webhook] Exhausted ${maxAttempts} attempts for ${url}`);
+  logger.error(`[Webhook] Exhausted ${maxAttempts} attempts for ${url}`);
   return { delivered: false, statusCode: lastStatusCode, attempts };
 }

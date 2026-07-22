@@ -1,5 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import { prisma } from '@/lib/db';
+import { hashApiKey } from './api-keys';
+import { logger } from '@/lib/logger';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 // Locally defined to avoid importing model types from @prisma/client,
@@ -20,7 +22,8 @@ interface Merchant {
 
 interface ApiKey {
   id: string;
-  key: string;
+  keyHash: string;
+  keyPrefix: string;
   merchantId: string;
   createdAt: Date;
   revoked: boolean;
@@ -55,8 +58,10 @@ export async function authenticateApiKey(request: Request): Promise<AuthResult> 
   }
 
   try {
+    const providedHash = hashApiKey(apiKeyHeader);
+
     const apiKeyRecord = await prisma.apiKey.findUnique({
-      where: { key: apiKeyHeader },
+      where: { keyHash: providedHash },
       include: { merchant: true },
     });
 
@@ -68,11 +73,9 @@ export async function authenticateApiKey(request: Request): Promise<AuthResult> 
       return { success: false, error: 'API key has been revoked', status: 401 };
     }
 
-    // Constant-time comparison to defend against timing attacks.
-    // Even though findUnique does an exact DB match, this layer protects against
-    // subtle timing differences in DB query execution or future architecture changes.
-    const providedBuffer = Buffer.from(apiKeyHeader, 'utf-8');
-    const storedBuffer = Buffer.from(apiKeyRecord.key, 'utf-8');
+    // Constant-time comparison on the hash for defense-in-depth against timing attacks.
+    const providedBuffer = Buffer.from(providedHash, 'utf-8');
+    const storedBuffer = Buffer.from(apiKeyRecord.keyHash, 'utf-8');
 
     if (providedBuffer.length !== storedBuffer.length || !timingSafeEqual(providedBuffer, storedBuffer)) {
       return { success: false, error: 'Invalid API key', status: 401 };
@@ -81,7 +84,7 @@ export async function authenticateApiKey(request: Request): Promise<AuthResult> 
     return { success: true, merchant: apiKeyRecord.merchant, apiKey: apiKeyRecord };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('API Key authentication error:', message);
+    logger.error('API Key authentication error:', message);
     // Never leak internal error details to the client
     return { success: false, error: 'Authentication service unavailable', status: 500 };
   }

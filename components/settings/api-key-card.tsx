@@ -17,17 +17,17 @@ import {
 } from "@/components/ui/dialog";
 
 interface ApiKeyCardProps {
-  initialKey: string;
+  initialKeyPrefix: string;
 }
 
-export function ApiKeyCard({ initialKey }: ApiKeyCardProps) {
-  const [apiKey, setApiKey] = useState(initialKey);
+export function ApiKeyCard({ initialKeyPrefix }: ApiKeyCardProps) {
+  const [apiKey, setApiKey] = useState("");
   const [isRevealed, setIsRevealed] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const displayKey = isRevealed ? apiKey : "••••••••••••••••••••••••••••••••";
+  const displayKey = isRevealed && apiKey ? apiKey : (initialKeyPrefix ? `${initialKeyPrefix}••••••••••••••••••••` : "••••••••••••••••••••••••••••••••");
 
   const copyToClipboard = async () => {
     try {
@@ -74,32 +74,37 @@ export function ApiKeyCard({ initialKey }: ApiKeyCardProps) {
           it as the x-api-key header on every request to /api/v1/payments/initiate.
           Never use it in browser or mobile app code where customers could see it — it
           belongs only on your server.
+          <br /><br />
+          <strong>For security, we only ever show your full API key once, right when it&apos;s created. If you&apos;ve lost it, regenerate a new one.</strong>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Input 
-              type={isRevealed ? "text" : "password"} 
+              type={isRevealed && apiKey ? "text" : "password"} 
               value={displayKey} 
               readOnly 
               className="font-mono pr-20"
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute right-1 top-1 h-7 w-7 text-muted-foreground hover:text-foreground"
-              onClick={() => setIsRevealed(!isRevealed)}
-              title={isRevealed ? "Hide API Key" : "Reveal API Key"}
-            >
-              {isRevealed ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-            </Button>
+            {apiKey && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1 h-7 w-7 text-muted-foreground hover:text-foreground"
+                onClick={() => setIsRevealed(!isRevealed)}
+                title={isRevealed ? "Hide API Key" : "Reveal API Key"}
+              >
+                {isRevealed ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </Button>
+            )}
           </div>
           <Button 
             variant="outline" 
             onClick={copyToClipboard}
             className="shrink-0"
+            disabled={!apiKey}
           >
             {isCopied ? <CheckCircle2 className="size-4 mr-2" /> : <Copy className="size-4 mr-2" />}
             {isCopied ? "Copied" : "Copy"}

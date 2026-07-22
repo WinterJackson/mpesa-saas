@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import crypto from 'node:crypto';
+import { encryptSecret } from '@/lib/crypto';
+import { logger } from '@/lib/logger';
 
 export async function POST() {
   try {
@@ -23,7 +25,7 @@ export async function POST() {
 
     await prisma.merchant.update({
       where: { id: merchant.id },
-      data: { webhookSecret: newSecret },
+      data: { webhookSecret: encryptSecret(newSecret) },
     });
 
     return NextResponse.json({ 
@@ -33,7 +35,7 @@ export async function POST() {
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Regenerate Webhook Secret Error]:', message);
+    logger.error('[Regenerate Webhook Secret Error]:', message);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

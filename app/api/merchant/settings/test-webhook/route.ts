@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import crypto from 'crypto';
 import { deliverWebhook } from '@/lib/webhook';
+import { logger } from '@/lib/logger';
 
 export async function POST() {
   try {
@@ -99,7 +100,7 @@ export async function POST() {
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Test Webhook Error]:', message);
+    logger.error('[Test Webhook Error]:', message);
     return NextResponse.json({ success: false, error: 'Failed to deliver webhook payload to destination.' }, { status: 500 });
   }
 }
