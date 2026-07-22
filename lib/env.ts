@@ -25,6 +25,17 @@ const envSchema = z.object({
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1, 'UPSTASH_REDIS_REST_TOKEN is required'),
   CRON_SECRET: z.string().min(1, 'CRON_SECRET is required'),
   NEXT_PUBLIC_SENTRY_DSN: z.string().url('NEXT_PUBLIC_SENTRY_DSN must be a valid URL'),
+  // Optional: KYC document storage (Cloudflare R2, S3-compatible). Not required
+  // for the app to start — lib/storage.ts throws a clear error only when a KYC
+  // upload is actually attempted without these configured.
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET_NAME: z.string().optional(),
+  // Optional: Clerk webhook signing secret for app/api/webhooks/clerk/route.ts
+  // (organization membership sync). Configure once Clerk Organizations +
+  // webhooks are enabled in the Clerk Dashboard.
+  CLERK_WEBHOOK_SIGNING_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -60,6 +71,11 @@ function validateEnv(): Env {
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
     CRON_SECRET: process.env.CRON_SECRET,
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID,
+    R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
+    R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
+    R2_BUCKET_NAME: process.env.R2_BUCKET_NAME,
+    CLERK_WEBHOOK_SIGNING_SECRET: process.env.CLERK_WEBHOOK_SIGNING_SECRET,
   });
 
   if (!result.success) {

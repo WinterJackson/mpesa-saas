@@ -52,6 +52,17 @@ NEXT_PUBLIC_SENTRY_DSN="https://..."
 # MPESA_SHORTCODE_LIVE=""
 # MPESA_CALLBACK_URL_LIVE=""
 
+# Optional — KYC document storage (Cloudflare R2, S3-compatible). The onboarding
+# wizard's KYC upload step returns a 503 with a clear message until these are set.
+# R2_ACCOUNT_ID=""
+# R2_ACCESS_KEY_ID=""
+# R2_SECRET_ACCESS_KEY=""
+# R2_BUCKET_NAME=""
+
+# Optional — required once you add a webhook endpoint in the Clerk Dashboard
+# pointing at /api/webhooks/clerk (organization membership sync).
+# CLERK_WEBHOOK_SIGNING_SECRET=""
+
 # Webhook Domain (Use Ngrok for local testing)
 NEXT_PUBLIC_APP_URL="https://your-ngrok-domain.ngrok-free.app"
 
@@ -482,6 +493,7 @@ The repository includes utility scripts for operational maintenance:
 
 - `npm run db:seed` (via `scripts/seed-transactions.ts`): Safely seeds mock transactions into a local development database.
 - `npx tsx scripts/backfill-webhook-secrets.ts`: Operational script to backfill `webhookSecret` fields for existing merchants who registered prior to HMAC signature enforcement.
+- `npx tsx scripts/backfill-organizations.ts`: One-off Phase 1 migration script — creates a matching Clerk Organization + local Organization/Membership for every pre-Phase-1 Merchant and cascades `organizationId` onto its existing ApiKey/Transaction rows. Must be run (and its zero-NULL verification confirmed) before the follow-up migration that makes `organizationId` `NOT NULL`.
 
 ---
 

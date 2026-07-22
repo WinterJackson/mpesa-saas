@@ -94,6 +94,35 @@ export async function listMemberships(organizationId: string): Promise<Membershi
   });
 }
 
+export async function findOrganizationByClerkOrgId(clerkOrgId: string): Promise<Organization | null> {
+  return prisma.organization.findUnique({ where: { clerkOrgId } });
+}
+
+export async function createMembership(
+  organizationId: string,
+  clerkUserId: string,
+  role: string
+): Promise<Membership> {
+  return prisma.membership.create({
+    data: { organizationId, clerkUserId, role },
+  });
+}
+
+export async function removeMembership(organizationId: string, clerkUserId: string): Promise<void> {
+  await prisma.membership.deleteMany({ where: { organizationId, clerkUserId } });
+}
+
+export async function updateMembershipRole(
+  organizationId: string,
+  clerkUserId: string,
+  role: string
+): Promise<Membership> {
+  return prisma.membership.update({
+    where: { organizationId_clerkUserId: { organizationId, clerkUserId } },
+    data: { role },
+  });
+}
+
 export interface MerchantSettingsUpdate {
   environment?: string;
   webhookUrl?: string | null;

@@ -16,11 +16,25 @@ test.describe('E2E Onboarding & Checkout', () => {
     await otpInput.first().waitFor();
     await page.keyboard.type('424242'); // Clerk test OTP
 
-    // 2. Onboarding — the only submit button on this form reads "Complete Setup"
-    // (components/onboarding/onboarding-form.tsx), not "Complete Onboarding".
+    // 2. Onboarding — a 5-step wizard (components/onboarding/onboarding-wizard.tsx).
+    // Step 1 (Business Info) creates the Organization; steps 2-4 (KYC, Payment
+    // Setup, Webhook) are all skippable via their own "Continue" button since
+    // none are required to reach the dashboard in Phase 1.
     await page.waitForURL('**/onboarding');
     await page.getByLabel(/Business Name/i).fill('E2E Test Business');
-    await page.getByRole('button', { name: 'Complete Setup' }).click();
+    await page.getByRole('button', { name: 'Continue' }).click();
+
+    // Step 2: KYC Documents — skip.
+    await page.getByRole('button', { name: 'Continue' }).click();
+
+    // Step 3: Payment Setup — skip, keep the pooled sandbox credentials.
+    await page.getByRole('button', { name: 'Continue with pooled sandbox' }).click();
+
+    // Step 4: Webhook — skip (optional field).
+    await page.getByRole('button', { name: 'Continue' }).click();
+
+    // Step 5: Review — this is the step that actually navigates to the dashboard.
+    await page.getByRole('button', { name: 'Go to Dashboard' }).click();
 
     // 3. Dashboard — business name is rendered in app/(dashboard)/layout.tsx
     await page.waitForURL('**/dashboard');

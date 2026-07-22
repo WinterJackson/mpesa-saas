@@ -38,6 +38,17 @@ CRON_SECRET="..."
 
 # Observability
 NEXT_PUBLIC_SENTRY_DSN="..."
+
+# Optional — KYC document storage (Cloudflare R2). lib/storage.ts throws a
+# clear error only when a KYC upload is attempted without these set.
+# R2_ACCOUNT_ID="..."
+# R2_ACCESS_KEY_ID="..."
+# R2_SECRET_ACCESS_KEY="..."
+# R2_BUCKET_NAME="..."
+
+# Optional — required once a webhook endpoint is added in the Clerk Dashboard
+# pointing at /api/webhooks/clerk (organization membership sync).
+# CLERK_WEBHOOK_SIGNING_SECRET="..."
 ```
 
 ## Setup Steps
@@ -60,3 +71,4 @@ Use Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `security
 6. **API Key Schema**: API Keys are strictly stored as `keyHash` and `keyPrefix`. There is no plaintext `key` column. Do not attempt to query or read plaintext keys from the database.
 7. **Migrations**: Never hand-edit a migration file under `prisma/migrations/` that has already been applied. Create a new migration instead — this exact mistake caused a real data-loss incident during Phase 0 and must not be repeated.
 8. **Secrets**: Never commit `.env` or `.env.local`. Never touch live Daraja, Clerk, Sentry, Upstash, or billing-provider credentials under any circumstance.
+9. **Tenant Scoping (Phase 1)**: `lib/repositories/*` is the only place tenant-scoped Prisma calls (`Organization`, `Membership`, `ApiKey`, `Transaction`, `OrganizationDarajaCredential`, `KycDocument`) are allowed to live. Every function in it takes `organizationId` as a required parameter. Do not add a `prisma.<tenantScopedModel>.*` call anywhere else.
