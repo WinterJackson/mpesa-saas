@@ -31,8 +31,16 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!merchantToUse.organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Account setup incomplete' },
+        { status: 500 }
+      );
+    }
+
     const result = await createAndInitiatePayment({
       merchant: merchantToUse,
+      organizationId: merchantToUse.organizationId,
       phone,
       amount,
       orderReference,

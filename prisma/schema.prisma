@@ -6,9 +6,39 @@ datasource db {
   provider = "postgresql"
 }
 
+model Organization {
+  id             String   @id @default(cuid())
+  clerkOrgId     String   @unique
+  businessName   String
+  kycStatus      String   @default("pending") // pending | approved | rejected
+  liveApprovedAt DateTime?
+  liveApprovedBy String?
+  environment    String   @default("sandbox")
+  createdAt      DateTime @default(now())
+
+  merchant     Merchant?
+  memberships  Membership[]
+  apiKeys      ApiKey[]
+  transactions Transaction[]
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  clerkUserId    String
+  role           String       // owner | admin | developer | finance
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, clerkUserId])
+  @@index([clerkUserId])
+}
+
 model Merchant {
   id                      String        @id @default(cuid())
   clerkUserId             String        @unique
+  organizationId          String?       @unique
+  organization            Organization? @relation(fields: [organizationId], references: [id])
   businessName            String
   webhookUrl              String?
   environment             String        @default("sandbox")
@@ -22,18 +52,25 @@ model Merchant {
 }
 
 model ApiKey {
-  id         String   @id @default(cuid())
-  merchantId String
-  createdAt  DateTime @default(now())
-  revoked    Boolean  @default(false)
-  keyHash    String   @unique
-  keyPrefix  String
-  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  id             String        @id @default(cuid())
+  merchantId     String
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  scope          String        @default("read_write") // read_only | read_write
+  createdAt      DateTime      @default(now())
+  revoked        Boolean       @default(false)
+  keyHash        String        @unique
+  keyPrefix      String
+  merchant       Merchant      @relation(fields: [merchantId], references: [id])
+
+  @@index([organizationId])
 }
 
 model Transaction {
   id                String            @id @default(cuid())
   merchantId        String
+  organizationId    String?
+  organization      Organization?     @relation(fields: [organizationId], references: [id])
   amount            Int
   phone             String
   orderReference    String?
@@ -51,6 +88,8 @@ model Transaction {
 
   @@index([merchantId, createdAt(sort: Desc)])
   @@index([merchantId, status])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([organizationId, status])
 }
 
 model WebhookDelivery {

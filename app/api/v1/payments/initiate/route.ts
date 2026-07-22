@@ -80,6 +80,7 @@ export async function POST(request: Request) {
     // ── 4. Initiate Payment ─────────────────────────────────────────
     const result = await createAndInitiatePayment({
       merchant,
+      organizationId: authResult.organizationId,
       phone: sanitizedPhone,
       amount: sanitizedAmount,
       orderReference: orderReference ? String(orderReference).substring(0, 50) : null,

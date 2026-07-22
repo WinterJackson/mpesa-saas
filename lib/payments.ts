@@ -8,17 +8,19 @@ export type InitiatePaymentResult =
 
 export async function createAndInitiatePayment(params: {
   merchant: Merchant;
+  organizationId: string;
   phone: string;
   amount: number;
   orderReference: string | null;
   source: string;
 }): Promise<InitiatePaymentResult> {
-  const { merchant, phone, amount, orderReference, source } = params;
+  const { merchant, organizationId, phone, amount, orderReference, source } = params;
 
   // 1. Create Pending Transaction
   const transaction = await prisma.transaction.create({
     data: {
       merchantId: merchant.id,
+      organizationId,
       phone,
       amount,
       orderReference,

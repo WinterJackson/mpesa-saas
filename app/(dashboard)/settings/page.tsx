@@ -1,7 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto";
+import { getOrganizationContext } from "@/lib/repositories/organizations";
+import { findActiveApiKey } from "@/lib/repositories/api-keys";
 import { ApiKeyCard } from "@/components/settings/api-key-card";
 import { WebhookCard } from "@/components/settings/webhook-card";
 import { EnvironmentCard } from "@/components/settings/environment-card";
@@ -13,28 +14,21 @@ export const metadata = {
 };
 
 export default async function SettingsPage() {
-  const { userId } = await auth();
+  const { userId, orgId } = await auth();
 
   if (!userId) {
     redirect("/sign-in");
   }
 
-  const merchant = await prisma.merchant.findUnique({
-    where: { clerkUserId: userId },
-    include: {
-      apiKeys: {
-        where: { revoked: false },
-        take: 1,
-        select: { keyPrefix: true },
-      },
-    },
-  });
+  const context = await getOrganizationContext(userId, orgId);
 
-  if (!merchant) {
+  if (!context || !context.merchant) {
     redirect("/onboarding");
   }
 
-  const activeKeyPrefix = merchant.apiKeys[0]?.keyPrefix || "";
+  const merchant = context.merchant;
+  const activeKey = await findActiveApiKey(context.organization.id);
+  const activeKeyPrefix = activeKey?.keyPrefix || "";
 
   return (
     <div className="space-y-6">

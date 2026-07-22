@@ -25,6 +25,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
     }
 
+    if (!merchant.organizationId) {
+      logger.error(`[Shopify] Merchant ${merchant.id} has no organizationId — Organization backfill has not run`);
+      return NextResponse.json({ success: false, error: 'Account setup incomplete' }, { status: 500 });
+    }
+
     if (!merchant.shopifyWebhookSecret || !verifyShopifyWebhook(rawBody, hmacHeader, decryptSecret(merchant.shopifyWebhookSecret)!)) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
@@ -66,6 +71,7 @@ export async function POST(request: Request) {
       try {
         const result = await createAndInitiatePayment({
           merchant,
+          organizationId: merchant.organizationId!,
           phone: phoneValidation.sanitized!,
           amount: amountKes,
           orderReference: String(shopifyOrderId), // Store numeric ID for update later

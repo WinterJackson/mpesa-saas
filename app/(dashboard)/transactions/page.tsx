@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { getOrganizationContext } from "@/lib/repositories/organizations";
+import { listTransactions } from "@/lib/repositories/transactions";
 import { TransactionsTable } from "@/components/dashboard/transactions-table";
 
 export const metadata = {
@@ -9,28 +10,13 @@ export const metadata = {
 };
 
 export default async function TransactionsPage() {
-  const { userId } = await auth();
+  const { userId, orgId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const merchant = await prisma.merchant.findUnique({ where: { clerkUserId: userId } });
-  if (!merchant) redirect("/onboarding");
+  const context = await getOrganizationContext(userId, orgId);
+  if (!context) redirect("/onboarding");
 
-  const transactions = await prisma.transaction.findMany({
-    where: { merchantId: merchant.id },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    select: {
-      id: true,
-      amount: true,
-      phone: true,
-      status: true,
-      orderReference: true,
-      environment: true,
-      source: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
+  const transactions = await listTransactions(context.organization.id, { take: 100 });
 
   return (
     <div className="space-y-6">

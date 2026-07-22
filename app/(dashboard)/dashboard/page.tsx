@@ -1,13 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { getOrganizationContext } from "@/lib/repositories/organizations";
+import { listTransactions, transactionStatusSummary, summarizeStats } from "@/lib/repositories/transactions";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
-
-interface TransactionGroupStat {
-  status: string;
-  _count: { id: number };
-  _sum: { amount: number | null };
-}
 
 export const metadata = {
   title: "Dashboard - PaySwift",
@@ -15,71 +10,22 @@ export const metadata = {
 };
 
 export default async function DashboardPage() {
-  const { userId } = await auth();
+  const { userId, orgId } = await auth();
 
   if (!userId) {
     redirect("/sign-in");
   }
 
-  const merchant = await prisma.merchant.findUnique({
-    where: { clerkUserId: userId },
-    select: { id: true },
-  });
+  const context = await getOrganizationContext(userId, orgId);
 
-  if (!merchant) {
+  if (!context) {
     redirect("/onboarding");
   }
 
   // Fetch initial transactions and stats
-  const transactions = await prisma.transaction.findMany({
-    where: { merchantId: merchant.id },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    select: {
-      id: true,
-      amount: true,
-      phone: true,
-      status: true,
-      orderReference: true,
-      environment: true,
-      source: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
-
-  const allStats = await prisma.transaction.groupBy({
-    by: ["status"],
-    where: { merchantId: merchant.id },
-    _count: { id: true },
-    _sum: { amount: true },
-  });
-
-  let overallTotal = 0;
-  let overallRevenue = 0;
-  let overallCompleted = 0;
-  let overallPending = 0;
-
-  allStats.forEach((stat: TransactionGroupStat) => {
-    const count = stat._count.id;
-    overallTotal += count;
-    if (stat.status === "completed") {
-      overallCompleted += count;
-      overallRevenue += stat._sum.amount || 0;
-    }
-    if (stat.status === "pending") {
-      overallPending += count;
-    }
-  });
-
-  const successRate = overallTotal > 0 ? Math.round((overallCompleted / overallTotal) * 100) : 0;
-
-  const initialSummary = {
-    totalTransactions: overallTotal,
-    totalRevenue: overallRevenue,
-    successRate,
-    pendingCount: overallPending,
-  };
+  const transactions = await listTransactions(context.organization.id, { take: 50 });
+  const allStats = await transactionStatusSummary(context.organization.id);
+  const initialSummary = summarizeStats(allStats);
 
   return (
     <DashboardView 

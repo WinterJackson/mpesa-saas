@@ -10,6 +10,7 @@ import { logger } from '@/lib/logger';
 interface Merchant {
   id: string;
   clerkUserId: string;
+  organizationId: string | null;
   businessName: string;
   webhookUrl: string | null;
   webhookSecret: string | null;
@@ -25,12 +26,14 @@ interface ApiKey {
   keyHash: string;
   keyPrefix: string;
   merchantId: string;
+  organizationId: string | null;
+  scope: string;
   createdAt: Date;
   revoked: boolean;
 }
 
 export type AuthResult =
-  | { success: true; merchant: Merchant; apiKey: ApiKey }
+  | { success: true; merchant: Merchant; apiKey: ApiKey; organizationId: string }
   | { success: false; error: string; status: number };
 
 // ─── API Key Authentication ──────────────────────────────────────────────────
@@ -81,7 +84,16 @@ export async function authenticateApiKey(request: Request): Promise<AuthResult> 
       return { success: false, error: 'Invalid API key', status: 401 };
     }
 
-    return { success: true, merchant: apiKeyRecord.merchant, apiKey: apiKeyRecord };
+    // organizationId is nullable at the schema level only to allow an additive
+    // migration ahead of the Organization backfill (see scripts/backfill-organizations.ts).
+    // Every key reaching this point after that backfill has run must have one.
+    const organizationId = apiKeyRecord.organizationId ?? apiKeyRecord.merchant.organizationId;
+    if (!organizationId) {
+      logger.error('API key resolved with no organizationId — Organization backfill has not run for this key', { apiKeyId: apiKeyRecord.id });
+      return { success: false, error: 'Account setup incomplete', status: 500 };
+    }
+
+    return { success: true, merchant: apiKeyRecord.merchant, apiKey: apiKeyRecord, organizationId };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('API Key authentication error:', message);

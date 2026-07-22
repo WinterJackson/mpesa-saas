@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { authenticateApiKey } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { findTransactionById } from '@/lib/repositories/transactions';
 import { logger } from '@/lib/logger';
 
 export async function GET(
@@ -16,22 +16,14 @@ export async function GET(
       );
     }
 
-    const { merchant } = authResult;
     const { id } = await params;
 
-    const transaction = await prisma.transaction.findUnique({ where: { id } });
+    const transaction = await findTransactionById(authResult.organizationId, id);
 
     if (!transaction) {
       return NextResponse.json(
         { success: false, error: 'Transaction not found' },
         { status: 404 }
-      );
-    }
-
-    if (transaction.merchantId !== merchant.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized access to transaction' },
-        { status: 403 }
       );
     }
 

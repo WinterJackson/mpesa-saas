@@ -1,35 +1,28 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { prisma } from '@/lib/db';
 import { isLiveModeConfigured } from '@/lib/daraja';
 import { encryptSecret, decryptSecret } from '@/lib/crypto';
+import { getOrganizationContext, updateMerchantForOrganization, type MerchantSettingsUpdate } from '@/lib/repositories/organizations';
 import { logger } from '@/lib/logger';
 
 export async function PATCH(request: Request) {
   try {
-    const { userId } = await auth();
+    const { userId, orgId } = await auth();
 
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const merchant = await prisma.merchant.findUnique({
-      where: { clerkUserId: userId },
-    });
+    const context = await getOrganizationContext(userId, orgId);
 
-    if (!merchant) {
+    if (!context || !context.merchant) {
       return NextResponse.json({ success: false, error: 'Merchant not found' }, { status: 404 });
     }
 
+    const { organization } = context;
     const body = await request.json();
 
-    const updateData: { 
-      environment?: string; 
-      webhookUrl?: string | null;
-      shopifyShopDomain?: string | null;
-      shopifyAdminAccessToken?: string | null;
-      shopifyWebhookSecret?: string | null;
-    } = {};
+    const updateData: MerchantSettingsUpdate = {};
 
     if (body.environment !== undefined) {
       if (body.environment !== 'sandbox' && body.environment !== 'live') {
@@ -72,10 +65,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });
     }
 
-    const updatedMerchant = await prisma.merchant.update({
-      where: { id: merchant.id },
-      data: updateData,
-    });
+    const updatedMerchant = await updateMerchantForOrganization(organization.id, updateData);
 
     return NextResponse.json({ 
       success: true, 
