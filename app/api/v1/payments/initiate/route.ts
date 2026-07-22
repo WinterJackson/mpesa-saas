@@ -3,6 +3,7 @@ import { authenticateApiKey } from '@/lib/auth';
 import { validatePhone, validateAmount } from '@/lib/validation';
 import { createAndInitiatePayment } from '@/lib/payments';
 import { logger } from '@/lib/logger';
+import { getCachedIdempotentResponse, cacheIdempotentResponse } from '@/lib/idempotency';
 
 /**
  * POST /api/v1/payments/initiate
@@ -39,13 +40,9 @@ export async function POST(request: Request) {
     // ── 2. Idempotency Check ──────────────────────────────────────────────────
     const idempotencyKey = request.headers.get('Idempotency-Key');
     if (idempotencyKey) {
-      const { checkIdempotency } = await import('@/lib/rate-limit');
-      const isNewRequest = await checkIdempotency(idempotencyKey);
-      if (!isNewRequest) {
-        return NextResponse.json(
-          { success: false, error: 'Duplicate request. A request with this Idempotency-Key is already being processed.' },
-          { status: 409 }
-        );
+      const cached = await getCachedIdempotentResponse(idempotencyKey, merchant.id);
+      if (cached) {
+        return NextResponse.json(cached.data, { status: cached.status });
       }
     }
 
@@ -65,18 +62,16 @@ export async function POST(request: Request) {
     // ── 3. Validate Inputs ────────────────────────────────────────────────────
     const phoneValidation = validatePhone(phone as string);
     if (!phoneValidation.valid) {
-      return NextResponse.json(
-        { success: false, error: phoneValidation.error },
-        { status: 400 }
-      );
+      const resData = { success: false, error: phoneValidation.error };
+      if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, merchant.id, resData, 400);
+      return NextResponse.json(resData, { status: 400 });
     }
 
     const amountValidation = validateAmount(amount);
     if (!amountValidation.valid) {
-      return NextResponse.json(
-        { success: false, error: amountValidation.error },
-        { status: 400 }
-      );
+      const resData = { success: false, error: amountValidation.error };
+      if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, merchant.id, resData, 400);
+      return NextResponse.json(resData, { status: 400 });
     }
 
     const sanitizedPhone = phoneValidation.sanitized!;
@@ -92,25 +87,24 @@ export async function POST(request: Request) {
     });
 
     if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 502 }
-      );
+      const resData = { success: false, error: result.error };
+      if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, merchant.id, resData, 502);
+      return NextResponse.json(resData, { status: 502 });
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          transactionId: result.transaction!.id,
-          checkoutRequestId: result.checkoutRequestId,
-          status: 'pending',
-          merchantRequestID: result.merchantRequestID,
-          customerMessage: result.customerMessage,
-        },
+    const responseData = {
+      success: true,
+      data: {
+        transactionId: result.transaction!.id,
+        checkoutRequestId: result.checkoutRequestId,
+        status: 'pending',
+        merchantRequestID: result.merchantRequestID,
+        customerMessage: result.customerMessage,
       },
-      { status: 201 }
-    );
+    };
+
+    if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, merchant.id, responseData, 201);
+    return NextResponse.json(responseData, { status: 201 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('[Payment Initiate Error]:', message);

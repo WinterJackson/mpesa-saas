@@ -37,6 +37,12 @@ MPESA_CONSUMER_SECRET="your_safaricom_consumer_secret"
 MPESA_PASSKEY="your_safaricom_passkey"
 MPESA_SHORTCODE="174379"
 
+# REQUIRED Infrastructure Variables (System will fail to start without these)
+UPSTASH_REDIS_REST_URL="https://..."
+UPSTASH_REDIS_REST_TOKEN="..."
+CRON_SECRET="..."
+NEXT_PUBLIC_SENTRY_DSN="https://..."
+
 # Only required if you complete Safaricom's Go-Live KYC process and want to enable Live mode
 # MPESA_CONSUMER_KEY_LIVE=""
 # MPESA_CONSUMER_SECRET_LIVE=""
@@ -163,9 +169,11 @@ To manually verify this behavior:
 ```
 Both duplicate calls returned `{"success":true}` (HTTP 200) in ~1.0-1.05s, confirming Safaricom's retry mechanism is satisfied without any reprocessing occurring. The unchanged `updatedAt` timestamp across three total delivery attempts is direct proof the idempotency guard works correctly — a bug here would show up as a changed timestamp even if the response body looked identical.
 
-### 3. Failure-Path Testing (ResultCode Simulation)
+### 3. Asymmetric Trust & Failure-Path Testing
 
-PaySwift maps every Daraja `ResultCode` to one of three terminal statuses. This is the complete mapping implemented in `/api/mpesa/callback`:
+PaySwift employs an **Asymmetric Trust** model for Daraja's Query API. Safaricom's Query API is documented as unreliable for failure states (it can return false failures for pending or genuinely successful transactions). Therefore, PaySwift *only* trusts the Query API when it returns a success (`ResultCode: 0`). Non-success results are ignored, and transactions are only marked as `expired` after a strict 30-minute timeout to prevent false positives.
+
+PaySwift maps every Daraja `ResultCode` from the callback to one of three terminal statuses. This is the complete mapping implemented in `/api/mpesa/callback`:
 
 | ResultCode | Daraja Meaning | PaySwift Status | CallbackMetadata Present? |
 |:---:|---|:---:|:---:|

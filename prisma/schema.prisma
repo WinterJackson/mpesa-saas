@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,47 +7,46 @@ datasource db {
 }
 
 model Merchant {
-  id           String        @id @default(cuid())
-  clerkUserId  String        @unique
-  businessName String
+  id                      String        @id @default(cuid())
+  clerkUserId             String        @unique
+  businessName            String
   webhookUrl              String?
-  webhookSecret           String?       @unique
-  shopifyShopDomain       String?
-  shopifyAdminAccessToken String?
-  shopifyWebhookSecret    String?
   environment             String        @default("sandbox")
-  createdAt    DateTime      @default(now())
-  apiKeys      ApiKey[]
-  transactions Transaction[]
+  createdAt               DateTime      @default(now())
+  shopifyAdminAccessToken String?
+  shopifyShopDomain       String?
+  shopifyWebhookSecret    String?
+  webhookSecret           String?       @unique
+  apiKeys                 ApiKey[]
+  transactions            Transaction[]
 }
 
 model ApiKey {
   id         String   @id @default(cuid())
-  keyHash    String   @unique
-  keyPrefix  String
   merchantId String
-  merchant   Merchant @relation(fields: [merchantId], references: [id])
   createdAt  DateTime @default(now())
   revoked    Boolean  @default(false)
+  keyHash    String   @unique
+  keyPrefix  String
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
 }
 
 model Transaction {
-  id                String   @id @default(cuid())
+  id                String            @id @default(cuid())
   merchantId        String
-  merchant          Merchant @relation(fields: [merchantId], references: [id])
   amount            Int
   phone             String
   orderReference    String?
-  status            String   @default("pending")
-  environment       String   @default("sandbox")
-  source            String   @default("api")
-  checkoutRequestId String?  @unique
+  status            String            @default("pending")
+  checkoutRequestId String?           @unique
   mpesaReceipt      String?
   resultCode        Int?
   resultDesc        String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  environment       String            @default("sandbox")
+  source            String            @default("api")
+  merchant          Merchant          @relation(fields: [merchantId], references: [id])
   webhookDeliveries WebhookDelivery[]
 
   @@index([merchantId, createdAt(sort: Desc)])
@@ -58,15 +54,15 @@ model Transaction {
 }
 
 model WebhookDelivery {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   transactionId String
-  transaction   Transaction @relation(fields: [transactionId], references: [id])
   url           String
   payload       Json
   statusCode    Int?
-  success       Boolean  @default(false)
-  attempt       Int      @default(1)
-  createdAt     DateTime @default(now())
+  success       Boolean     @default(false)
+  attempt       Int         @default(1)
+  createdAt     DateTime    @default(now())
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
 
   @@index([transactionId])
 }

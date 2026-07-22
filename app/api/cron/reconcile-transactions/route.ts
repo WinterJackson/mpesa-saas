@@ -4,6 +4,7 @@ import { querySTKPushStatus } from '@/lib/daraja';
 import { finalizeTransactionAsync } from '@/lib/transaction-finalization';
 import { mapResultCodeToStatus } from '@/lib/mpesa-status';
 import { logger } from '@/lib/logger';
+import { timingSafeEqual } from 'node:crypto';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +12,13 @@ export async function GET(request: Request) {
   try {
     // 1. Authorize CRON request
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const providedToken = authHeader?.split(' ')[1] || '';
+    const expectedToken = process.env.CRON_SECRET || '';
+    
+    if (
+      providedToken.length !== expectedToken.length || 
+      !timingSafeEqual(Buffer.from(providedToken), Buffer.from(expectedToken))
+    ) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
@@ -34,6 +41,8 @@ export async function GET(request: Request) {
     for (const tx of pendingTransactions) {
       if (!tx.checkoutRequestId) continue;
 
+      const isOlderThan30Mins = (Date.now() - tx.createdAt.getTime()) >= 30 * 60 * 1000;
+
       try {
         const result = await querySTKPushStatus(
           tx.checkoutRequestId,
@@ -44,42 +53,61 @@ export async function GET(request: Request) {
           const numericResultCode = parseInt(result.ResultCode, 10);
           const status = mapResultCodeToStatus(numericResultCode);
           
-          if (status === 'completed' || status === 'cancelled' || status === 'failed') {
+          if (status === 'completed') {
+            // Asymmetric trust: Only a confirmed 'completed' (ResultCode === 0) is trusted
+            // from the Query API to self-heal.
             const updatedTx = await prisma.transaction.update({
               where: { id: tx.id },
               data: {
-                status,
+                status: 'completed',
                 resultCode: numericResultCode,
                 resultDesc: result.ResultDesc,
-                // We won't have mpesaReceipt or amount confirmed from querySTKPushStatus reliably without ResultParameters, 
-                // but the status change is critical. Usually Daraja query status returns ResultCode and ResultDesc.
               }
             });
 
-            // Trigger finalization (webhooks/shopify) since the transaction concluded
+            // Trigger finalization (webhooks/shopify) since the transaction concluded successfully
             finalizeTransactionAsync(updatedTx, tx.merchant);
             successCount++;
+          } else {
+            // Non-zero ResultCode.
+            // DO NOT trust it to mark the transaction failed/cancelled yet due to documented false negatives.
+            // Citing bce05fa: Safaricom's Query endpoint is unreliable and can return false failures.
+            // The webhook callback is the only definitive source of failure.
+            if (isOlderThan30Mins) {
+              await prisma.transaction.update({
+                where: { id: tx.id },
+                data: {
+                  status: 'expired',
+                  resultCode: numericResultCode,
+                  resultDesc: result.ResultDesc || 'Transaction abandoned/expired without successful confirmation'
+                }
+              });
+              logger.warn(`[Reconcile Cron] Transaction ${tx.id} marked as expired after 30+ minutes of non-zero Query responses. (ResultCode: ${numericResultCode})`);
+              failCount++;
+            } else {
+              // Leave as pending
+              logger.debug(`[Reconcile Cron] Transaction ${tx.id} returned non-zero status (${numericResultCode}) but is < 30 mins old. Leaving pending.`);
+            }
           }
         }
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : String(err);
         
-        // If query fails, it might mean the transaction expired without completion
-        if (errorMessage.includes('The transaction is being processed') || errorMessage.includes('transaction has not been completed') || errorMessage.includes('status: 400') || errorMessage.includes('status: 500')) {
-          // still pending, leave it
-        } else {
-          // mark as failed based on Daraja error
-          const updatedTx = await prisma.transaction.update({
+        // Citing bce05fa: Safaricom's Query endpoint is unreliable and can return false failures.
+        if (isOlderThan30Mins) {
+          await prisma.transaction.update({
             where: { id: tx.id },
             data: {
-              status: 'failed',
-              resultDesc: errorMessage || 'Daraja query failed'
+              status: 'expired',
+              resultDesc: errorMessage || 'Transaction abandoned/expired with Daraja query failures'
             }
           });
-          finalizeTransactionAsync(updatedTx, tx.merchant);
+          logger.warn(`[Reconcile Cron] Transaction ${tx.id} marked as expired after 30+ minutes of Query failures. Error: ${errorMessage}`);
           failCount++;
+        } else {
+          // Leave as pending
+          logger.debug(`[Reconcile Cron] Transaction ${tx.id} query failed but is < 30 mins old. Leaving pending. Error: ${errorMessage}`);
         }
-        logger.error(`[Reconcile Cron] Failed to process tx ${tx.id}`, err);
       }
     }
 

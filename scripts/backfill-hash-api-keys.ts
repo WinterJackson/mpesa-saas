@@ -1,76 +1,21 @@
-import * as dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
-import { createHash } from 'node:crypto';
-
-import path from 'path';
-
-import { PrismaNeon } from '@prisma/adapter-neon';
-
-// Load .env.local
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
-
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) throw new Error('DATABASE_URL is not set');
-
-const adapter = new PrismaNeon({ connectionString });
-const prisma = new PrismaClient({ adapter });
-
-function hashApiKey(rawKey: string): string {
-  return createHash('sha256').update(rawKey).digest('hex');
-}
+/**
+ * DEPRECATED / INOPERABLE
+ * 
+ * This script was originally intended to backfill `keyHash` and `keyPrefix` for existing
+ * API keys when transitioning away from plaintext `key` storage.
+ * 
+ * However, the database schema was synchronized using `prisma db push` before an additive
+ * migration was applied, resulting in the immediate and unrecoverable drop of the `key` column
+ * from the live database. (See Phase 0 Remediation / Task 2).
+ * 
+ * The migration history has been reconciled (see 20260722114600_reconcile_api_key_hash_schema),
+ * but this backfill script cannot run because the source plaintext data is gone. Any API keys
+ * created before this event must be regenerated manually by merchants.
+ */
 
 async function main() {
-  console.log('Starting API key hash backfill...');
-
-  try {
-    // We use $queryRaw because the plaintext `key` column has been removed from 
-    // the Prisma schema. If run against an older database state, this will explicitly
-    // select the `key` column.
-    const apiKeys = await prisma.$queryRaw<{ id: string; key: string; keyHash: string | null }[]>`
-      SELECT id, key, "keyHash" FROM "ApiKey" 
-      WHERE "keyHash" IS NULL OR "keyHash" = ''
-    `;
-
-    console.log(`Found ${apiKeys.length} API keys to process.`);
-
-    let updatedCount = 0;
-
-    for (const apiKey of apiKeys) {
-      if (apiKey.key) {
-        const keyHash = hashApiKey(apiKey.key);
-        const keyPrefix = apiKey.key.slice(0, 12);
-
-        await prisma.apiKey.update({
-          where: { id: apiKey.id },
-          data: {
-            keyHash,
-            keyPrefix,
-          },
-        });
-        updatedCount++;
-      }
-    }
-
-    console.log(`Successfully backfilled ${updatedCount} API keys.`);
-
-    // Verify all keys have hashes using raw query since empty string is not assignable to string type natively in prisma where clause
-    const countQuery = await prisma.$queryRaw<{ count: bigint }[]>`
-      SELECT COUNT(*) as count FROM "ApiKey" WHERE "keyHash" IS NULL OR "keyHash" = ''
-    `;
-    
-    const countWithoutHash = Number(countQuery[0]?.count || 0);
-
-    if (countWithoutHash === 0) {
-      console.log('Verification passed: All API keys have hashes.');
-    } else {
-      console.error(`Verification failed: ${countWithoutHash} API keys still missing hashes.`);
-    }
-
-  } catch (error) {
-    console.error('Error during backfill:', error);
-  } finally {
-    await prisma.$disconnect();
-  }
+  console.log('Skipping backfill: The plaintext `key` column has already been dropped from the live database.');
+  console.log('Any API keys generated prior to this fix are unrecoverable and must be regenerated.');
 }
 
 main().catch(console.error);

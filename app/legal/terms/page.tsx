@@ -4,9 +4,9 @@ export default function TermsPage() {
   return (
     <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
       {/* <!-- TODO(LEGAL): MUST BE REVIEWED BY COUNSEL BEFORE PRODUCTION LAUNCH --> */}
-      <h1 className="text-3xl font-extrabold text-gray-900 mb-6">Terms of Service</h1>
-      <p className="text-gray-500 mb-4">Last updated: [DATE]</p>
-      <div className="prose prose-sm sm:prose lg:prose-lg text-gray-700">
+      <h1 className="text-3xl font-extrabold text-foreground mb-6">Terms of Service</h1>
+      <p className="text-muted-foreground mb-4">Last updated: [DATE]</p>
+      <div className="prose prose-sm sm:prose lg:prose-lg dark:prose-invert text-foreground">
         <p>
           Welcome to PaySwift. By accessing or using our services, you agree to be bound by these Terms of Service.
           Please read them carefully.

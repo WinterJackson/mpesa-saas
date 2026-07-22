@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { checkIdempotency } from './rate-limit';
+import { paymentInitiateRateLimit, paymentStatusRateLimit } from './rate-limit';
 
 vi.mock('@upstash/redis', () => {
   return {
@@ -10,16 +10,24 @@ vi.mock('@upstash/redis', () => {
 });
 
 vi.mock('@upstash/ratelimit', () => {
+  const mockLimit = vi.fn().mockResolvedValue({ success: true, pending: Promise.resolve() });
   return {
-    Ratelimit: vi.fn().mockImplementation(() => ({
-      limit: vi.fn().mockResolvedValue({ success: true, pending: Promise.resolve() }),
-    })),
+    Ratelimit: Object.assign(vi.fn().mockImplementation(() => ({
+      limit: mockLimit,
+    })), {
+      slidingWindow: vi.fn((reqs, win) => `${reqs} per ${win}`),
+    })
   };
 });
 
 describe('rate-limit', () => {
-  it('checkIdempotency returns true when set is OK', async () => {
-    const result = await checkIdempotency('test_key');
-    expect(result).toBe(true);
+  it('exports paymentInitiateRateLimit which has limit method', async () => {
+    const result = await paymentInitiateRateLimit.limit('test_ip');
+    expect(result.success).toBe(true);
+  });
+  
+  it('exports paymentStatusRateLimit which has limit method', async () => {
+    const result = await paymentStatusRateLimit.limit('test_ip');
+    expect(result.success).toBe(true);
   });
 });

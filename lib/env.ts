@@ -21,10 +21,10 @@ const envSchema = z.object({
   MPESA_PASSKEY_LIVE: z.string().optional(),
   MPESA_CALLBACK_URL_LIVE: z.string().url('MPESA_CALLBACK_URL_LIVE must be a valid URL').optional(),
   ENCRYPTION_KEY: z.string().min(44, 'ENCRYPTION_KEY must be a 32-byte base64 string'),
-  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
-  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
-  CRON_SECRET: z.string().min(1).optional(),
-  NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
+  UPSTASH_REDIS_REST_URL: z.string().url('UPSTASH_REDIS_REST_URL must be a valid URL'),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1, 'UPSTASH_REDIS_REST_TOKEN is required'),
+  CRON_SECRET: z.string().min(1, 'CRON_SECRET is required'),
+  NEXT_PUBLIC_SENTRY_DSN: z.string().url('NEXT_PUBLIC_SENTRY_DSN must be a valid URL'),
 });
 
 export type Env = z.infer<typeof envSchema>;

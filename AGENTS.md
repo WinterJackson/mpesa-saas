@@ -46,3 +46,4 @@ NEXT_PUBLIC_SENTRY_DSN="..."
 3. **Database Client**: Always use the `PrismaNeon` adapter to support Vercel Edge connections. See `lib/db.ts`.
 4. **Type Safety**: Avoid using `any`. Use `unknown` with narrow type assertions if absolutely necessary.
 5. **No Breaking Migrations**: Do not break the database schema for the existing demo user. Write backfill scripts for zero-downtime migrations.
+6. **API Key Schema**: API Keys are strictly stored as `keyHash` and `keyPrefix`. There is no plaintext `key` column. Do not attempt to query or read plaintext keys from the database.

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
 
 export async function GET(
   request: Request,
@@ -15,27 +16,34 @@ export async function GET(
       );
     }
 
-    const host = request.headers.get('host') || 'localhost:3000';
-    const protocol = request.headers.get('x-forwarded-proto') || 'http';
-    const apiUrl = `${protocol}://${host}/api/v1/payments/status/${id}`;
-
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'x-api-key': demoApiKey,
-      },
+    // Direct database fetch to avoid hitting edge network limits from internal self-referencing
+    const tx = await prisma.transaction.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        checkoutRequestId: true,
+        status: true,
+        resultDesc: true,
+      }
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
+    if (!tx) {
       return NextResponse.json(
-        { success: false, error: data.error || 'Failed to fetch status' },
-        { status: response.status }
+        { success: false, error: 'Transaction not found' },
+        { status: 404 }
       );
     }
 
-    return NextResponse.json(data, { status: 200 });
+    return NextResponse.json({
+      success: true,
+      data: {
+        transactionId: tx.id,
+        checkoutRequestId: tx.checkoutRequestId,
+        status: tx.status,
+        merchantRequestID: tx.id, // mapped to id for consistency if merchantRequestID isn't separate
+        customerMessage: tx.resultDesc || null,
+      }
+    }, { status: 200 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(

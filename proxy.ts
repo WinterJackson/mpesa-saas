@@ -1,6 +1,6 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { paymentApiRateLimit, callbackRateLimit, generalRateLimit } from '@/lib/rate-limit';
+import { paymentInitiateRateLimit, paymentStatusRateLimit, callbackRateLimit, generalRateLimit } from '@/lib/rate-limit';
 
 /**
  * Proxy (Middleware) for M-Pesa SaaS Platform
@@ -26,8 +26,20 @@ export default clerkMiddleware(async (auth, req) => {
     const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? '127.0.0.1';
     let limitResult;
     
-    if (pathname.startsWith('/api/v1/payments')) {
-      limitResult = await paymentApiRateLimit.limit(ip);
+    const xApiKey = req.headers.get('x-api-key');
+    const authHeader = req.headers.get('authorization');
+    
+    let apiIdentifier = ip;
+    if (xApiKey) {
+      apiIdentifier = `key_${xApiKey.substring(0, 12)}`;
+    } else if (authHeader?.startsWith('Bearer ')) {
+      apiIdentifier = `bearer_${authHeader.substring(7, 19)}`;
+    }
+    
+    if (pathname.startsWith('/api/v1/payments/initiate')) {
+      limitResult = await paymentInitiateRateLimit.limit(apiIdentifier);
+    } else if (pathname.startsWith('/api/v1/payments/status')) {
+      limitResult = await paymentStatusRateLimit.limit(apiIdentifier);
     } else if (pathname.startsWith('/api/mpesa/callback') || pathname.startsWith('/api/integrations/')) {
       limitResult = await callbackRateLimit.limit(ip);
     } else {
