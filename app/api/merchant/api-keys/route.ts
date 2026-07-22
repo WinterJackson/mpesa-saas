@@ -5,6 +5,7 @@ import { generateApiKey } from '@/lib/api-keys';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { revokeActiveApiKeys, createApiKey } from '@/lib/repositories/api-keys';
 import { requireRole } from '@/lib/rbac';
+import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
@@ -60,6 +61,13 @@ export async function POST(request: Request) {
       });
 
       return { keyRecord, rawKey: newApiKey.raw };
+    });
+
+    await writeAuditLog({
+      organizationId: organization.id,
+      actorId: userId,
+      action: 'api_key.regenerated',
+      metadata: { scope: requestedScope, newKeyId: result.keyRecord.id },
     });
 
     return NextResponse.json({

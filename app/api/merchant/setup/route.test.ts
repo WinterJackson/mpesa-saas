@@ -25,6 +25,10 @@ vi.mock('@/lib/repositories/daraja-credentials', () => ({
   seedPooledSandboxCredential: vi.fn(),
 }));
 
+vi.mock('@/lib/repositories/audit-log', () => ({
+  writeAuditLog: vi.fn(),
+}));
+
 vi.mock('@/lib/crypto', () => ({
   encryptSecret: vi.fn((v: string) => `enc:${v}`),
   decryptSecret: vi.fn((v: string) => v),

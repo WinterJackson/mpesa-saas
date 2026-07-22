@@ -22,6 +22,10 @@ vi.mock('@/lib/daraja', () => ({
   getAccessToken: vi.fn(),
 }));
 
+vi.mock('@/lib/repositories/audit-log', () => ({
+  writeAuditLog: vi.fn(),
+}));
+
 const VALID_CREDS = {
   mode: 'live',
   consumerKey: 'ck',

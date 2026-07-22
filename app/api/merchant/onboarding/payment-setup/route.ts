@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { setSandboxCredential, setLiveCredential, type DarajaCredentialSet } from '@/lib/repositories/daraja-credentials';
 import { getAccessToken } from '@/lib/daraja';
+import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
 
 /**
@@ -64,6 +65,13 @@ export async function POST(request: Request) {
     } else {
       await setSandboxCredential(context.organization.id, credentials);
     }
+
+    await writeAuditLog({
+      organizationId: context.organization.id,
+      actorId: userId,
+      action: mode === 'live' ? 'daraja_credential.live_set' : 'daraja_credential.sandbox_set',
+      metadata: { shortcode: credentials.shortcode },
+    });
 
     // Validate immediately against Safaricom rather than waiting for the
     // organization's first real transaction to surface a typo.

@@ -48,3 +48,5 @@ Changes to any of these files should be treated as security-relevant and reviewe
 - `lib/storage.ts` — R2 client for KYC documents; never generate a public (non-signed) URL for a stored document
 - `app/api/webhooks/clerk/route.ts` — syncs Clerk Organization membership into the local `Membership` table; verifies Svix signatures via `verifyWebhook`
 - `app/api/merchant/setup/route.ts` — the only place a Clerk Organization + local Organization/Membership(owner)/Merchant/API key are created together
+- `lib/admin-auth.ts` — platform-admin gating (`AdminUser` table), deliberately separate from `lib/rbac.ts`
+- `app/api/admin/*` — platform admin console routes; every mutation must write an `AuditLog` row

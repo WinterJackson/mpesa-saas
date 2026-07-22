@@ -7,6 +7,7 @@ import { encryptSecret } from '@/lib/crypto';
 import { env } from '@/lib/env';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { seedPooledSandboxCredential } from '@/lib/repositories/daraja-credentials';
+import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
 
 /**
@@ -134,6 +135,13 @@ export async function POST(request: Request) {
     });
 
     const newMerchant = created.merchant;
+
+    await writeAuditLog({
+      organizationId: created.organization.id,
+      actorId: userId,
+      action: 'organization.created',
+      metadata: { businessName: businessName.trim() },
+    });
 
     // Update Clerk metadata so edge middleware knows user is onboarded
     await client.users.updateUserMetadata(userId, {

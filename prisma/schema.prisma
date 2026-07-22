@@ -22,6 +22,29 @@ model Organization {
   transactions     Transaction[]
   darajaCredential OrganizationDarajaCredential?
   kycDocuments     KycDocument[]
+  auditLogs        AuditLog[]
+}
+
+// Deliberately NOT related to Organization — an admin must never accidentally
+// inherit tenant-scoped permissions through this table. Auth is gated via
+// lib/admin-auth.ts's requireAdmin(), never lib/rbac.ts's requireRole().
+model AdminUser {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  role        String   @default("support") // support | superadmin
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  actorId        String        // Clerk user ID (member action) or AdminUser's clerkUserId (admin action)
+  action         String        // e.g. "api_key.created", "org.live_credential_set", "admin.impersonated"
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, createdAt(sort: Desc)])
 }
 
 model KycDocument {

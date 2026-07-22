@@ -35,6 +35,22 @@ export async function listPendingKycDocuments(): Promise<
   });
 }
 
+const REQUIRED_DOC_TYPES = ['id', 'business_registration', 'kra_pin'];
+
+/**
+ * Whether every required document type for an organization has been
+ * uploaded and approved — used to auto-flip Organization.kycStatus once the
+ * last outstanding document is approved from the admin console.
+ */
+export async function allRequiredDocumentsApproved(organizationId: string): Promise<boolean> {
+  const approved = await prisma.kycDocument.findMany({
+    where: { organizationId, reviewStatus: 'approved' },
+    select: { type: true },
+  });
+  const approvedTypes = new Set(approved.map((d) => d.type));
+  return REQUIRED_DOC_TYPES.every((type) => approvedTypes.has(type));
+}
+
 export async function updateKycDocumentReviewStatus(
   organizationId: string,
   documentId: string,

@@ -51,7 +51,12 @@ export default clerkMiddleware(async (auth, req) => {
     }
   }
 
-  // Skip onboarding logic for public routes, API routes, and static assets
+  // Skip onboarding logic for public routes, API routes, static assets, and
+  // the admin console — admins are platform-level (AdminUser table) and are
+  // never expected to have a Merchant/Organization of their own, so the
+  // merchant-onboarding gate below must not apply to /admin at all. Auth and
+  // role enforcement for /admin is handled by app/admin/layout.tsx via
+  // lib/admin-auth.ts's requireAdmin(), not here.
   if (
     pathname === '/' ||
     pathname.startsWith('/sign-in') ||
@@ -59,7 +64,8 @@ export default clerkMiddleware(async (auth, req) => {
     pathname.startsWith('/demo-store') ||
     pathname.startsWith('/legal') ||
     pathname.startsWith('/api/') ||
-    pathname.startsWith('/__clerk')
+    pathname.startsWith('/__clerk') ||
+    pathname.startsWith('/admin')
   ) {
     return NextResponse.next();
   }

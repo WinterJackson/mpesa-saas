@@ -26,6 +26,10 @@ vi.mock('@/lib/repositories/api-keys', () => ({
   createApiKey: vi.fn(),
 }));
 
+vi.mock('@/lib/repositories/audit-log', () => ({
+  writeAuditLog: vi.fn(),
+}));
+
 vi.mock('@/lib/rbac', () => ({
   requireRole: vi.fn(),
 }));
