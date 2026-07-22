@@ -29,6 +29,8 @@ export default async function SettingsPage() {
   const merchant = context.merchant;
   const activeKey = await findActiveApiKey(context.organization.id);
   const activeKeyPrefix = activeKey?.keyPrefix || "";
+  const activeKeyScope = activeKey?.scope || "read_write";
+  const currentRole = context.membership.role;
 
   return (
     <div className="space-y-6">
@@ -40,7 +42,7 @@ export default async function SettingsPage() {
       </div>
 
       <div className="grid gap-6">
-        <ApiKeyCard initialKeyPrefix={activeKeyPrefix} />
+        <ApiKeyCard initialKeyPrefix={activeKeyPrefix} initialScope={activeKeyScope} currentRole={currentRole} />
         <WebhookCard initialUrl={merchant.webhookUrl} initialSecret={merchant.webhookSecret ? decryptSecret(merchant.webhookSecret) : null} />
         <EnvironmentCard initialEnvironment={merchant.environment as "sandbox" | "live"} />
         <ShopifyCard 

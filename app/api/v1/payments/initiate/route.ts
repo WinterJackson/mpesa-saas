@@ -37,6 +37,13 @@ export async function POST(request: Request) {
 
     const { merchant } = authResult;
 
+    if (authResult.apiKey.scope === 'read_only') {
+      return NextResponse.json(
+        { success: false, error: 'This API key is read-only and cannot initiate payments' },
+        { status: 403 }
+      );
+    }
+
     // ── 2. Idempotency Check ──────────────────────────────────────────────────
     const idempotencyKey = request.headers.get('Idempotency-Key');
     if (idempotencyKey) {

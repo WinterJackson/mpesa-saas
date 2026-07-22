@@ -18,14 +18,20 @@ import {
 
 interface ApiKeyCardProps {
   initialKeyPrefix: string;
+  initialScope: string;
+  currentRole: string;
 }
 
-export function ApiKeyCard({ initialKeyPrefix }: ApiKeyCardProps) {
+export function ApiKeyCard({ initialKeyPrefix, initialScope, currentRole }: ApiKeyCardProps) {
   const [apiKey, setApiKey] = useState("");
   const [isRevealed, setIsRevealed] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const canCreateReadWrite = currentRole === "owner" || currentRole === "admin";
+  const [selectedScope, setSelectedScope] = useState<"read_only" | "read_write">(
+    canCreateReadWrite && initialScope === "read_write" ? "read_write" : canCreateReadWrite ? "read_write" : "read_only"
+  );
 
   const displayKey = isRevealed && apiKey ? apiKey : (initialKeyPrefix ? `${initialKeyPrefix}••••••••••••••••••••` : "••••••••••••••••••••••••••••••••");
 
@@ -45,6 +51,8 @@ export function ApiKeyCard({ initialKeyPrefix }: ApiKeyCardProps) {
     try {
       const res = await fetch("/api/merchant/api-keys", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope: selectedScope }),
       });
       const json = await res.json();
       if (res.ok && json.success) {
@@ -120,10 +128,39 @@ export function ApiKeyCard({ initialKeyPrefix }: ApiKeyCardProps) {
                 Regenerate API Key
               </DialogTitle>
               <DialogDescription className="pt-3">
-                Are you sure you want to regenerate your API key? 
+                Are you sure you want to regenerate your API key?
                 <strong> This will immediately revoke your existing key.</strong> Any applications currently using the old key will fail to authenticate until updated.
               </DialogDescription>
             </DialogHeader>
+
+            <div className="space-y-2 pt-2">
+              <p className="text-sm font-medium">Key scope</p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={selectedScope === "read_write" ? "default" : "outline"}
+                  disabled={!canCreateReadWrite}
+                  onClick={() => setSelectedScope("read_write")}
+                >
+                  Read &amp; write
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={selectedScope === "read_only" ? "default" : "outline"}
+                  onClick={() => setSelectedScope("read_only")}
+                >
+                  Read-only
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {canCreateReadWrite
+                  ? "Read-only keys can check payment status but cannot initiate payments."
+                  : "Only owners and admins can create a read & write key — your role can only create read-only keys."}
+              </p>
+            </div>
+
             <DialogFooter className="mt-4">
               <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isGenerating}>
                 Cancel

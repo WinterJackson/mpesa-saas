@@ -4,9 +4,10 @@ import { prisma, TransactionClient } from '@/lib/db';
 import { generateApiKey } from '@/lib/api-keys';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { revokeActiveApiKeys, createApiKey } from '@/lib/repositories/api-keys';
+import { requireRole } from '@/lib/rbac';
 import { logger } from '@/lib/logger';
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const { userId, orgId } = await auth();
 
@@ -21,6 +22,29 @@ export async function POST() {
     }
 
     const { organization, merchant } = context;
+
+    // Owner/Admin/Developer may manage API keys; Finance is read-only.
+    const rbac = await requireRole(organization.id, userId, ['owner', 'admin', 'developer']);
+    if (!rbac.allowed) {
+      return NextResponse.json({ success: false, error: rbac.error }, { status: rbac.status });
+    }
+
+    let body: Record<string, unknown> = {};
+    try {
+      body = await request.json();
+    } catch {
+      // No body is fine — defaults to read_write below.
+    }
+
+    const requestedScope = body.scope === 'read_only' ? 'read_only' : 'read_write';
+
+    if (requestedScope === 'read_write' && !['owner', 'admin'].includes(rbac.membership.role)) {
+      return NextResponse.json(
+        { success: false, error: 'Only owners and admins can create a read_write API key' },
+        { status: 403 }
+      );
+    }
+
     const newApiKey = generateApiKey();
 
     const result = await prisma.$transaction(async (tx: TransactionClient) => {
@@ -32,14 +56,15 @@ export async function POST() {
         organizationId: organization.id,
         merchantId: merchant.id,
         key: newApiKey,
+        scope: requestedScope,
       });
 
       return { keyRecord, rawKey: newApiKey.raw };
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      data: { key: result.rawKey } 
+    return NextResponse.json({
+      success: true,
+      data: { key: result.rawKey, scope: requestedScope }
     }, { status: 200 });
 
   } catch (error: unknown) {
