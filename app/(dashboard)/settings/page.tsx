@@ -8,11 +8,10 @@ import { getCredentialSummary } from "@/lib/repositories/daraja-credentials";
 import { ApiKeyCard } from "@/components/settings/api-key-card";
 import { WebhookCard } from "@/components/settings/webhook-card";
 import { EnvironmentCard } from "@/components/settings/environment-card";
-import { ShopifyCard } from "@/components/settings/shopify-card";
 import { DarajaCredentialsCard } from "@/components/settings/daraja-credentials-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Plug } from "lucide-react";
 
 export const metadata = {
   title: "Settings - PaySwift",
@@ -77,11 +76,23 @@ export default async function SettingsPage() {
             </Link>
           </CardContent>
         </Card>
-        <ShopifyCard
-          initialDomain={merchant.shopifyShopDomain}
-          initialToken={merchant.shopifyAdminAccessToken ? decryptSecret(merchant.shopifyAdminAccessToken) : null}
-          initialSecret={merchant.shopifyWebhookSecret ? decryptSecret(merchant.shopifyWebhookSecret) : null}
-        />
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plug className="size-5" />
+              Shopify Integration
+            </CardTitle>
+            <CardDescription>
+              Connect your Shopify store in one click so new orders automatically collect payment with
+              M-Pesa. Manage it from the Integrations page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/integrations" className="text-sm font-medium text-primary hover:underline">
+              Go to Integrations →
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

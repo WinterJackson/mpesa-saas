@@ -52,6 +52,17 @@ const envSchema = z.object({
   // (B2C/C2B/reversal/balance point at OUR routes, same for every org). Falls back
   // to the STK callback URL's origin when unset.
   MPESA_CALLBACK_BASE_URL: z.string().url('MPESA_CALLBACK_BASE_URL must be a valid URL').optional(),
+  // Optional: Shopify public app credentials for the one-click OAuth "Connect
+  // Shopify" install flow (lib/shopify.ts + app/api/integrations/shopify/oauth/*).
+  // ONE app installed by many stores. Until set, the OAuth wizard is dormant and
+  // merchants fall back to the manual access-token card. CLIENT_SECRET also
+  // verifies inbound Shopify webhooks (with a per-merchant secret fallback).
+  SHOPIFY_CLIENT_ID: z.string().optional(),
+  SHOPIFY_CLIENT_SECRET: z.string().optional(),
+  SHOPIFY_APP_SCOPES: z.string().optional(),
+  // Optional: public base URL used to build the Shopify OAuth redirect_uri and
+  // the auto-registered webhook address. Falls back to the request origin.
+  APP_BASE_URL: z.string().url('APP_BASE_URL must be a valid URL').optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -95,6 +106,10 @@ function validateEnv(): Env {
     MPESA_SANDBOX_CERT_PATH: process.env.MPESA_SANDBOX_CERT_PATH,
     MPESA_PRODUCTION_CERT_PATH: process.env.MPESA_PRODUCTION_CERT_PATH,
     MPESA_CALLBACK_BASE_URL: process.env.MPESA_CALLBACK_BASE_URL,
+    SHOPIFY_CLIENT_ID: process.env.SHOPIFY_CLIENT_ID,
+    SHOPIFY_CLIENT_SECRET: process.env.SHOPIFY_CLIENT_SECRET,
+    SHOPIFY_APP_SCOPES: process.env.SHOPIFY_APP_SCOPES,
+    APP_BASE_URL: process.env.APP_BASE_URL,
   });
 
   if (!result.success) {

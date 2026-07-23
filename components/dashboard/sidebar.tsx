@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Settings, Receipt, Users, CreditCard, Link2 } from "lucide-react";
+import { LayoutDashboard, Settings, Receipt, Users, CreditCard, Link2, Plug } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
 
@@ -21,6 +21,11 @@ const navItems = [
     name: "Payment Links",
     href: "/payment-links",
     icon: Link2,
+  },
+  {
+    name: "Integrations",
+    href: "/integrations",
+    icon: Plug,
   },
   {
     name: "Team",

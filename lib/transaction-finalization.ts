@@ -63,7 +63,9 @@ export function finalizeTransactionAsync(
           shopDomain: merchant.shopifyShopDomain!,
           accessToken: decryptSecret(merchant.shopifyAdminAccessToken!)!,
           orderId: updatedTransaction.orderReference!, // Contains numeric orderId
-          mpesaReceipt: updatedTransaction.mpesaReceipt ?? 'N/A'
+          mpesaReceipt: updatedTransaction.mpesaReceipt ?? 'N/A',
+          amount: updatedTransaction.amount,
+          currency: 'KES',
         });
         
         if (!result.success) {

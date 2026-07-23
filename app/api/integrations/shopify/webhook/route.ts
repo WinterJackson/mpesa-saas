@@ -1,6 +1,6 @@
 import { NextResponse, after } from 'next/server';
 import { prisma } from '@/lib/db';
-import { verifyShopifyWebhook } from '@/lib/shopify';
+import { verifyShopifyWebhook, getShopifyAppConfig } from '@/lib/shopify';
 import { createAndInitiatePayment } from '@/lib/payments';
 import { decryptSecret } from '@/lib/crypto';
 import { validatePhone } from '@/lib/validation';
@@ -30,7 +30,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Account setup incomplete' }, { status: 500 });
     }
 
-    if (!merchant.shopifyWebhookSecret || !verifyShopifyWebhook(rawBody, hmacHeader, decryptSecret(merchant.shopifyWebhookSecret)!)) {
+    // Verify the webhook HMAC. Merchants connected via the one-click OAuth app
+    // are verified with the platform app's shared secret (SHOPIFY_CLIENT_SECRET);
+    // merchants who registered manually before OAuth existed keep working via
+    // their own per-merchant shopifyWebhookSecret. Either matching is sufficient.
+    const appSecret = getShopifyAppConfig()?.clientSecret;
+    const perMerchantSecret = merchant.shopifyWebhookSecret
+      ? decryptSecret(merchant.shopifyWebhookSecret)
+      : null;
+
+    const verified =
+      (appSecret && verifyShopifyWebhook(rawBody, hmacHeader, appSecret)) ||
+      (perMerchantSecret && verifyShopifyWebhook(rawBody, hmacHeader, perMerchantSecret));
+
+    if (!verified) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 

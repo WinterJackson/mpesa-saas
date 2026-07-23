@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
 import { prisma } from '@/lib/db';
-import { verifyShopifyWebhook } from '@/lib/shopify';
+import { verifyShopifyWebhook, getShopifyAppConfig } from '@/lib/shopify';
 import { createAndInitiatePayment } from '@/lib/payments';
 
 vi.mock('next/server', async () => {
@@ -16,7 +16,9 @@ vi.mock('next/server', async () => {
 vi.mock('@/lib/db', () => ({
   prisma: { merchant: { findFirst: vi.fn() } },
 }));
-vi.mock('@/lib/shopify', () => ({ verifyShopifyWebhook: vi.fn() }));
+// getShopifyAppConfig returns null here → verification falls back to the
+// per-merchant secret path, matching pre-OAuth merchants.
+vi.mock('@/lib/shopify', () => ({ verifyShopifyWebhook: vi.fn(), getShopifyAppConfig: vi.fn(() => null) }));
 vi.mock('@/lib/crypto', () => ({ decryptSecret: vi.fn((v: string) => v) }));
 vi.mock('@/lib/payments', () => ({ createAndInitiatePayment: vi.fn() }));
 
@@ -81,5 +83,31 @@ describe('POST /api/integrations/shopify/webhook', () => {
     expect(createAndInitiatePayment).toHaveBeenCalledWith(
       expect.objectContaining({ organizationId: 'org-1' })
     );
+  });
+
+  it('verifies an OAuth-connected merchant via the platform app secret (no per-merchant secret)', async () => {
+    vi.mocked(getShopifyAppConfig).mockReturnValueOnce({
+      clientId: 'cid',
+      clientSecret: 'app_secret',
+      scopes: 'read_orders,write_orders',
+    });
+    vi.mocked(prisma.merchant.findFirst).mockResolvedValueOnce({
+      id: 'merchant-1',
+      organizationId: 'org-1',
+      shopifyWebhookSecret: null,
+    } as never);
+    // App-secret HMAC check passes.
+    vi.mocked(verifyShopifyWebhook).mockReturnValueOnce(true);
+    vi.mocked(createAndInitiatePayment).mockResolvedValueOnce({
+      success: true,
+      transaction: {} as never,
+      checkoutRequestId: 'ws_1',
+      merchantRequestID: 'm_1',
+      customerMessage: 'Success',
+    });
+
+    const response = await POST(makeRequest(ORDER));
+    expect(response.status).toBe(200);
+    expect(verifyShopifyWebhook).toHaveBeenCalledWith(expect.any(String), 'sig', 'app_secret');
   });
 });

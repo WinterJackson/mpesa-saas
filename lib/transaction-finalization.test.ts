@@ -70,21 +70,24 @@ describe('transaction-finalization', () => {
       status: 'completed',
       source: 'shopify',
       orderReference: '9999',
+      amount: 2500,
     } as unknown as Transaction;
-    
+
     const merchant = {
       shopifyShopDomain: 'test.myshopify.com',
       shopifyAdminAccessToken: 'enc_token123',
     } as unknown as Merchant;
-    
+
     finalizeTransactionAsync(tx, merchant);
     await afterCallback!();
-    
+
     expect(markShopifyOrderPaid).toHaveBeenCalledWith({
       shopDomain: 'test.myshopify.com',
       accessToken: 'token123',
       orderId: '9999',
       mpesaReceipt: 'N/A',
+      amount: 2500,
+      currency: 'KES',
     });
   });
 });
