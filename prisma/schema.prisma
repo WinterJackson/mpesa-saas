@@ -315,6 +315,25 @@ model Refund {
   @@index([transactionId])
 }
 
+// Reconciliation findings surfaced by the nightly ledger job — records whose
+// Daraja callback never resolved them (a pending payout/transaction/command
+// stuck past its expected window). Surfaced in the admin console for human
+// review; we NEVER auto-flip a record to failed here (guardrail #4). Unique on
+// (resourceType, resourceId) so re-running the job doesn't duplicate.
+model ReconciliationMismatch {
+  id             String    @id @default(cuid())
+  organizationId String?
+  resourceType   String    // transaction | payout | daraja_command
+  resourceId     String
+  reason         String
+  status         String    @default("open") // open | resolved | ignored
+  detectedAt     DateTime  @default(now())
+  resolvedAt     DateTime?
+
+  @@unique([resourceType, resourceId])
+  @@index([status, detectedAt(sort: Desc)])
+}
+
 // Durable idempotency store — the Postgres fallback behind the Upstash Redis
 // fast path (lib/idempotency.ts). Guarantees cache-and-replay survives a Redis
 // outage/eviction. Keyed by "${organizationId}:${idempotencyKey}".
