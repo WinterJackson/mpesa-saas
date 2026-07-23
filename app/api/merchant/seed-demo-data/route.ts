@@ -33,6 +33,7 @@ export async function POST() {
     const seedData = [
       {
         merchantId: merchant.id,
+        organizationId: merchant.organizationId,
         amount: 1500,
         phone: '254712345678',
         orderReference: 'ORD-77A9B1',
@@ -46,6 +47,7 @@ export async function POST() {
       },
       {
         merchantId: merchant.id,
+        organizationId: merchant.organizationId,
         amount: 250,
         phone: '254798765432',
         orderReference: 'ORD-88B9C2',
@@ -59,6 +61,7 @@ export async function POST() {
       },
       {
         merchantId: merchant.id,
+        organizationId: merchant.organizationId,
         amount: 8000,
         phone: '254700112233',
         orderReference: 'ORD-99C9D3',
@@ -72,6 +75,7 @@ export async function POST() {
       },
       {
         merchantId: merchant.id,
+        organizationId: merchant.organizationId,
         amount: 3200,
         phone: '254744556677',
         orderReference: 'ORD-11D9E4',
@@ -85,6 +89,7 @@ export async function POST() {
       },
       {
         merchantId: merchant.id,
+        organizationId: merchant.organizationId,
         amount: 500,
         phone: '254799887766',
         orderReference: 'ORD-22E9F5',

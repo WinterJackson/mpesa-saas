@@ -10,7 +10,9 @@ import { logger } from '@/lib/logger';
 interface Merchant {
   id: string;
   clerkUserId: string;
-  organizationId: string | null;
+  // NOT NULL as of migration 20260723051942_require_organization_id — every
+  // Merchant belongs to exactly one Organization (Phase 1 backfill completed).
+  organizationId: string;
   businessName: string;
   webhookUrl: string | null;
   webhookSecret: string | null;
@@ -26,7 +28,7 @@ interface ApiKey {
   keyHash: string;
   keyPrefix: string;
   merchantId: string;
-  organizationId: string | null;
+  organizationId: string;
   scope: string;
   createdAt: Date;
   revoked: boolean;
@@ -84,16 +86,13 @@ export async function authenticateApiKey(request: Request): Promise<AuthResult> 
       return { success: false, error: 'Invalid API key', status: 401 };
     }
 
-    // organizationId is nullable at the schema level only to allow an additive
-    // migration ahead of the Organization backfill (see scripts/backfill-organizations.ts).
-    // Every key reaching this point after that backfill has run must have one.
-    const organizationId = apiKeyRecord.organizationId ?? apiKeyRecord.merchant.organizationId;
-    if (!organizationId) {
-      logger.error('API key resolved with no organizationId — Organization backfill has not run for this key', { apiKeyId: apiKeyRecord.id });
-      return { success: false, error: 'Account setup incomplete', status: 500 };
-    }
-
-    return { success: true, merchant: apiKeyRecord.merchant, apiKey: apiKeyRecord, organizationId };
+    // organizationId is NOT NULL as of migration 20260723051942 — guaranteed present.
+    return {
+      success: true,
+      merchant: apiKeyRecord.merchant,
+      apiKey: apiKeyRecord,
+      organizationId: apiKeyRecord.organizationId,
+    };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('API Key authentication error:', message);

@@ -15,18 +15,35 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 1. Create or find the demo merchant
+    // 1. Ensure the demo Organization exists. The demo merchant is a synthetic
+    //    (non-Clerk) user, so it gets a local-only Organization with a
+    //    deterministic clerkOrgId — matching what scripts/backfill-organizations.ts
+    //    created. organizationId is NOT NULL, so every Merchant needs one.
+    const DEMO_CLERK_ORG_ID = 'synthetic_org_demo_user_123';
+    const organization = await prisma.organization.upsert({
+      where: { clerkOrgId: DEMO_CLERK_ORG_ID },
+      update: {},
+      create: {
+        clerkOrgId: DEMO_CLERK_ORG_ID,
+        businessName: 'PaySwift Demo Store',
+        environment: 'sandbox',
+        kycStatus: 'approved',
+      },
+    });
+
+    // 2. Create or find the demo merchant, linked to that Organization.
     const merchant = await prisma.merchant.upsert({
       where: { clerkUserId: 'demo_user_123' },
       update: {},
       create: {
         clerkUserId: 'demo_user_123',
+        organizationId: organization.id,
         businessName: 'PaySwift Demo Store',
         environment: 'sandbox',
       },
     });
 
-    // 2. Check if API key exists, revoke, and always create fresh
+    // 3. Check if API key exists, revoke, and always create fresh
     await prisma.apiKey.updateMany({
       where: { merchantId: merchant.id, revoked: false },
       data: { revoked: true },
@@ -36,6 +53,7 @@ export async function GET(req: NextRequest) {
     await prisma.apiKey.create({
       data: {
         merchantId: merchant.id,
+        organizationId: organization.id,
         keyHash: newKey.keyHash,
         keyPrefix: newKey.keyPrefix,
       },

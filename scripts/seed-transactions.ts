@@ -3,9 +3,10 @@ dotenv.config({ path: '.env.local' });
 import { prisma } from '../lib/db';
 
 async function main() {
-  const merchant = await prisma.merchant.findFirst({ where: { organizationId: { not: null } } });
+  // organizationId is NOT NULL, so any merchant has an Organization.
+  const merchant = await prisma.merchant.findFirst();
   if (!merchant) {
-    console.error('No merchant with an Organization found. Run the onboarding flow (or scripts/backfill-organizations.ts) first.');
+    console.error('No merchant found. Run the onboarding flow first.');
     process.exit(1);
   }
 
