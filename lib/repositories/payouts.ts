@@ -80,6 +80,11 @@ export async function markPayoutFailedOnInitiation(organizationId: string, id: s
 // globally-unique originatorConversationId, mirroring how the STK callback
 // finds a transaction by its unique checkoutRequestId.
 
+/** Admin (platform) payout lookup — deliberately NOT org-scoped. */
+export async function adminFindPayoutById(id: string) {
+  return prisma.payout.findUnique({ where: { id } });
+}
+
 export async function findPayoutByOriginatorId(originatorConversationId: string) {
   return prisma.payout.findUnique({
     where: { originatorConversationId },

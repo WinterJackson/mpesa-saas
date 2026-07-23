@@ -26,6 +26,46 @@ model Organization {
   subscription     Subscription?
   payouts          Payout[]
   refunds          Refund[]
+  accountBalances  AccountBalanceSnapshot[]
+  darajaCommands   DarajaCommand[]
+}
+
+// Ledger of initiator-authenticated Daraja commands (Transaction Status, Account
+// Balance, Reversal). Each async result callback correlates back by the unique
+// originatorConversationId Daraja returned at initiation — a single home for
+// that correlation instead of per-model fields.
+model DarajaCommand {
+  id                       String       @id @default(cuid())
+  organizationId           String
+  organization             Organization @relation(fields: [organizationId], references: [id])
+  type                     String       // transaction_status | account_balance | reversal
+  environment              String       @default("sandbox")
+  originatorConversationId String       @unique
+  conversationId           String?
+  targetReceipt            String?      // the M-Pesa receipt being queried/reversed
+  targetPayoutId           String?      // the Payout being reversed, if any
+  status                   String       @default("pending") // pending | completed | failed
+  resultCode               Int?
+  resultDesc               String?
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+
+  @@index([organizationId, createdAt(sort: Desc)])
+}
+
+// Latest-and-historical M-Pesa account balance readings per org, populated by
+// the Account Balance result callback. Used for ops alerting ("balance low,
+// payouts may fail") and surfaced in the admin console.
+model AccountBalanceSnapshot {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  environment    String       @default("sandbox")
+  balanceRaw     String       // Daraja's raw AccountBalance string
+  workingBalance Int?         // parsed working-account balance (KES), best-effort
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt(sort: Desc)])
 }
 
 // Placeholder pricing seeded by lib/repositories/billing.ts's
