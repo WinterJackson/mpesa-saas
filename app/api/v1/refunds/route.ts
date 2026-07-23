@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { authenticateApiKey } from '@/lib/auth';
-import { validateAmount } from '@/lib/validation';
 import { findTransactionById } from '@/lib/repositories/transactions';
 import { createAndInitiateRefund } from '@/lib/payouts';
 import { getCachedIdempotentResponse, cacheIdempotentResponse } from '@/lib/idempotency';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
+import { parseWith, refundCreateRequestSchema } from '@/lib/schemas';
 
 /**
  * POST /api/v1/refunds — refund a completed Transaction via B2C. read_write only.
@@ -37,13 +37,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Invalid JSON payload' }, { status: 400 });
     }
 
-    const { transactionId, amount, reason } = body;
-    if (typeof transactionId !== 'string' || !transactionId) {
-      return NextResponse.json({ success: false, error: 'transactionId is required' }, { status: 400 });
+    const parsed = parseWith(refundCreateRequestSchema, body);
+    if (!parsed.ok) {
+      const resData = { success: false, error: parsed.error };
+      if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, authResult.organizationId, resData, 400);
+      return NextResponse.json(resData, { status: 400 });
     }
 
     // Org-scoped lookup — a merchant can only refund their own transactions.
-    const transaction = await findTransactionById(authResult.organizationId, transactionId);
+    const transaction = await findTransactionById(authResult.organizationId, parsed.data.transactionId);
     if (!transaction) {
       return NextResponse.json({ success: false, error: 'Transaction not found' }, { status: 404 });
     }
@@ -53,17 +55,11 @@ export async function POST(request: Request) {
 
     // Default to a full refund; a partial amount must not exceed the original.
     let refundAmount = transaction.amount;
-    if (amount !== undefined) {
-      const amountValidation = validateAmount(amount);
-      if (!amountValidation.valid) {
-        const resData = { success: false, error: amountValidation.error };
-        if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, authResult.organizationId, resData, 400);
-        return NextResponse.json(resData, { status: 400 });
-      }
-      if (amountValidation.sanitized! > transaction.amount) {
+    if (parsed.data.amount !== undefined) {
+      if (parsed.data.amount > transaction.amount) {
         return NextResponse.json({ success: false, error: 'Refund amount cannot exceed the original transaction amount' }, { status: 400 });
       }
-      refundAmount = amountValidation.sanitized!;
+      refundAmount = parsed.data.amount;
     }
 
     const result = await createAndInitiateRefund({
@@ -73,7 +69,7 @@ export async function POST(request: Request) {
       environment: merchant.environment as 'sandbox' | 'live',
       amount: refundAmount,
       phone: transaction.phone,
-      reason: reason ? String(reason).substring(0, 100) : null,
+      reason: parsed.data.reason,
     });
 
     if (!result.success) {

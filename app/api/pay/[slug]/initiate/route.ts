@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { findActiveLinkBySlug } from '@/lib/repositories/payment-links';
 import { createAndInitiatePayment } from '@/lib/payments';
-import { validatePhone, validateAmount } from '@/lib/validation';
+import { parseWith, payLinkInitiateRequestSchema } from '@/lib/schemas';
+import { validateAmount } from '@/lib/validation';
 import { logger } from '@/lib/logger';
 
 /**
@@ -34,9 +35,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const phoneCheck = validatePhone(String(body.phone ?? ''));
-    if (!phoneCheck.valid) {
-      return NextResponse.json({ success: false, error: phoneCheck.error }, { status: 400 });
+    const parsed = parseWith(payLinkInitiateRequestSchema, body);
+    if (!parsed.ok) {
+      return NextResponse.json({ success: false, error: parsed.error }, { status: 400 });
     }
 
     // Fixed links use their stored amount and ignore the client entirely.
@@ -47,7 +48,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       }
       amount = link.amount;
     } else {
-      const amountCheck = validateAmount(body.amount);
+      const amountCheck = validateAmount(parsed.data.amount);
       if (!amountCheck.valid) {
         return NextResponse.json({ success: false, error: amountCheck.error }, { status: 400 });
       }
@@ -57,7 +58,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     const result = await createAndInitiatePayment({
       merchant: link.merchant,
       organizationId: link.organizationId,
-      phone: phoneCheck.sanitized!,
+      phone: parsed.data.phone,
       amount,
       orderReference: link.title.substring(0, 32),
       source: 'payment_link',

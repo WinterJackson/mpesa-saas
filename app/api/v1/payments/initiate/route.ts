@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { authenticateApiKey } from '@/lib/auth';
-import { validatePhone, validateAmount } from '@/lib/validation';
 import { createAndInitiatePayment } from '@/lib/payments';
 import { logger } from '@/lib/logger';
 import { getCachedIdempotentResponse, cacheIdempotentResponse } from '@/lib/idempotency';
+import { parseWith, paymentInitiateRequestSchema } from '@/lib/schemas';
 
 /**
  * POST /api/v1/payments/initiate
@@ -64,33 +64,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const { phone, amount, orderReference } = body;
-
-    // ── 3. Validate Inputs ────────────────────────────────────────────────────
-    const phoneValidation = validatePhone(phone as string);
-    if (!phoneValidation.valid) {
-      const resData = { success: false, error: phoneValidation.error };
+    // ── 3. Validate Inputs (single Zod entry point) ──────────────────────────
+    const parsed = parseWith(paymentInitiateRequestSchema, body);
+    if (!parsed.ok) {
+      const resData = { success: false, error: parsed.error };
       if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, authResult.organizationId, resData, 400);
       return NextResponse.json(resData, { status: 400 });
     }
-
-    const amountValidation = validateAmount(amount);
-    if (!amountValidation.valid) {
-      const resData = { success: false, error: amountValidation.error };
-      if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, authResult.organizationId, resData, 400);
-      return NextResponse.json(resData, { status: 400 });
-    }
-
-    const sanitizedPhone = phoneValidation.sanitized!;
-    const sanitizedAmount = amountValidation.sanitized!;
 
     // ── 4. Initiate Payment ─────────────────────────────────────────
     const result = await createAndInitiatePayment({
       merchant,
       organizationId: authResult.organizationId,
-      phone: sanitizedPhone,
-      amount: sanitizedAmount,
-      orderReference: orderReference ? String(orderReference).substring(0, 50) : null,
+      phone: parsed.data.phone,
+      amount: parsed.data.amount,
+      orderReference: parsed.data.orderReference,
       source: 'api',
     });
 

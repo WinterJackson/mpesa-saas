@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
 import { authenticateApiKey } from '@/lib/auth';
-import { validatePhone, validateAmount } from '@/lib/validation';
 import { createAndInitiatePayout } from '@/lib/payouts';
 import type { B2CCommandID } from '@/lib/daraja-b2c';
 import { getCachedIdempotentResponse, cacheIdempotentResponse } from '@/lib/idempotency';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
-
-const VALID_COMMANDS: B2CCommandID[] = ['BusinessPayment', 'SalaryPayment', 'PromotionPayment'];
+import { parseWith, payoutCreateRequestSchema } from '@/lib/schemas';
 
 /**
  * POST /api/v1/payouts — send money to a customer (B2C). read_write scope only.
@@ -40,37 +38,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Invalid JSON payload' }, { status: 400 });
     }
 
-    const { phone, amount, commandId, remarks, occasion } = body;
-
-    const phoneValidation = validatePhone(phone as string);
-    if (!phoneValidation.valid) {
-      const resData = { success: false, error: phoneValidation.error };
+    const parsed = parseWith(payoutCreateRequestSchema, body);
+    if (!parsed.ok) {
+      const resData = { success: false, error: parsed.error };
       if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, authResult.organizationId, resData, 400);
       return NextResponse.json(resData, { status: 400 });
-    }
-
-    const amountValidation = validateAmount(amount);
-    if (!amountValidation.valid) {
-      const resData = { success: false, error: amountValidation.error };
-      if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, authResult.organizationId, resData, 400);
-      return NextResponse.json(resData, { status: 400 });
-    }
-
-    const resolvedCommand: B2CCommandID | undefined =
-      commandId === undefined ? undefined : VALID_COMMANDS.includes(commandId as B2CCommandID) ? (commandId as B2CCommandID) : undefined;
-    if (commandId !== undefined && resolvedCommand === undefined) {
-      return NextResponse.json({ success: false, error: `commandId must be one of: ${VALID_COMMANDS.join(', ')}` }, { status: 400 });
     }
 
     const result = await createAndInitiatePayout({
       organizationId: authResult.organizationId,
       merchantId: merchant.id,
       environment: merchant.environment as 'sandbox' | 'live',
-      amount: amountValidation.sanitized!,
-      phone: phoneValidation.sanitized!,
-      commandId: resolvedCommand,
-      remarks: remarks ? String(remarks).substring(0, 100) : null,
-      occasion: occasion ? String(occasion).substring(0, 100) : null,
+      amount: parsed.data.amount,
+      phone: parsed.data.phone,
+      commandId: parsed.data.commandId as B2CCommandID | undefined,
+      remarks: parsed.data.remarks,
+      occasion: parsed.data.occasion,
     });
 
     if (!result.success) {
@@ -83,7 +66,7 @@ export async function POST(request: Request) {
       organizationId: authResult.organizationId,
       actorId: `apikey:${authResult.apiKey.id}`,
       action: 'payout.initiated',
-      metadata: { payoutId: result.payoutId, amount: amountValidation.sanitized },
+      metadata: { payoutId: result.payoutId, amount: parsed.data.amount },
     });
 
     const responseData = {
