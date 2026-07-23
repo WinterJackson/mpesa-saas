@@ -74,7 +74,7 @@ export function EnvironmentCard({ initialEnvironment }: EnvironmentCardProps) {
           Environment Mode
         </CardTitle>
         <CardDescription>
-          Sandbox mode lets you test the full payment flow safely — no real money moves, and it uses Safaricom&apos;s official testing environment. To enable Live mode and start accepting real customer payments, you&apos;ll need to complete Safaricom&apos;s Go-Live business verification process (typically 2-4 weeks), then contact us to activate it on your account.
+          Sandbox mode lets you test the full payment flow safely — no real money moves, and it uses Safaricom&apos;s official testing environment. To enable Live mode, complete Safaricom&apos;s Go-Live business verification, then add your own Daraja shortcode and credentials below under Payment Credentials — your live credentials are always your own, never shared with other organizations.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -98,7 +98,7 @@ export function EnvironmentCard({ initialEnvironment }: EnvironmentCardProps) {
           ) : isLoadingReadiness ? (
             <Button disabled variant="outline">Loading...</Button>
           ) : !liveReady ? (
-            <div title="Live payments are not yet configured on this platform. This will be enabled once the platform completes Safaricom's Go-Live process.">
+            <div title="Add your organization's live Daraja credentials under Payment Credentials below before switching to Live mode.">
               <Button disabled>Go Live</Button>
             </div>
           ) : (

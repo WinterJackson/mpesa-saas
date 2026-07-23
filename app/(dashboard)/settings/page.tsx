@@ -1,12 +1,18 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { decryptSecret } from "@/lib/crypto";
 import { getOrganizationContext } from "@/lib/repositories/organizations";
 import { findActiveApiKey } from "@/lib/repositories/api-keys";
+import { getCredentialSummary } from "@/lib/repositories/daraja-credentials";
 import { ApiKeyCard } from "@/components/settings/api-key-card";
 import { WebhookCard } from "@/components/settings/webhook-card";
 import { EnvironmentCard } from "@/components/settings/environment-card";
 import { ShopifyCard } from "@/components/settings/shopify-card";
+import { DarajaCredentialsCard } from "@/components/settings/daraja-credentials-card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ShieldCheck } from "lucide-react";
 
 export const metadata = {
   title: "Settings - PaySwift",
@@ -31,6 +37,7 @@ export default async function SettingsPage() {
   const activeKeyPrefix = activeKey?.keyPrefix || "";
   const activeKeyScope = activeKey?.scope || "read_write";
   const currentRole = context.membership.role;
+  const credentialSummary = await getCredentialSummary(context.organization.id);
 
   return (
     <div className="space-y-6">
@@ -45,10 +52,35 @@ export default async function SettingsPage() {
         <ApiKeyCard initialKeyPrefix={activeKeyPrefix} initialScope={activeKeyScope} currentRole={currentRole} />
         <WebhookCard initialUrl={merchant.webhookUrl} initialSecret={merchant.webhookSecret ? decryptSecret(merchant.webhookSecret) : null} />
         <EnvironmentCard initialEnvironment={merchant.environment as "sandbox" | "live"} />
-        <ShopifyCard 
-          initialDomain={merchant.shopifyShopDomain} 
-          initialToken={merchant.shopifyAdminAccessToken ? decryptSecret(merchant.shopifyAdminAccessToken) : null} 
-          initialSecret={merchant.shopifyWebhookSecret ? decryptSecret(merchant.shopifyWebhookSecret) : null} 
+        {credentialSummary && (
+          <DarajaCredentialsCard
+            sandboxShortcode={credentialSummary.sandboxShortcode}
+            isPooledSandbox={credentialSummary.isPooledSandbox}
+            liveShortcode={credentialSummary.liveShortcode}
+            hasLiveCredentials={credentialSummary.hasLiveCredentials}
+          />
+        )}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <ShieldCheck className="size-5" />
+              KYC Verification
+            </CardTitle>
+            <CardDescription>Required before going live with real M-Pesa payments.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <Badge variant={context.organization.kycStatus === "approved" ? "default" : context.organization.kycStatus === "rejected" ? "destructive" : "secondary"} className="capitalize">
+              {context.organization.kycStatus}
+            </Badge>
+            <Link href="/settings/kyc" className="text-sm font-medium text-primary hover:underline">
+              Manage documents →
+            </Link>
+          </CardContent>
+        </Card>
+        <ShopifyCard
+          initialDomain={merchant.shopifyShopDomain}
+          initialToken={merchant.shopifyAdminAccessToken ? decryptSecret(merchant.shopifyAdminAccessToken) : null}
+          initialSecret={merchant.shopifyWebhookSecret ? decryptSecret(merchant.shopifyWebhookSecret) : null}
         />
       </div>
     </div>

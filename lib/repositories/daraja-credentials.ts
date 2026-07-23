@@ -107,6 +107,33 @@ export async function setLiveCredential(organizationId: string, live: DarajaCred
   });
 }
 
+export interface CredentialSummary {
+  sandboxShortcode: string | null;
+  isPooledSandbox: boolean;
+  liveShortcode: string | null;
+  hasLiveCredentials: boolean;
+}
+
+/**
+ * Non-secret summary for the settings UI — never returns decrypted
+ * consumerSecret/passkey values, only the (non-secret) shortcode and
+ * whether each environment's credentials are configured.
+ */
+export async function getCredentialSummary(organizationId: string): Promise<CredentialSummary | null> {
+  const row = await prisma.organizationDarajaCredential.findUnique({
+    where: { organizationId },
+    select: { shortcode: true, isPooledSandbox: true, shortcodeLive: true },
+  });
+  if (!row) return null;
+
+  return {
+    sandboxShortcode: row.shortcode,
+    isPooledSandbox: row.isPooledSandbox,
+    liveShortcode: row.shortcodeLive,
+    hasLiveCredentials: Boolean(row.shortcodeLive),
+  };
+}
+
 export async function setSandboxCredential(organizationId: string, sandbox: DarajaCredentialSet) {
   return prisma.organizationDarajaCredential.update({
     where: { organizationId },
