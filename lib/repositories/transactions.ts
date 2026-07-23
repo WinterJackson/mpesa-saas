@@ -38,6 +38,44 @@ const LIST_SELECT = {
   updatedAt: true,
 } as const;
 
+/**
+ * Records a completed C2B transaction (customer paid the Paybill/Till directly).
+ * Idempotent on the M-Pesa receipt (TransID) — Safaricom may re-send a
+ * confirmation. Returns null if a transaction with that receipt already exists.
+ */
+export async function createC2BTransactionIfNew(params: {
+  organizationId: string;
+  merchantId: string;
+  environment: string;
+  amount: number;
+  phone: string;
+  mpesaReceipt: string;
+  orderReference: string | null;
+}) {
+  const existing = await prisma.transaction.findFirst({
+    where: { organizationId: params.organizationId, mpesaReceipt: params.mpesaReceipt },
+    select: { id: true },
+  });
+  if (existing) return null;
+
+  return prisma.transaction.create({
+    data: {
+      organizationId: params.organizationId,
+      merchantId: params.merchantId,
+      environment: params.environment,
+      amount: params.amount,
+      phone: params.phone,
+      mpesaReceipt: params.mpesaReceipt,
+      orderReference: params.orderReference,
+      status: 'completed',
+      resultCode: 0,
+      resultDesc: 'C2B payment received',
+      source: 'c2b',
+    },
+    include: { merchant: true },
+  });
+}
+
 export async function findTransactionById(
   organizationId: string,
   id: string

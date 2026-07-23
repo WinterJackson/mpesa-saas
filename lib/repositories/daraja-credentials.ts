@@ -146,6 +146,29 @@ export async function getCredentialSummary(organizationId: string): Promise<Cred
   };
 }
 
+// ─── Shortcode → organization resolution (for C2B confirmations) ────────────
+// A C2B confirmation carries only the BusinessShortCode. Match a live shortcode,
+// or a non-pooled sandbox shortcode (the pooled sandbox 174379 is shared across
+// orgs and therefore not uniquely attributable — those are skipped).
+export async function findOrgContextByShortcode(shortcode: string): Promise<
+  | { organizationId: string; merchantId: string; environment: 'sandbox' | 'live' }
+  | null
+> {
+  const row = await prisma.organizationDarajaCredential.findFirst({
+    where: {
+      OR: [{ shortcodeLive: shortcode }, { shortcode, isPooledSandbox: false }],
+    },
+    include: { organization: { include: { merchant: true } } },
+  });
+  if (!row || !row.organization.merchant) return null;
+  const environment: 'sandbox' | 'live' = row.shortcodeLive === shortcode ? 'live' : 'sandbox';
+  return {
+    organizationId: row.organizationId,
+    merchantId: row.organization.merchant.id,
+    environment,
+  };
+}
+
 // ─── B2C / Reversal / Balance initiator credentials ────────────────────────
 
 export interface InitiatorCredential {
