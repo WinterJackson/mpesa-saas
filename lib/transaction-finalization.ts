@@ -1,8 +1,9 @@
 import { after } from 'next/server';
-import { prisma } from '@/lib/db';
 import { deliverWebhook } from '@/lib/webhook';
 import { markShopifyOrderPaid } from '@/lib/shopify';
 import { decryptSecret } from '@/lib/crypto';
+import { recordDelivery } from '@/lib/repositories/webhook-deliveries';
+import { paymentEvent } from '@/lib/webhook-events';
 import type { Transaction, Merchant } from '@prisma/client';
 import { logger } from '@/lib/logger';
 
@@ -12,8 +13,9 @@ export function finalizeTransactionAsync(
 ) {
   // ── 1. Outbound Webhook (Fire-and-Forget) ─────────────────────────────────
   if (merchant.webhookUrl) {
+    const event = paymentEvent(updatedTransaction.status);
     const webhookPayload = {
-      event: `payment.${updatedTransaction.status}`,
+      event,
       data: {
         transactionId: updatedTransaction.id,
         amount: updatedTransaction.amount,
@@ -32,17 +34,16 @@ export function finalizeTransactionAsync(
       try {
         const secret = merchant.webhookSecret ? decryptSecret(merchant.webhookSecret) ?? undefined : undefined;
         const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, secret);
-        
-        await prisma.webhookDelivery.create({
-          data: {
-            transactionId: updatedTransaction.id,
-            url: merchant.webhookUrl!,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            payload: webhookPayload as any,
-            statusCode: result.statusCode ?? null,
-            success: result.delivered,
-            attempt: result.attempts,
-          }
+
+        await recordDelivery({
+          organizationId: updatedTransaction.organizationId,
+          event,
+          transactionId: updatedTransaction.id,
+          url: merchant.webhookUrl!,
+          payload: webhookPayload,
+          statusCode: result.statusCode ?? null,
+          success: result.delivered,
+          attempt: result.attempts,
         });
 
         if (!result.delivered) {

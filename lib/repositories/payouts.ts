@@ -96,6 +96,8 @@ export async function applyPayoutResult(
   id: string,
   data: { status: string; resultCode: number | null; resultDesc: string | null; mpesaReceipt: string | null }
 ) {
+  // Includes the merchant so callers can fire the terminal webhook
+  // (payout.completed/failed via B2C result, payout.reversed via Reversal result).
   return prisma.payout.update({
     where: { id },
     data: {
@@ -104,5 +106,6 @@ export async function applyPayoutResult(
       resultDesc: data.resultDesc,
       ...(data.mpesaReceipt ? { mpesaReceipt: data.mpesaReceipt } : {}),
     },
+    include: { merchant: true },
   });
 }

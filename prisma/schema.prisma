@@ -389,10 +389,13 @@ model WebhookDelivery {
   transactionId String?
   payoutId      String?
   refundId      String?
+  organizationId String?     // denormalized for org-scoped listing without a join
+  event         String?      // canonical event name (lib/webhook-events.ts)
   url           String
   payload       Json
   statusCode    Int?
   success       Boolean      @default(false)
+  status        String       @default("delivered") // delivered | failed (dead-lettered)
   attempt       Int          @default(1)
   createdAt     DateTime     @default(now())
   transaction   Transaction? @relation(fields: [transactionId], references: [id])
@@ -402,6 +405,7 @@ model WebhookDelivery {
   @@index([transactionId])
   @@index([payoutId])
   @@index([refundId])
+  @@index([organizationId, createdAt(sort: Desc)])
 }
 
 model DarajaToken {

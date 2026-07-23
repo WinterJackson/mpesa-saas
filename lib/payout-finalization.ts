@@ -1,7 +1,8 @@
 import { after } from 'next/server';
-import { prisma } from '@/lib/db';
 import { deliverWebhook } from '@/lib/webhook';
 import { decryptSecret } from '@/lib/crypto';
+import { recordDelivery } from '@/lib/repositories/webhook-deliveries';
+import { payoutEvent, refundEvent } from '@/lib/webhook-events';
 import type { Payout, Refund, Merchant } from '@prisma/client';
 import { logger } from '@/lib/logger';
 
@@ -12,8 +13,9 @@ import { logger } from '@/lib/logger';
 export function finalizePayoutAsync(payout: Payout, merchant: Merchant) {
   if (!merchant.webhookUrl) return;
 
+  const event = payoutEvent(payout.status);
   const webhookPayload = {
-    event: `payout.${payout.status}`,
+    event,
     data: {
       payoutId: payout.id,
       amount: payout.amount,
@@ -32,16 +34,15 @@ export function finalizePayoutAsync(payout: Payout, merchant: Merchant) {
     try {
       const secret = merchant.webhookSecret ? decryptSecret(merchant.webhookSecret) ?? undefined : undefined;
       const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, secret);
-      await prisma.webhookDelivery.create({
-        data: {
-          payoutId: payout.id,
-          url: merchant.webhookUrl!,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          payload: webhookPayload as any,
-          statusCode: result.statusCode ?? null,
-          success: result.delivered,
-          attempt: result.attempts,
-        },
+      await recordDelivery({
+        organizationId: payout.organizationId,
+        event,
+        payoutId: payout.id,
+        url: merchant.webhookUrl!,
+        payload: webhookPayload,
+        statusCode: result.statusCode ?? null,
+        success: result.delivered,
+        attempt: result.attempts,
       });
       if (!result.delivered) {
         logger.warn(`[Finalize Payout Webhook] Delivery failed to ${merchant.webhookUrl} (HTTP ${result.statusCode})`);
@@ -56,8 +57,9 @@ export function finalizePayoutAsync(payout: Payout, merchant: Merchant) {
 export function finalizeRefundAsync(refund: Refund, merchant: Merchant) {
   if (!merchant.webhookUrl) return;
 
+  const event = refundEvent(refund.status);
   const webhookPayload = {
-    event: `refund.${refund.status}`,
+    event,
     data: {
       refundId: refund.id,
       transactionId: refund.transactionId,
@@ -76,16 +78,15 @@ export function finalizeRefundAsync(refund: Refund, merchant: Merchant) {
     try {
       const secret = merchant.webhookSecret ? decryptSecret(merchant.webhookSecret) ?? undefined : undefined;
       const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, secret);
-      await prisma.webhookDelivery.create({
-        data: {
-          refundId: refund.id,
-          url: merchant.webhookUrl!,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          payload: webhookPayload as any,
-          statusCode: result.statusCode ?? null,
-          success: result.delivered,
-          attempt: result.attempts,
-        },
+      await recordDelivery({
+        organizationId: refund.organizationId,
+        event,
+        refundId: refund.id,
+        url: merchant.webhookUrl!,
+        payload: webhookPayload,
+        statusCode: result.statusCode ?? null,
+        success: result.delivered,
+        attempt: result.attempts,
       });
       if (!result.delivered) {
         logger.warn(`[Finalize Refund Webhook] Delivery failed to ${merchant.webhookUrl} (HTTP ${result.statusCode})`);

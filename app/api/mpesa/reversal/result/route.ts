@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { processCommandResult } from '@/lib/daraja-command-result';
 import { applyPayoutResult } from '@/lib/repositories/payouts';
+import { finalizePayoutAsync } from '@/lib/payout-finalization';
 import type { DarajaResultPayload } from '@/lib/types';
 import { logger } from '@/lib/logger';
 
@@ -16,12 +17,14 @@ export async function POST(request: Request) {
 
     await processCommandResult(body, 'Reversal', async (command, result, status) => {
       if (status !== 'completed' || !command.targetPayoutId) return;
-      await applyPayoutResult(command.targetPayoutId, {
+      const updated = await applyPayoutResult(command.targetPayoutId, {
         status: 'reversed',
         resultCode: result.ResultCode,
         resultDesc: result.ResultDesc,
         mpesaReceipt: null,
       });
+      // Fire the payout.reversed webhook (mirrors payout.completed/failed).
+      finalizePayoutAsync(updated, updated.merchant);
     });
 
     return NextResponse.json({ success: true }, { status: 200 });
