@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,20 @@ interface ShopifyCardProps {
 }
 
 const APP_URL_FALLBACK = process.env.NEXT_PUBLIC_APP_URL || "https://your-payswift-url.com";
+
+// Reads window.location.origin without a hydration mismatch: the server
+// snapshot stays the static fallback, the client snapshot reflects the real
+// origin once mounted. No subscription needed since origin never changes
+// after mount.
+function subscribeToOrigin() {
+  return () => {};
+}
+function getOriginSnapshot() {
+  return window.location.origin;
+}
+function getServerOriginSnapshot() {
+  return APP_URL_FALLBACK;
+}
 
 export function ShopifyCard({ initialDomain, initialToken, initialSecret }: ShopifyCardProps) {
   const [shopDomain, setShopDomain] = useState(initialDomain || "");
@@ -31,10 +45,7 @@ export function ShopifyCard({ initialDomain, initialToken, initialSecret }: Shop
   const displaySecret = isSecretRevealed ? webhookSecret : (webhookSecret ? "••••••••••••••••••••••••••••••" : "");
 
   // Defer window.location.origin to after hydration to prevent mismatch
-  const [appUrl, setAppUrl] = useState(APP_URL_FALLBACK);
-  useEffect(() => {
-    setAppUrl(window.location.origin);
-  }, []);
+  const appUrl = useSyncExternalStore(subscribeToOrigin, getOriginSnapshot, getServerOriginSnapshot);
   const webhookUrl = `${appUrl}/api/integrations/shopify/webhook`;
 
   const handleSave = async () => {

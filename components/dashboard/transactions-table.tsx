@@ -98,7 +98,7 @@ export function TransactionsTable({ initialTransactions, initialNextCursor = nul
       controller.abort();
       clearTimeout(timeoutId);
     };
-  }, [onSummaryUpdate, limit, hasLoadedMore]);
+  }, [onSummaryUpdate, limit, hasLoadedMore, envQuery]);
 
   const handleManualRefresh = async () => {
     try {
