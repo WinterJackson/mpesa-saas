@@ -24,6 +24,8 @@ model Organization {
   kycDocuments     KycDocument[]
   auditLogs        AuditLog[]
   subscription     Subscription?
+  payouts          Payout[]
+  refunds          Refund[]
 }
 
 // Placeholder pricing seeded by lib/repositories/billing.ts's
@@ -168,6 +170,8 @@ model Merchant {
   webhookSecret           String?       @unique
   apiKeys                 ApiKey[]
   transactions            Transaction[]
+  payouts                 Payout[]
+  refunds                 Refund[]
 }
 
 model ApiKey {
@@ -209,6 +213,63 @@ model Transaction {
   @@index([merchantId, status])
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, status])
+  refunds           Refund[]
+}
+
+// B2C disbursement (business → customer). Status is written ONLY by the B2C
+// result callback (app/api/mpesa/b2c/result) — the sole writer of terminal
+// payout status, mirroring the STK callback's authority over transactions.
+model Payout {
+  id                       String       @id @default(cuid())
+  organizationId           String
+  organization             Organization @relation(fields: [organizationId], references: [id])
+  merchantId               String
+  merchant                 Merchant     @relation(fields: [merchantId], references: [id])
+  amount                   Int
+  phone                    String
+  commandId                String       @default("BusinessPayment") // BusinessPayment | SalaryPayment | PromotionPayment
+  remarks                  String?
+  occasion                 String?
+  status                   String       @default("pending") // pending | completed | failed
+  conversationId           String?
+  originatorConversationId String?      @unique // Daraja's async-callback correlation key
+  mpesaReceipt             String?
+  resultCode               Int?
+  resultDesc               String?
+  environment              String       @default("sandbox")
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([organizationId, status])
+}
+
+// Refund of a specific collected Transaction, executed via B2C back to the
+// customer. Terminal status is written ONLY by the B2C result callback.
+model Refund {
+  id                       String       @id @default(cuid())
+  organizationId           String
+  organization             Organization @relation(fields: [organizationId], references: [id])
+  merchantId               String
+  merchant                 Merchant     @relation(fields: [merchantId], references: [id])
+  transactionId            String
+  transaction              Transaction  @relation(fields: [transactionId], references: [id])
+  amount                   Int
+  phone                    String
+  reason                   String?
+  status                   String       @default("pending") // pending | completed | failed
+  conversationId           String?
+  originatorConversationId String?      @unique
+  mpesaReceipt             String?
+  resultCode               Int?
+  resultDesc               String?
+  environment              String       @default("sandbox")
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([organizationId, status])
+  @@index([transactionId])
 }
 
 model WebhookDelivery {

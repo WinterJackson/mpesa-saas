@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { getDecryptedCredentials, isLiveCredentialConfigured, type DarajaCredentialSet } from '@/lib/repositories/daraja-credentials';
 
-const DARAJA_BASE_URLS = {
+export const DARAJA_BASE_URLS = {
   sandbox: 'https://sandbox.safaricom.co.ke',
   live: 'https://api.safaricom.co.ke',
 } as const;
