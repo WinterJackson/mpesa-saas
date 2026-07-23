@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Link2, Save, Send, Eye, EyeOff, Copy, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
+import { Link2, Save, Send, Eye, EyeOff, Copy, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -17,16 +17,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-
-interface WebhookDeliveryRow {
-  id: string;
-  createdAt: string;
-  statusCode: number | null;
-  success: boolean;
-  attempt: number;
-  transactionId: string;
-  transaction?: { orderReference: string | null };
-}
 
 interface WebhookCardProps {
   initialUrl: string | null;
@@ -42,29 +32,6 @@ export function WebhookCard({ initialUrl, initialSecret }: WebhookCardProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-
-  const [deliveries, setDeliveries] = useState<WebhookDeliveryRow[]>([]);
-  const [isLoadingDeliveries, setIsLoadingDeliveries] = useState(false);
-
-  const fetchDeliveries = async () => {
-    setIsLoadingDeliveries(true);
-    try {
-      const res = await fetch("/api/merchant/webhook-deliveries?limit=10");
-      const json = await res.json();
-      if (res.ok && json.success) {
-        setDeliveries(json.data);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoadingDeliveries(false);
-    }
-  };
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchDeliveries();
-  }, []);
 
   const displaySecret = isRevealed ? webhookSecret : (webhookSecret ? "whsec_••••••••••••••••••••••••••••••••••••" : "Not generated");
 
@@ -274,42 +241,17 @@ export function WebhookCard({ initialUrl, initialSecret }: WebhookCardProps) {
         </div>
 
         <div className="pt-4 border-t border-border mt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium">Recent Deliveries</h3>
-            <Button variant="ghost" size="sm" onClick={fetchDeliveries} disabled={isLoadingDeliveries}>
-              <RefreshCw className={`size-4 mr-2 ${isLoadingDeliveries ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-          </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            A log of webhook notifications sent by PaySwift. Use this to verify your server receives updates correctly.
-          </p>
-          
-          {deliveries.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">No recent deliveries found.</p>
-          ) : (
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-              {deliveries.map((delivery) => (
-                <div key={delivery.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-md border border-border text-sm">
-                  <div className="flex flex-col gap-1">
-                    <span className="font-medium">{new Date(delivery.createdAt).toLocaleString()}</span>
-                    <span className="text-xs text-muted-foreground font-mono truncate max-w-[200px] sm:max-w-[300px]">
-                      {delivery.transaction?.orderReference || delivery.transactionId}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-2 sm:mt-0">
-                    <span className="text-xs text-muted-foreground text-right">
-                      HTTP {delivery.statusCode || "N/A"}<br/>
-                      {delivery.attempt} {delivery.attempt === 1 ? "attempt" : "attempts"}
-                    </span>
-                    <Badge variant={delivery.success ? "default" : "destructive"} className="shrink-0">
-                      {delivery.success ? "Delivered" : "Failed"}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium">Delivery history</h3>
+              <p className="text-sm text-muted-foreground">
+                Inspect every webhook PaySwift has sent — payloads, HTTP status, and redelivery of failed events.
+              </p>
             </div>
-          )}
+            <Link href="/settings/webhooks">
+              <Button variant="outline" size="sm">Open inspector</Button>
+            </Link>
+          </div>
         </div>
       </CardContent>
     </Card>

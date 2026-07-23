@@ -7,16 +7,22 @@ import { useTheme } from "@wrksz/themes/client";
 
 export function ParticlesBackground() {
   const [init, setInit] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const { resolvedTheme } = useTheme();
 
+  // `init` flips only after the async engine load resolves (client-only), so it
+  // already guarantees we never render during SSR/first paint — no separate
+  // synchronous `mounted` setState-in-effect needed (which the React compiler
+  // flags for triggering cascading renders).
   useEffect(() => {
-    setMounted(true);
+    let cancelled = false;
     initParticlesEngine(async (engine) => {
       await loadSlim(engine);
     }).then(() => {
-      setInit(true);
+      if (!cancelled) setInit(true);
     });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const color = resolvedTheme === "dark" ? "#ffffff" : "#000000";
@@ -92,7 +98,7 @@ export function ParticlesBackground() {
     detectRetina: true,
   }), [color]);
 
-  if (!init || !mounted) return null;
+  if (!init) return null;
 
   return (
     <Particles
