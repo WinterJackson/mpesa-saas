@@ -239,6 +239,7 @@ model Payout {
   environment              String       @default("sandbox")
   createdAt                DateTime     @default(now())
   updatedAt                DateTime     @updatedAt
+  webhookDeliveries        WebhookDelivery[]
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, status])
@@ -266,24 +267,34 @@ model Refund {
   environment              String       @default("sandbox")
   createdAt                DateTime     @default(now())
   updatedAt                DateTime     @updatedAt
+  webhookDeliveries        WebhookDelivery[]
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, status])
   @@index([transactionId])
 }
 
+// A single WebhookDelivery is linked to exactly one of transaction/payout/refund
+// (enforced in application code). transactionId is nullable as of the polymorphic
+// migration so payout/refund events can be recorded the same way.
 model WebhookDelivery {
-  id            String      @id @default(cuid())
-  transactionId String
+  id            String       @id @default(cuid())
+  transactionId String?
+  payoutId      String?
+  refundId      String?
   url           String
   payload       Json
   statusCode    Int?
-  success       Boolean     @default(false)
-  attempt       Int         @default(1)
-  createdAt     DateTime    @default(now())
-  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  success       Boolean      @default(false)
+  attempt       Int          @default(1)
+  createdAt     DateTime     @default(now())
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+  payout        Payout?      @relation(fields: [payoutId], references: [id])
+  refund        Refund?      @relation(fields: [refundId], references: [id])
 
   @@index([transactionId])
+  @@index([payoutId])
+  @@index([refundId])
 }
 
 model DarajaToken {

@@ -36,11 +36,17 @@ export default clerkMiddleware(async (auth, req) => {
       apiIdentifier = `bearer_${authHeader.substring(7, 19)}`;
     }
     
-    if (pathname.startsWith('/api/v1/payments/initiate')) {
+    if (
+      pathname.startsWith('/api/v1/payments/initiate') ||
+      pathname.startsWith('/api/v1/payouts') ||
+      pathname.startsWith('/api/v1/refunds')
+    ) {
+      // Money-movement endpoints share the tightest limit.
       limitResult = await paymentInitiateRateLimit.limit(apiIdentifier);
     } else if (pathname.startsWith('/api/v1/payments/status')) {
       limitResult = await paymentStatusRateLimit.limit(apiIdentifier);
-    } else if (pathname.startsWith('/api/mpesa/callback') || pathname.startsWith('/api/integrations/')) {
+    } else if (pathname.startsWith('/api/mpesa/') || pathname.startsWith('/api/integrations/')) {
+      // All Safaricom-originated callbacks (STK, B2C, C2B, reversal, balance, status).
       limitResult = await callbackRateLimit.limit(ip);
     } else {
       limitResult = await generalRateLimit.limit(userId ?? ip);
