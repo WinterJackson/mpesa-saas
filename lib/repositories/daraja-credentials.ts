@@ -112,17 +112,27 @@ export interface CredentialSummary {
   isPooledSandbox: boolean;
   liveShortcode: string | null;
   hasLiveCredentials: boolean;
+  hasSandboxInitiator: boolean;
+  hasLiveInitiator: boolean;
 }
 
 /**
  * Non-secret summary for the settings UI — never returns decrypted
- * consumerSecret/passkey values, only the (non-secret) shortcode and
+ * consumerSecret/passkey/initiator values, only the (non-secret) shortcode and
  * whether each environment's credentials are configured.
  */
 export async function getCredentialSummary(organizationId: string): Promise<CredentialSummary | null> {
   const row = await prisma.organizationDarajaCredential.findUnique({
     where: { organizationId },
-    select: { shortcode: true, isPooledSandbox: true, shortcodeLive: true },
+    select: {
+      shortcode: true,
+      isPooledSandbox: true,
+      shortcodeLive: true,
+      initiatorName: true,
+      initiatorPasswordEncrypted: true,
+      initiatorNameLive: true,
+      initiatorPasswordLiveEncrypted: true,
+    },
   });
   if (!row) return null;
 
@@ -131,7 +141,66 @@ export async function getCredentialSummary(organizationId: string): Promise<Cred
     isPooledSandbox: row.isPooledSandbox,
     liveShortcode: row.shortcodeLive,
     hasLiveCredentials: Boolean(row.shortcodeLive),
+    hasSandboxInitiator: Boolean(row.initiatorName && row.initiatorPasswordEncrypted),
+    hasLiveInitiator: Boolean(row.initiatorNameLive && row.initiatorPasswordLiveEncrypted),
   };
+}
+
+// ─── B2C / Reversal / Balance initiator credentials ────────────────────────
+
+export interface InitiatorCredential {
+  name: string;
+  password: string;
+}
+
+/**
+ * Resolves an organization's initiator name + decrypted password for the given
+ * environment (used to produce the SecurityCredential). Returns null if not set.
+ */
+export async function getDecryptedInitiator(
+  organizationId: string,
+  environment: 'sandbox' | 'live'
+): Promise<InitiatorCredential | null> {
+  const row = await prisma.organizationDarajaCredential.findUnique({ where: { organizationId } });
+  if (!row) return null;
+
+  if (environment === 'live') {
+    if (!row.initiatorNameLive || !row.initiatorPasswordLiveEncrypted) return null;
+    return { name: row.initiatorNameLive, password: decryptSecret(row.initiatorPasswordLiveEncrypted)! };
+  }
+  if (!row.initiatorName || !row.initiatorPasswordEncrypted) return null;
+  return { name: row.initiatorName, password: decryptSecret(row.initiatorPasswordEncrypted)! };
+}
+
+export async function setInitiatorCredential(
+  organizationId: string,
+  environment: 'sandbox' | 'live',
+  initiator: InitiatorCredential
+) {
+  const data =
+    environment === 'live'
+      ? { initiatorNameLive: initiator.name, initiatorPasswordLiveEncrypted: encryptSecret(initiator.password) }
+      : { initiatorName: initiator.name, initiatorPasswordEncrypted: encryptSecret(initiator.password) };
+  return prisma.organizationDarajaCredential.update({ where: { organizationId }, data });
+}
+
+export async function isInitiatorConfigured(
+  organizationId: string,
+  environment: 'sandbox' | 'live'
+): Promise<boolean> {
+  const row = await prisma.organizationDarajaCredential.findUnique({
+    where: { organizationId },
+    select: {
+      initiatorName: true,
+      initiatorPasswordEncrypted: true,
+      initiatorNameLive: true,
+      initiatorPasswordLiveEncrypted: true,
+    },
+  });
+  if (!row) return false;
+  return environment === 'live'
+    ? Boolean(row.initiatorNameLive && row.initiatorPasswordLiveEncrypted)
+    : Boolean(row.initiatorName && row.initiatorPasswordEncrypted);
 }
 
 export async function setSandboxCredential(organizationId: string, sandbox: DarajaCredentialSet) {

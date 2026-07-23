@@ -128,6 +128,16 @@ model OrganizationDarajaCredential {
   passkeyLiveEncrypted        String?
   callbackUrlLive              String?
 
+  // B2C / Reversal / Account Balance / Transaction Status initiator credentials.
+  // initiatorName is plaintext (a username); the initiator password is AES-encrypted
+  // at rest and RSA-encrypted with Safaricom's public cert at call time to produce
+  // the Daraja SecurityCredential (see lib/daraja-security-credential.ts). Null
+  // until the org supplies them in Payment Setup.
+  initiatorName             String?
+  initiatorPasswordEncrypted String?
+  initiatorNameLive         String?
+  initiatorPasswordLiveEncrypted String?
+
   updatedAt DateTime @updatedAt
 }
 

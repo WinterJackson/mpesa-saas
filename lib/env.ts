@@ -36,6 +36,15 @@ const envSchema = z.object({
   // (organization membership sync). Configure once Clerk Organizations +
   // webhooks are enabled in the Clerk Dashboard.
   CLERK_WEBHOOK_SIGNING_SECRET: z.string().optional(),
+  // Optional: Safaricom public certificate paths for the B2C/Reversal/Balance
+  // SecurityCredential (lib/daraja-security-credential.ts). Defaults to
+  // certs/sandbox.cer and certs/production.cer if unset. Public keys; git-ignored.
+  MPESA_SANDBOX_CERT_PATH: z.string().optional(),
+  MPESA_PRODUCTION_CERT_PATH: z.string().optional(),
+  // Optional: platform base URL used to build Daraja Result/Timeout callback URLs
+  // (B2C/C2B/reversal/balance point at OUR routes, same for every org). Falls back
+  // to the STK callback URL's origin when unset.
+  MPESA_CALLBACK_BASE_URL: z.string().url('MPESA_CALLBACK_BASE_URL must be a valid URL').optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -76,6 +85,9 @@ function validateEnv(): Env {
     R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
     R2_BUCKET_NAME: process.env.R2_BUCKET_NAME,
     CLERK_WEBHOOK_SIGNING_SECRET: process.env.CLERK_WEBHOOK_SIGNING_SECRET,
+    MPESA_SANDBOX_CERT_PATH: process.env.MPESA_SANDBOX_CERT_PATH,
+    MPESA_PRODUCTION_CERT_PATH: process.env.MPESA_PRODUCTION_CERT_PATH,
+    MPESA_CALLBACK_BASE_URL: process.env.MPESA_CALLBACK_BASE_URL,
   });
 
   if (!result.success) {
