@@ -6,6 +6,7 @@ import { getCachedIdempotentResponse, cacheIdempotentResponse } from '@/lib/idem
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
 import { parseWith, refundCreateRequestSchema } from '@/lib/schemas';
+import { enforcePlanRateLimit, rateLimitHeaders, retryAfterSeconds } from '@/lib/plan-rate-limit';
 
 /**
  * POST /api/v1/refunds — refund a completed Transaction via B2C. read_write only.
@@ -22,6 +23,14 @@ export async function POST(request: Request) {
     const { merchant } = authResult;
     if (authResult.apiKey.scope === 'read_only') {
       return NextResponse.json({ success: false, error: 'This API key is read-only and cannot issue refunds' }, { status: 403 });
+    }
+
+    const rl = await enforcePlanRateLimit(authResult.organizationId, 'refunds');
+    if (!rl.ok) {
+      return NextResponse.json(
+        { success: false, error: 'Rate limit exceeded' },
+        { status: 429, headers: { ...rateLimitHeaders(rl), 'Retry-After': String(retryAfterSeconds(rl)) } }
+      );
     }
 
     const idempotencyKey = request.headers.get('Idempotency-Key');
@@ -95,7 +104,7 @@ export async function POST(request: Request) {
       },
     };
     if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, authResult.organizationId, responseData, 201);
-    return NextResponse.json(responseData, { status: 201 });
+    return NextResponse.json(responseData, { status: 201, headers: rateLimitHeaders(rl) });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('[Refund Initiate Error]:', message);

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { authenticateApiKey } from '@/lib/auth';
 import { listTransactionsPage } from '@/lib/repositories/transactions';
+import { enforcePlanRateLimit, rateLimitHeaders, retryAfterSeconds } from '@/lib/plan-rate-limit';
 import { logger } from '@/lib/logger';
 
 /**
@@ -15,6 +16,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: authResult.error }, { status: authResult.status });
     }
 
+    const rl = await enforcePlanRateLimit(authResult.organizationId, 'transactions');
+    if (!rl.ok) {
+      return NextResponse.json(
+        { success: false, error: 'Rate limit exceeded' },
+        { status: 429, headers: { ...rateLimitHeaders(rl), 'Retry-After': String(retryAfterSeconds(rl)) } }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const page = await listTransactionsPage(authResult.organizationId, {
       cursor: searchParams.get('cursor'),
@@ -25,7 +34,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(
       { success: true, data: { transactions: page.data, nextCursor: page.nextCursor } },
-      { status: 200 }
+      { status: 200, headers: rateLimitHeaders(rl) }
     );
   } catch (error: unknown) {
     logger.error('[V1 Transactions List Error]:', error instanceof Error ? error.message : 'Unknown error');

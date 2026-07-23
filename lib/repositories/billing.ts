@@ -5,9 +5,12 @@ import { prisma } from '@/lib/db';
 // the master plan's explicit instruction not to invent real KES figures.
 // Flag for a real product decision before onboarding merchants beyond a pilot.
 const PLACEHOLDER_PLANS = [
-  { name: 'Starter', monthlyFee: 0, txFeeBps: 150, txCapMonthly: 200 },
-  { name: 'Growth', monthlyFee: 5000, txFeeBps: 100, txCapMonthly: null },
+  { name: 'Starter', monthlyFee: 0, txFeeBps: 150, txCapMonthly: 200, apiRateLimitPerMin: 60 },
+  { name: 'Growth', monthlyFee: 5000, txFeeBps: 100, txCapMonthly: null, apiRateLimitPerMin: 300 },
 ] as const;
+
+/** Platform fallback when an org has no subscription/plan or the plan's limit is null. */
+export const DEFAULT_API_RATE_LIMIT_PER_MIN = 60;
 
 const TRIAL_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -15,10 +18,24 @@ export async function ensurePlansSeeded(): Promise<void> {
   for (const plan of PLACEHOLDER_PLANS) {
     await prisma.plan.upsert({
       where: { name: plan.name },
-      update: {},
+      // Keep the rate limit in sync on re-seed (the other fields are pricing
+      // placeholders left untouched once created).
+      update: { apiRateLimitPerMin: plan.apiRateLimitPerMin },
       create: plan,
     });
   }
+}
+
+/**
+ * The org's per-minute API rate limit from its active plan, or the platform
+ * default. Read-only lookup used by lib/plan-rate-limit.ts (which caches it).
+ */
+export async function getOrgApiRateLimit(organizationId: string): Promise<number> {
+  const subscription = await prisma.subscription.findUnique({
+    where: { organizationId },
+    select: { plan: { select: { apiRateLimitPerMin: true } } },
+  });
+  return subscription?.plan?.apiRateLimitPerMin ?? DEFAULT_API_RATE_LIMIT_PER_MIN;
 }
 
 export async function getPlanByName(name: string) {

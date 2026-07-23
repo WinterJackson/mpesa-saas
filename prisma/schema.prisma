@@ -101,12 +101,13 @@ model AccountBalanceSnapshot {
 // ensurePlansSeeded() — NOT a confirmed product/pricing decision, flagged
 // explicitly in that module for a real decision before launch.
 model Plan {
-  id            String         @id @default(cuid())
-  name          String         @unique // Starter | Growth | Scale
-  monthlyFee    Int            // KES, minor units (whole shillings, matching Transaction.amount's convention)
-  txFeeBps      Int            // basis points of transaction volume
-  txCapMonthly  Int?           // null = uncapped
-  subscriptions Subscription[]
+  id                String         @id @default(cuid())
+  name              String         @unique // Starter | Growth | Scale
+  monthlyFee        Int            // KES, minor units (whole shillings, matching Transaction.amount's convention)
+  txFeeBps          Int            // basis points of transaction volume
+  txCapMonthly      Int?           // null = uncapped
+  apiRateLimitPerMin Int?          // per-org API requests/min per route class; null = platform default
+  subscriptions     Subscription[]
 }
 
 model Subscription {

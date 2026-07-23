@@ -4,6 +4,7 @@ import { createAndInitiatePayment } from '@/lib/payments';
 import { logger } from '@/lib/logger';
 import { getCachedIdempotentResponse, cacheIdempotentResponse } from '@/lib/idempotency';
 import { parseWith, paymentInitiateRequestSchema } from '@/lib/schemas';
+import { enforcePlanRateLimit, rateLimitHeaders, retryAfterSeconds } from '@/lib/plan-rate-limit';
 
 /**
  * POST /api/v1/payments/initiate
@@ -41,6 +42,15 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: 'This API key is read-only and cannot initiate payments' },
         { status: 403 }
+      );
+    }
+
+    // ── 1b. Per-plan rate limit (org known post-auth) ─────────────────────────
+    const rl = await enforcePlanRateLimit(authResult.organizationId, 'payments');
+    if (!rl.ok) {
+      return NextResponse.json(
+        { success: false, error: 'Rate limit exceeded' },
+        { status: 429, headers: { ...rateLimitHeaders(rl), 'Retry-After': String(retryAfterSeconds(rl)) } }
       );
     }
 
@@ -100,7 +110,7 @@ export async function POST(request: Request) {
     };
 
     if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, authResult.organizationId, responseData, 201);
-    return NextResponse.json(responseData, { status: 201 });
+    return NextResponse.json(responseData, { status: 201, headers: rateLimitHeaders(rl) });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('[Payment Initiate Error]:', message);
