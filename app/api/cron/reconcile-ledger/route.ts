@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { timingSafeEqual } from 'node:crypto';
+import { isAuthorizedCronRequest } from '@/lib/cron-auth';
 import { findStalePendingRecords, upsertMismatch } from '@/lib/repositories/reconciliation';
 import { logger } from '@/lib/logger';
 
@@ -15,13 +15,7 @@ const STALE_MS = 60 * 60 * 1000; // 1 hour — well past every callback's window
 
 export async function GET(request: Request) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const providedToken = authHeader?.split(' ')[1] || '';
-    const expectedToken = process.env.CRON_SECRET || '';
-    if (
-      providedToken.length !== expectedToken.length ||
-      !timingSafeEqual(Buffer.from(providedToken), Buffer.from(expectedToken))
-    ) {
+    if (!isAuthorizedCronRequest(request)) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 

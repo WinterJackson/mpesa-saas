@@ -497,6 +497,18 @@ curl -X POST http://localhost:3000/api/integrations/shopify/webhook \
 
 ---
 
+## ⏰ Scheduled Jobs (cron-job.org)
+
+Cron is run by an **external scheduler ([cron-job.org](https://cron-job.org))**, not Vercel Cron (there is no `vercel.json`). Each job is a `GET` endpoint authorized by an `Authorization: Bearer <CRON_SECRET>` header — the auth **fails closed**, so `CRON_SECRET` MUST be set in the production environment or every cron call is rejected.
+
+| Endpoint | Schedule | Purpose |
+|---|---|---|
+| `GET /api/cron/reconcile-transactions` | every 2 min (`*/2 * * * *`) | STK self-heal for pending transactions |
+| `GET /api/cron/reconcile-ledger` | daily 02:00 | Surface unresolved payouts/transactions/commands for admin review |
+| `GET /api/cron/aggregate-usage` | daily 03:00 | Aggregate usage → invoices, advance billing periods |
+
+**Setup:** create one cron-job.org job per row above, pointing at your deployed URL, method `GET`, with a request header `Authorization: Bearer <your CRON_SECRET>`. Set the daily jobs' timezone to Africa/Nairobi. (Full step-by-step is in the deploy notes.)
+
 ## 🛠️ Maintenance Scripts
 
 The repository includes utility scripts for operational maintenance:

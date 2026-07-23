@@ -4,21 +4,14 @@ import { querySTKPushStatus } from '@/lib/daraja';
 import { finalizeTransactionAsync } from '@/lib/transaction-finalization';
 import { mapResultCodeToStatus } from '@/lib/mpesa-status';
 import { logger } from '@/lib/logger';
-import { timingSafeEqual } from 'node:crypto';
+import { isAuthorizedCronRequest } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    // 1. Authorize CRON request
-    const authHeader = request.headers.get('authorization');
-    const providedToken = authHeader?.split(' ')[1] || '';
-    const expectedToken = process.env.CRON_SECRET || '';
-    
-    if (
-      providedToken.length !== expectedToken.length || 
-      !timingSafeEqual(Buffer.from(providedToken), Buffer.from(expectedToken))
-    ) {
+    // 1. Authorize the external cron request (cron-job.org) via CRON_SECRET.
+    if (!isAuthorizedCronRequest(request)) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 

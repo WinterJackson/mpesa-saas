@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { timingSafeEqual } from 'node:crypto';
+import { isAuthorizedCronRequest } from '@/lib/cron-auth';
 import {
   listSubscriptionsDueForBilling,
   recordUsage,
@@ -16,7 +16,7 @@ const PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 /**
  * GET /api/cron/aggregate-usage
  *
- * Scheduled job (see vercel.json): for every Subscription whose billing
+ * Scheduled job (external cron via cron-job.org): for every Subscription whose billing
  * period has elapsed, aggregates the org's completed-transaction volume for
  * that period into a UsageRecord, generates a pending Invoice
  * (monthlyFee + txVolume * txFeeBps), and advances the billing period.
@@ -28,14 +28,7 @@ const PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
  */
 export async function GET(request: Request) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const providedToken = authHeader?.split(' ')[1] || '';
-    const expectedToken = process.env.CRON_SECRET || '';
-
-    if (
-      providedToken.length !== expectedToken.length ||
-      !timingSafeEqual(Buffer.from(providedToken), Buffer.from(expectedToken))
-    ) {
+    if (!isAuthorizedCronRequest(request)) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 

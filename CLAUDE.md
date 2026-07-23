@@ -58,6 +58,7 @@ Changes to any of these files should be treated as security-relevant and reviewe
 - `app/api/mpesa/{transaction-status,account-balance,reversal}/result/route.ts` — initiator-command result callbacks; correlate via the `DarajaCommand` ledger
 - `app/api/admin/organizations/[id]/go-live/route.ts` — superadmin go-live approval; validates live credentials against Safaricom before flipping to live
 - `app/api/cron/reconcile-ledger/route.ts` — nightly ledger reconciliation; must preserve guardrail #4 (surface mismatches, never auto-fail)
+- `lib/cron-auth.ts` — the ONLY authorizer for cron endpoints (`isAuthorizedCronRequest`); fails closed when `CRON_SECRET` is unset. Every `app/api/cron/*` route must gate on it. Cron jobs run via an external scheduler (cron-job.org), not Vercel Cron.
 
 ## Phase 2 guardrails (payments engine)
 9. **B2C SecurityCredential**: never store or log the raw initiator password in plaintext — it is AES-encrypted at rest (`initiatorPassword*Encrypted`) and RSA-encrypted per call via `lib/daraja-security-credential.ts`. Never introduce a second SecurityCredential path.
