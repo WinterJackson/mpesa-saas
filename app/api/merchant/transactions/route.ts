@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
-import { listTransactions, transactionStatusSummary, summarizeStats } from '@/lib/repositories/transactions';
+import { listTransactionsPage, transactionStatusSummary, summarizeStats } from '@/lib/repositories/transactions';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
@@ -20,18 +20,25 @@ export async function GET(request: Request) {
 
     const { organization } = context;
 
-    // Get searchParams for basic pagination if needed
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const cursor = searchParams.get('cursor');
 
-    const transactions = await listTransactions(organization.id, { take: limit });
-    const allStats = await transactionStatusSummary(organization.id);
-    const summary = summarizeStats(allStats);
+    const page = await listTransactionsPage(organization.id, {
+      cursor,
+      limit: searchParams.get('limit') ? Number(searchParams.get('limit')) : undefined,
+      environment: searchParams.get('environment') ?? undefined,
+      status: searchParams.get('status') ?? undefined,
+    });
+
+    // The status summary only makes sense on the first page (whole-account totals).
+    const summary = cursor
+      ? undefined
+      : summarizeStats(await transactionStatusSummary(organization.id));
 
     return NextResponse.json(
       {
         success: true,
-        data: { transactions, summary },
+        data: { transactions: page.data, nextCursor: page.nextCursor, summary },
       },
       { status: 200 }
     );

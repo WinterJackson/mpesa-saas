@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getOrganizationContext } from "@/lib/repositories/organizations";
-import { listTransactions } from "@/lib/repositories/transactions";
+import { listTransactionsPage } from "@/lib/repositories/transactions";
 import { TransactionsTable } from "@/components/dashboard/transactions-table";
 
 export const metadata = {
@@ -16,7 +16,7 @@ export default async function TransactionsPage() {
   const context = await getOrganizationContext(userId, orgId);
   if (!context) redirect("/onboarding");
 
-  const transactions = await listTransactions(context.organization.id, { take: 100 });
+  const { data: transactions, nextCursor } = await listTransactionsPage(context.organization.id, { limit: 50 });
 
   return (
     <div className="space-y-6">
@@ -26,7 +26,12 @@ export default async function TransactionsPage() {
           Full history of all payments through your account.
         </p>
       </div>
-      <TransactionsTable initialTransactions={transactions} showFilters={true} limit={100} />
+      <TransactionsTable
+        initialTransactions={transactions}
+        initialNextCursor={nextCursor}
+        showFilters={true}
+        limit={50}
+      />
     </div>
   );
 }

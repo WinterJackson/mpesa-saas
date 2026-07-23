@@ -31,13 +31,17 @@ export interface Transaction {
 
 interface TransactionsTableProps {
   initialTransactions: Transaction[];
+  initialNextCursor?: string | null;
   onSummaryUpdate?: (summary: SummaryData) => void;
   showFilters?: boolean;
   limit?: number;
 }
 
-export function TransactionsTable({ initialTransactions, onSummaryUpdate, showFilters = false, limit = 50 }: TransactionsTableProps) {
+export function TransactionsTable({ initialTransactions, initialNextCursor = null, onSummaryUpdate, showFilters = false, limit = 50 }: TransactionsTableProps) {
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
+  const [hasLoadedMore, setHasLoadedMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [filter, setFilter] = useState("All");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const previousSummaryRef = React.useRef<string | null>(null);
@@ -59,7 +63,12 @@ export function TransactionsTable({ initialTransactions, onSummaryUpdate, showFi
         if (res.ok) {
           const json = await res.json();
           if (json.success && json.data) {
-            setTransactions(json.data.transactions);
+            // Don't clobber additional pages the user has loaded; the live
+            // refresh only keeps the first page fresh.
+            if (!hasLoadedMore) {
+              setTransactions(json.data.transactions);
+              setNextCursor(json.data.nextCursor ?? null);
+            }
             if (onSummaryUpdate && json.data.summary) {
               const currentSummaryStr = JSON.stringify(json.data.summary);
               if (previousSummaryRef.current !== currentSummaryStr) {
@@ -87,7 +96,7 @@ export function TransactionsTable({ initialTransactions, onSummaryUpdate, showFi
       controller.abort();
       clearTimeout(timeoutId);
     };
-  }, [onSummaryUpdate, limit]);
+  }, [onSummaryUpdate, limit, hasLoadedMore]);
 
   const handleManualRefresh = async () => {
     try {
@@ -97,6 +106,8 @@ export function TransactionsTable({ initialTransactions, onSummaryUpdate, showFi
         const json = await res.json();
         if (json.success && json.data) {
           setTransactions(json.data.transactions);
+          setNextCursor(json.data.nextCursor ?? null);
+          setHasLoadedMore(false);
           if (onSummaryUpdate && json.data.summary) {
             const currentSummaryStr = JSON.stringify(json.data.summary);
             if (previousSummaryRef.current !== currentSummaryStr) {
@@ -110,6 +121,26 @@ export function TransactionsTable({ initialTransactions, onSummaryUpdate, showFi
       console.error("Failed to refresh transactions:", error);
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    if (!nextCursor) return;
+    try {
+      setIsLoadingMore(true);
+      const res = await fetch(`/api/merchant/transactions?limit=${limit}&cursor=${encodeURIComponent(nextCursor)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setTransactions((prev) => [...prev, ...json.data.transactions]);
+          setNextCursor(json.data.nextCursor ?? null);
+          setHasLoadedMore(true);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load more transactions:", error);
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -252,6 +283,13 @@ export function TransactionsTable({ initialTransactions, onSummaryUpdate, showFi
                 ))}
               </TableBody>
             </Table>
+            {nextCursor && filter === "All" && (
+              <div className="flex justify-center pt-4">
+                <Button variant="outline" onClick={handleLoadMore} disabled={isLoadingMore}>
+                  {isLoadingMore ? "Loading..." : "Load more"}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

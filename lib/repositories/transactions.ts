@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { clampLimit, cursorWhere, toPage, DEFAULT_PAGE_SIZE, type Page } from '@/lib/pagination';
 
 export interface TransactionRow {
   id: string;
@@ -103,6 +104,34 @@ export async function listTransactions(
     take: opts.take ?? 50,
     select: LIST_SELECT,
   });
+}
+
+export interface TransactionListItem extends TransactionRow {
+  mpesaReceipt: string | null;
+}
+
+/**
+ * Cursor-paginated, org-scoped transaction list ordered (createdAt desc, id desc).
+ * Optional environment/status filters power both the dashboard "load more" table
+ * and the public GET /api/v1/transactions endpoint.
+ */
+export async function listTransactionsPage(
+  organizationId: string,
+  opts: { cursor?: string | null; limit?: number; environment?: string; status?: string } = {}
+): Promise<Page<TransactionListItem>> {
+  const limit = clampLimit(opts.limit ?? DEFAULT_PAGE_SIZE);
+  const rows = await prisma.transaction.findMany({
+    where: {
+      organizationId,
+      ...(opts.environment ? { environment: opts.environment } : {}),
+      ...(opts.status ? { status: opts.status } : {}),
+      ...cursorWhere(opts.cursor),
+    },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: limit + 1,
+    select: { ...LIST_SELECT, mpesaReceipt: true },
+  });
+  return toPage(rows, limit);
 }
 
 export async function transactionStatusSummary(organizationId: string) {
