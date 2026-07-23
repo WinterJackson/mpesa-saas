@@ -41,9 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
-.agent/
-
-.agents/
 
 # Safaricom public certificates for the B2C SecurityCredential (public keys, but kept out of git)
 certs/
