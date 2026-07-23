@@ -49,6 +49,16 @@ NEXT_PUBLIC_SENTRY_DSN="..."
 # Optional — required once a webhook endpoint is added in the Clerk Dashboard
 # pointing at /api/webhooks/clerk (organization membership sync).
 # CLERK_WEBHOOK_SIGNING_SECRET="..."
+
+# Optional (Phase 2) — Safaricom public certificates for the B2C/Reversal/Balance
+# SecurityCredential. Public keys; git-ignored under certs/. Default paths are
+# certs/sandbox.cer and certs/production.cer.
+# MPESA_SANDBOX_CERT_PATH="./certs/sandbox.cer"
+# MPESA_PRODUCTION_CERT_PATH="./certs/production.cer"
+# Optional — platform base URL for Daraja Result/Timeout callbacks (B2C/C2B/etc.
+# point at OUR routes). Falls back to MPESA_CALLBACK_URL's origin. Set this to a
+# fixed-IP proxy origin if Safaricom requires a static outbound IP for production.
+# MPESA_CALLBACK_BASE_URL="https://your-app.example.com"
 ```
 
 ## Setup Steps
@@ -71,4 +81,5 @@ Use Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `security
 6. **API Key Schema**: API Keys are strictly stored as `keyHash` and `keyPrefix`. There is no plaintext `key` column. Do not attempt to query or read plaintext keys from the database.
 7. **Migrations**: Never hand-edit a migration file under `prisma/migrations/` that has already been applied. Create a new migration instead — this exact mistake caused a real data-loss incident during Phase 0 and must not be repeated.
 8. **Secrets**: Never commit `.env` or `.env.local`. Never touch live Daraja, Clerk, Sentry, Upstash, or billing-provider credentials under any circumstance.
-9. **Tenant Scoping (Phase 1)**: `lib/repositories/*` is the only place tenant-scoped Prisma calls (`Organization`, `Membership`, `ApiKey`, `Transaction`, `OrganizationDarajaCredential`, `KycDocument`) are allowed to live. Every function in it takes `organizationId` as a required parameter. Do not add a `prisma.<tenantScopedModel>.*` call anywhere else.
+9. **Tenant Scoping (Phase 1)**: `lib/repositories/*` is the only place tenant-scoped Prisma calls (`Organization`, `Membership`, `ApiKey`, `Transaction`, `OrganizationDarajaCredential`, `KycDocument`, `Payout`, `Refund`) are allowed to live. Every function in it takes `organizationId` as a required parameter — except the deliberately un-scoped callback-correlation lookups (`findPayoutByOriginatorId`, `findOrgContextByShortcode`, `findDarajaCommandByOriginatorId`) and platform-level admin/reconciliation queries, which are documented as such.
+10. **Payments engine (Phase 2)**: the full Daraja suite (STK, C2B, B2C payouts/refunds, Transaction Status, Account Balance, Reversal) resolves credentials per-organization (Model B). Terminal payout/refund status is written ONLY by the B2C result callback. Going live is admin-gated (`Organization.liveApprovedAt`). Reconciliation surfaces mismatches, never auto-fails (guardrail #4). B2C initiator passwords are AES-encrypted at rest and RSA-encrypted per call — never plaintext.

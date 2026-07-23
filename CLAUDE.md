@@ -50,3 +50,17 @@ Changes to any of these files should be treated as security-relevant and reviewe
 - `app/api/merchant/setup/route.ts` — the only place a Clerk Organization + local Organization/Membership(owner)/Merchant/API key are created together
 - `lib/admin-auth.ts` — platform-admin gating (`AdminUser` table), deliberately separate from `lib/rbac.ts`
 - `app/api/admin/*` — platform admin console routes; every mutation must write an `AuditLog` row
+- `lib/daraja-security-credential.ts` — RSA-encrypts the initiator password with Safaricom's public cert to build the B2C/Reversal/Balance `SecurityCredential`; the cert is a public key but treated as security-sensitive
+- `lib/daraja-b2c.ts`, `lib/daraja-c2b.ts`, `lib/daraja-reversal.ts`, `lib/daraja-account-balance.ts`, `lib/daraja-transaction-status.ts`, `lib/daraja-initiator.ts` — per-organization Daraja money-movement/query calls; all resolve credentials per-org (Model B), never a global constant
+- `lib/payouts.ts`, `lib/payout-finalization.ts` — B2C payout/refund orchestration + webhook finalization
+- `app/api/mpesa/b2c/result/route.ts` — the only writer of definitive payout/refund success/failure (as the STK callback is for transactions); its non-zero result IS authoritative (unlike `querySTKPushStatus`)
+- `app/api/mpesa/c2b/{validation,confirmation}/route.ts` — C2B attribution by shortcode; confirmation is idempotent on the M-Pesa receipt
+- `app/api/mpesa/{transaction-status,account-balance,reversal}/result/route.ts` — initiator-command result callbacks; correlate via the `DarajaCommand` ledger
+- `app/api/admin/organizations/[id]/go-live/route.ts` — superadmin go-live approval; validates live credentials against Safaricom before flipping to live
+- `app/api/cron/reconcile-ledger/route.ts` — nightly ledger reconciliation; must preserve guardrail #4 (surface mismatches, never auto-fail)
+
+## Phase 2 guardrails (payments engine)
+9. **B2C SecurityCredential**: never store or log the raw initiator password in plaintext — it is AES-encrypted at rest (`initiatorPassword*Encrypted`) and RSA-encrypted per call via `lib/daraja-security-credential.ts`. Never introduce a second SecurityCredential path.
+10. **Payout/refund terminal status** is written ONLY by the B2C result callback (`app/api/mpesa/b2c/result`), correlated by `originatorConversationId` — mirror the STK callback's sole-writer authority. The B2C QueueTimeout is NOT a definitive failure; leave the record pending for reconciliation.
+11. **Go-live is admin-gated**: a merchant reaches live mode only after `Organization.liveApprovedAt` is set by a superadmin (who first validates live credentials against Safaricom). Do not reintroduce a credential-presence-only self-flip.
+12. **Reconciliation surfaces, never mutates**: the nightly ledger job records `ReconciliationMismatch` rows for human review; it must never flip a record to failed (guardrail #4).

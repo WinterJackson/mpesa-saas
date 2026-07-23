@@ -63,6 +63,16 @@ NEXT_PUBLIC_SENTRY_DSN="https://..."
 # pointing at /api/webhooks/clerk (organization membership sync).
 # CLERK_WEBHOOK_SIGNING_SECRET=""
 
+# Optional (Phase 2) — Safaricom public certs for the B2C/Reversal/Balance
+# SecurityCredential (public keys, git-ignored under certs/). Default paths are
+# certs/sandbox.cer and certs/production.cer.
+# MPESA_SANDBOX_CERT_PATH="./certs/sandbox.cer"
+# MPESA_PRODUCTION_CERT_PATH="./certs/production.cer"
+# Optional — base URL for Daraja Result/Timeout callbacks (they hit OUR routes).
+# Falls back to MPESA_CALLBACK_URL's origin. Point at a fixed-IP proxy if
+# Safaricom requires a static outbound IP for production go-live.
+# MPESA_CALLBACK_BASE_URL=""
+
 # Webhook Domain (Use Ngrok for local testing)
 NEXT_PUBLIC_APP_URL="https://your-ngrok-domain.ngrok-free.app"
 
@@ -495,6 +505,23 @@ The repository includes utility scripts for operational maintenance:
 - `npx tsx scripts/backfill-webhook-secrets.ts`: Operational script to backfill `webhookSecret` fields for existing merchants who registered prior to HMAC signature enforcement.
 - `npx tsx scripts/backfill-organizations.ts`: One-off Phase 1 migration script — creates a matching Clerk Organization + local Organization/Membership for every pre-Phase-1 Merchant and cascades `organizationId` onto its existing ApiKey/Transaction rows. Must be run (and its zero-NULL verification confirmed) before the follow-up migration that makes `organizationId` `NOT NULL`.
 - `npx tsx scripts/seed-qa-organization.ts`: Idempotent — provisions a permanent, clearly-labeled QA Organization (with pooled sandbox Daraja credentials) for Playwright/CI use, so E2E runs don't have to create a fresh Clerk user and walk the onboarding wizard every time.
+- `npx tsx scripts/daraja-sandbox-smoke.ts <organizationId> [stk|b2c|balance]`: **Manual** smoke test against Safaricom's real sandbox for one organization. Never run in CI — it depends on live sandbox availability. Use during go-live prep to confirm the full chain end-to-end.
+
+## 💸 Daraja API Suite (Phase 2)
+
+Every call resolves the initiating organization's own encrypted credentials (Model B):
+
+| API | Endpoint / trigger | Notes |
+|---|---|---|
+| STK Push | `POST /api/v1/payments/initiate` | Customer-initiated collection |
+| C2B | `POST /api/v1/c2b/register-urls` → callbacks at `/api/mpesa/c2b/*` | Direct Paybill/Till; confirmation idempotent on receipt |
+| B2C payout | `POST /api/v1/payouts` | Result at `/api/mpesa/b2c/result` (sole writer of terminal status) |
+| Refund | `POST /api/v1/refunds` | B2C back to the customer for a completed transaction |
+| Transaction Status | `POST /api/v1/transactions/[id]/status-query` | Reconciliation only — never auto-heals (guardrail #4) |
+| Account Balance | `POST /api/admin/organizations/[id]/account-balance` | Snapshots balance for ops alerting |
+| Reversal | `POST /api/admin/payouts/[id]/reverse` (superadmin) | Undo a wrong payout; flips it to `reversed` |
+
+B2C / Reversal / Account Balance require the org's **initiator name + password** (entered in Payment Setup) and Safaricom's public **certificate** (`certs/{sandbox,production}.cer`) — the password is AES-encrypted at rest and RSA-encrypted per call to form the `SecurityCredential`. **Going live** is admin-gated: a merchant requests go-live (`POST /api/merchant/go-live/request`), a superadmin approves it (`POST /api/admin/organizations/[id]/go-live`, which validates the live credentials against Safaricom first). Idempotency (`Idempotency-Key` header) covers payments/payouts/refunds with a Redis fast path + durable Postgres fallback. A nightly `reconcile-ledger` cron surfaces unresolved records for admin review without ever auto-failing them.
 
 ---
 
