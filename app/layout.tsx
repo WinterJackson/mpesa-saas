@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   description: "A robust SaaS platform for businesses to collect and manage M-Pesa payments on their websites seamlessly.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;

@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { CodeSnippet } from "@/components/code-snippet";
 import { Logo } from "@/components/logo";
 import { SiteFooter } from "@/components/site-footer";
+import { ParticlesBackground } from "@/components/particles-background";
 
 export default async function Home() {
   const { userId } = await auth();
@@ -13,9 +14,9 @@ export default async function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground">
       {/* Floating Header Wrapper */}
-      <div className="fixed top-0 z-50 w-full pt-floating-header px-floating-header">
-        <header className="w-full rounded-floating-header bg-background/80 backdrop-blur-md shadow-floating-header">
-          <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
+      <div className="fixed top-0 z-50 w-full pt-floating-header pl-[15px] md:pl-[30px] pr-0">
+        <header className="w-full rounded-floating-header rounded-r-none bg-background text-foreground backdrop-blur-md shadow-floating-header">
+          <div className="flex h-20 w-full items-center justify-between px-4 md:px-6">
           <Logo />
           <nav className="flex items-center gap-4">
             <ThemeToggle />
@@ -41,8 +42,8 @@ export default async function Home() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="w-full pt-32 pb-24 md:pt-40 md:pb-32 lg:pt-56 lg:pb-48 relative overflow-hidden bg-hero bg-cover bg-center bg-no-repeat">
-          <div className="absolute inset-0 bg-hero-overlay z-0" />
+        <section className="w-full pt-32 pb-24 md:pt-40 md:pb-32 lg:pt-56 lg:pb-48 relative overflow-hidden bg-background">
+          <ParticlesBackground />
           <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px] dark:opacity-10 opacity-0 pointer-events-none z-0" />
           <div className="container px-4 md:px-8 flex flex-col items-center text-center gap-8 relative z-10 mx-auto max-w-4xl">
             <div className="flex flex-col gap-4 items-center">

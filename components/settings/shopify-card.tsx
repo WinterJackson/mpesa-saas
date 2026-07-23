@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ interface ShopifyCardProps {
   initialToken: string | null;
   initialSecret: string | null;
 }
+
+const APP_URL_FALLBACK = process.env.NEXT_PUBLIC_APP_URL || "https://your-payswift-url.com";
 
 export function ShopifyCard({ initialDomain, initialToken, initialSecret }: ShopifyCardProps) {
   const [shopDomain, setShopDomain] = useState(initialDomain || "");
@@ -28,8 +30,11 @@ export function ShopifyCard({ initialDomain, initialToken, initialSecret }: Shop
   const displayToken = isTokenRevealed ? accessToken : (accessToken ? "shpat_••••••••••••••••••••••••••" : "");
   const displaySecret = isSecretRevealed ? webhookSecret : (webhookSecret ? "••••••••••••••••••••••••••••••" : "");
 
-  // Using window.location.origin dynamically or falling back if SSR
-  const appUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || "https://your-payswift-url.com");
+  // Defer window.location.origin to after hydration to prevent mismatch
+  const [appUrl, setAppUrl] = useState(APP_URL_FALLBACK);
+  useEffect(() => {
+    setAppUrl(window.location.origin);
+  }, []);
   const webhookUrl = `${appUrl}/api/integrations/shopify/webhook`;
 
   const handleSave = async () => {

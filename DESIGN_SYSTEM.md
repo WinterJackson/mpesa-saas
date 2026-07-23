@@ -25,6 +25,9 @@ All semantic colors are defined in `app/globals.css`. Never use hardcoded colors
 *   `--input`: Form input borders
 *   `--ring`: Focus rings
 
+### Backgrounds & Overlays
+*   `--background-image-dashboard`: Dashboard background image (auto-switches between light and dark mode images)
+
 ### Typography & Sizing
 *   **Fonts**: We use `font-sans` (Geist Sans) and `font-mono` (Geist Mono). No custom font faces should be added without updating this document.
 *   **Spacing**: Rely on standard Tailwind spacing utilities (e.g., `p-4`, `m-2`, `gap-6`). Do not use arbitrary values like `gap-[13px]`.

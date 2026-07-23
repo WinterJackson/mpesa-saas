@@ -50,10 +50,10 @@ export function Sidebar() {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex h-full shrink-0 pt-floating-header pl-floating-header pb-floating-header">
-        <aside className="flex flex-col w-64 rounded-floating-header bg-background/80 backdrop-blur-md text-sidebar-foreground shadow-floating-header overflow-hidden">
+      <div className="hidden md:flex h-full shrink-0 py-floating-header pl-0">
+        <aside className="flex flex-col w-64 rounded-floating-header rounded-l-none bg-sidebar text-sidebar-foreground shadow-floating-header overflow-hidden">
           <div className="p-6 border-b border-sidebar-border flex items-center">
-            <Logo />
+            <Logo inverted />
           </div>
           <nav className="flex-1 p-4 flex flex-col gap-2">
             {navItems.map((item) => {
@@ -66,7 +66,7 @@ export function Sidebar() {
                     "flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm font-medium",
                     isActive
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                   )}
                 >
                   <item.icon className="size-5" />
@@ -79,8 +79,8 @@ export function Sidebar() {
       </div>
 
       {/* Mobile Bottom Nav */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-floating-header pb-[calc(var(--spacing-floating-header)+env(safe-area-inset-bottom))]">
-        <nav className="flex items-center justify-around rounded-floating-header bg-foreground shadow-floating-header p-3">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 pl-[15px] pr-0 pb-[calc(var(--spacing-floating-header)+env(safe-area-inset-bottom))]">
+        <nav className="flex items-center justify-around rounded-floating-header rounded-r-none bg-sidebar text-sidebar-foreground shadow-floating-header p-3">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -88,12 +88,12 @@ export function Sidebar() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 p-2 rounded-md transition-colors",
-                  isActive ? "text-primary" : "text-background/60 hover:text-background"
+                  "flex flex-col items-center justify-center p-2 rounded-md transition-colors",
+                  isActive ? "text-primary" : "text-sidebar-foreground/60 hover:text-sidebar-foreground"
                 )}
               >
                 <item.icon className="size-6" />
-                <span className="text-[10px] font-medium">{item.name}</span>
+                <span className="sr-only">{item.name}</span>
               </Link>
             );
           })}
