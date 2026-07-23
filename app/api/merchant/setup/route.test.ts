@@ -4,6 +4,7 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { seedPooledSandboxCredential } from '@/lib/repositories/daraja-credentials';
+import { ensurePlansSeeded, getPlanByName, createTrialSubscription } from '@/lib/repositories/billing';
 
 vi.mock('@clerk/nextjs/server', () => ({
   auth: vi.fn(),
@@ -27,6 +28,12 @@ vi.mock('@/lib/repositories/daraja-credentials', () => ({
 
 vi.mock('@/lib/repositories/audit-log', () => ({
   writeAuditLog: vi.fn(),
+}));
+
+vi.mock('@/lib/repositories/billing', () => ({
+  ensurePlansSeeded: vi.fn(),
+  getPlanByName: vi.fn(),
+  createTrialSubscription: vi.fn(),
 }));
 
 vi.mock('@/lib/crypto', () => ({
@@ -104,6 +111,7 @@ describe('POST /api/merchant/setup', () => {
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(prisma.$transaction).mockImplementationOnce(((cb: (tx: unknown) => unknown) => cb(tx)) as any);
+    vi.mocked(getPlanByName).mockResolvedValueOnce({ id: 'plan-starter', name: 'Starter', monthlyFee: 0, txFeeBps: 150, txCapMonthly: 200 });
 
     const response = await POST(makeRequest({ businessName: 'Acme Ltd' }));
     const data = await response.json();
@@ -115,6 +123,8 @@ describe('POST /api/merchant/setup', () => {
       'org-1',
       expect.objectContaining({ consumerKey: 'ck', shortcode: '174379' })
     );
+    expect(ensurePlansSeeded).toHaveBeenCalled();
+    expect(createTrialSubscription).toHaveBeenCalledWith('org-1', 'plan-starter');
     expect(updateUserMetadata).toHaveBeenCalledWith('user-1', { publicMetadata: { onboarded: true } });
     expect(response.status).toBe(201);
     expect(data.success).toBe(true);

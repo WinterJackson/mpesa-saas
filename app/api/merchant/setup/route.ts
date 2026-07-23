@@ -7,6 +7,7 @@ import { encryptSecret } from '@/lib/crypto';
 import { env } from '@/lib/env';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { seedPooledSandboxCredential } from '@/lib/repositories/daraja-credentials';
+import { ensurePlansSeeded, getPlanByName, createTrialSubscription } from '@/lib/repositories/billing';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
 
@@ -133,6 +134,15 @@ export async function POST(request: Request) {
       passkey: env.MPESA_PASSKEY,
       callbackUrl: env.MPESA_CALLBACK_URL,
     });
+
+    // 4. Start the org on the Starter plan trial. ensurePlansSeeded() is
+    //    idempotent (upsert by Plan.name), so this is safe to call on every
+    //    signup rather than depending on a separate one-off seed step.
+    await ensurePlansSeeded();
+    const starterPlan = await getPlanByName('Starter');
+    if (starterPlan) {
+      await createTrialSubscription(created.organization.id, starterPlan.id);
+    }
 
     const newMerchant = created.merchant;
 

@@ -77,6 +77,24 @@ export async function transactionStatusSummary(organizationId: string) {
   return stats as TransactionStatusSummary[];
 }
 
+export async function transactionUsageForPeriod(
+  organizationId: string,
+  periodStart: Date,
+  periodEnd: Date
+): Promise<{ txCount: number; txVolume: number }> {
+  const result = await prisma.transaction.aggregate({
+    where: {
+      organizationId,
+      status: 'completed',
+      createdAt: { gte: periodStart, lt: periodEnd },
+    },
+    _count: { id: true },
+    _sum: { amount: true },
+  });
+
+  return { txCount: result._count.id, txVolume: result._sum.amount ?? 0 };
+}
+
 export function summarizeStats(stats: TransactionStatusSummary[]) {
   let totalTransactions = 0;
   let totalRevenue = 0;

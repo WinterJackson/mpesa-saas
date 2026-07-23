@@ -23,6 +23,53 @@ model Organization {
   darajaCredential OrganizationDarajaCredential?
   kycDocuments     KycDocument[]
   auditLogs        AuditLog[]
+  subscription     Subscription?
+}
+
+// Placeholder pricing seeded by lib/repositories/billing.ts's
+// ensurePlansSeeded() — NOT a confirmed product/pricing decision, flagged
+// explicitly in that module for a real decision before launch.
+model Plan {
+  id            String         @id @default(cuid())
+  name          String         @unique // Starter | Growth | Scale
+  monthlyFee    Int            // KES, minor units (whole shillings, matching Transaction.amount's convention)
+  txFeeBps      Int            // basis points of transaction volume
+  txCapMonthly  Int?           // null = uncapped
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id               String        @id @default(cuid())
+  organizationId   String        @unique
+  organization     Organization  @relation(fields: [organizationId], references: [id])
+  planId           String
+  plan             Plan          @relation(fields: [planId], references: [id])
+  status           String        @default("active") // active | past_due | suspended | canceled
+  currentPeriodEnd DateTime
+  invoices         Invoice[]
+  usageRecords     UsageRecord[]
+}
+
+model Invoice {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  amount         Int
+  status         String       @default("pending") // pending | paid | failed
+  pdfUrl         String?
+  issuedAt       DateTime     @default(now())
+}
+
+model UsageRecord {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  periodStart    DateTime
+  periodEnd      DateTime
+  txCount        Int
+  txVolume       Int
+
+  @@index([subscriptionId])
 }
 
 // Deliberately NOT related to Organization — an admin must never accidentally
