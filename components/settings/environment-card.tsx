@@ -75,6 +75,11 @@ export function EnvironmentCard({ initialEnvironment }: EnvironmentCardProps) {
         </CardTitle>
         <CardDescription>
           Sandbox mode lets you test the full payment flow safely — no real money moves, and it uses Safaricom&apos;s official testing environment. To enable Live mode, complete Safaricom&apos;s Go-Live business verification, then add your own Daraja shortcode and credentials below under Payment Credentials — your live credentials are always your own, never shared with other organizations.
+          <span className="mt-2 block text-xs">
+            Note: this switch changes where your payments are actually routed. The Sandbox/Live toggle in
+            the dashboard header is only a <strong>view filter</strong> — it changes which records you
+            see, not how payments are processed.
+          </span>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -83,10 +83,10 @@ export async function createPaymentLink(params: {
 /** Org-scoped list, newest first, with per-link completed-payment stats. */
 export async function listPaymentLinks(
   organizationId: string,
-  opts: { take?: number } = {}
+  opts: { take?: number; environment?: string } = {}
 ): Promise<PaymentLinkWithStats[]> {
   const links = await prisma.paymentLink.findMany({
-    where: { organizationId },
+    where: { organizationId, ...(opts.environment ? { environment: opts.environment } : {}) },
     orderBy: { createdAt: 'desc' },
     take: opts.take ?? 100,
     select: {

@@ -72,6 +72,14 @@ describe('payment-links repository', () => {
     expect(result[0].paymentsVolume).toBe(350);
   });
 
+  it('listPaymentLinks applies the environment filter when given', async () => {
+    vi.mocked(prisma.paymentLink.findMany).mockResolvedValueOnce([] as never);
+    await listPaymentLinks('org-1', { environment: 'live' });
+    expect(prisma.paymentLink.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { organizationId: 'org-1', environment: 'live' } })
+    );
+  });
+
   it('findPaymentLinkById always filters by organizationId', async () => {
     vi.mocked(prisma.paymentLink.findFirst).mockResolvedValueOnce(null as never);
     await findPaymentLinkById('org-1', 'pl-1');

@@ -35,9 +35,11 @@ interface TransactionsTableProps {
   onSummaryUpdate?: (summary: SummaryData) => void;
   showFilters?: boolean;
   limit?: number;
+  environment?: string;
 }
 
-export function TransactionsTable({ initialTransactions, initialNextCursor = null, onSummaryUpdate, showFilters = false, limit = 50 }: TransactionsTableProps) {
+export function TransactionsTable({ initialTransactions, initialNextCursor = null, onSummaryUpdate, showFilters = false, limit = 50, environment }: TransactionsTableProps) {
+  const envQuery = environment ? `&environment=${environment}` : "";
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
   const [hasLoadedMore, setHasLoadedMore] = useState(false);
@@ -57,7 +59,7 @@ export function TransactionsTable({ initialTransactions, initialNextCursor = nul
     const poll = async () => {
       try {
         setIsRefreshing(true);
-        const res = await fetch(`/api/merchant/transactions?limit=${limit}`, {
+        const res = await fetch(`/api/merchant/transactions?limit=${limit}${envQuery}`, {
           signal: controller.signal
         });
         if (res.ok) {
@@ -101,7 +103,7 @@ export function TransactionsTable({ initialTransactions, initialNextCursor = nul
   const handleManualRefresh = async () => {
     try {
       setIsRefreshing(true);
-      const res = await fetch(`/api/merchant/transactions?limit=${limit}`);
+      const res = await fetch(`/api/merchant/transactions?limit=${limit}${envQuery}`);
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
@@ -128,7 +130,7 @@ export function TransactionsTable({ initialTransactions, initialNextCursor = nul
     if (!nextCursor) return;
     try {
       setIsLoadingMore(true);
-      const res = await fetch(`/api/merchant/transactions?limit=${limit}&cursor=${encodeURIComponent(nextCursor)}`);
+      const res = await fetch(`/api/merchant/transactions?limit=${limit}${envQuery}&cursor=${encodeURIComponent(nextCursor)}`);
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {

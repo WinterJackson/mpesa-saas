@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getOrganizationContext } from "@/lib/repositories/organizations";
 import { listTransactionsPage } from "@/lib/repositories/transactions";
+import { getViewEnvironment } from "@/lib/view-env";
 import { TransactionsTable } from "@/components/dashboard/transactions-table";
 
 export const metadata = {
@@ -16,7 +17,11 @@ export default async function TransactionsPage() {
   const context = await getOrganizationContext(userId, orgId);
   if (!context) redirect("/onboarding");
 
-  const { data: transactions, nextCursor } = await listTransactionsPage(context.organization.id, { limit: 50 });
+  const viewEnv = await getViewEnvironment(context.merchant?.environment);
+  const { data: transactions, nextCursor } = await listTransactionsPage(context.organization.id, {
+    limit: 50,
+    environment: viewEnv,
+  });
 
   return (
     <div className="space-y-6">
@@ -31,6 +36,7 @@ export default async function TransactionsPage() {
         initialNextCursor={nextCursor}
         showFilters={true}
         limit={50}
+        environment={viewEnv}
       />
     </div>
   );

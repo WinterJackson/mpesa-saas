@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { listPaymentLinks } from '@/lib/repositories/payment-links';
+import { getViewEnvironment } from '@/lib/view-env';
 import { PaymentLinksView } from '@/components/payment-links/payment-links-view';
 
 export const metadata = {
@@ -16,7 +17,8 @@ export default async function PaymentLinksPage() {
   const context = await getOrganizationContext(userId, orgId);
   if (!context) redirect('/onboarding');
 
-  const links = await listPaymentLinks(context.organization.id);
+  const viewEnv = await getViewEnvironment(context.merchant?.environment);
+  const links = await listPaymentLinks(context.organization.id, { environment: viewEnv });
 
   return (
     <div className="space-y-6">

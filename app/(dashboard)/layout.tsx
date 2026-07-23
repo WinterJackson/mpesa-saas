@@ -4,6 +4,8 @@ import { getOrganizationContext } from "@/lib/repositories/organizations";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/dashboard/user-menu";
+import { EnvViewToggle } from "@/components/dashboard/env-view-toggle";
+import { getViewEnvironment } from "@/lib/view-env";
 
 export default async function DashboardLayout({
   children,
@@ -24,6 +26,7 @@ export default async function DashboardLayout({
   }
 
   const businessName = context.merchant?.businessName ?? context.organization.businessName;
+  const viewEnv = await getViewEnvironment(context.merchant?.environment);
 
   return (
     <div className="flex h-screen overflow-hidden bg-dashboard bg-cover bg-center bg-no-repeat relative z-0">
@@ -42,6 +45,7 @@ export default async function DashboardLayout({
                 </h1>
               </div>
               <div className="flex items-center gap-4 ml-auto">
+                <EnvViewToggle initial={viewEnv} />
                 <ThemeToggle />
                 <UserMenu />
               </div>
