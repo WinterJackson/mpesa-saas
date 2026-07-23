@@ -3,9 +3,9 @@ dotenv.config({ path: '.env.local' });
 import { prisma } from '../lib/db';
 
 async function main() {
-  const merchant = await prisma.merchant.findFirst();
+  const merchant = await prisma.merchant.findFirst({ where: { organizationId: { not: null } } });
   if (!merchant) {
-    console.error('No merchant found in the database. Run the onboarding flow first.');
+    console.error('No merchant with an Organization found. Run the onboarding flow (or scripts/backfill-organizations.ts) first.');
     process.exit(1);
   }
 
@@ -14,6 +14,7 @@ async function main() {
   const seedData = [
     {
       merchantId: merchant.id,
+      organizationId: merchant.organizationId,
       amount: 1500,
       phone: '254712345678',
       orderReference: 'ORD-77A9B1',
@@ -25,6 +26,7 @@ async function main() {
     },
     {
       merchantId: merchant.id,
+      organizationId: merchant.organizationId,
       amount: 250,
       phone: '254798765432',
       orderReference: 'ORD-88B9C2',
@@ -36,6 +38,7 @@ async function main() {
     },
     {
       merchantId: merchant.id,
+      organizationId: merchant.organizationId,
       amount: 8000,
       phone: '254700112233',
       orderReference: 'ORD-99C9D3',
@@ -47,6 +50,7 @@ async function main() {
     },
     {
       merchantId: merchant.id,
+      organizationId: merchant.organizationId,
       amount: 3200,
       phone: '254744556677',
       orderReference: 'ORD-11D9E4',
@@ -58,6 +62,7 @@ async function main() {
     },
     {
       merchantId: merchant.id,
+      organizationId: merchant.organizationId,
       amount: 500,
       phone: '254799887766',
       orderReference: 'ORD-22E9F5',

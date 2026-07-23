@@ -494,6 +494,7 @@ The repository includes utility scripts for operational maintenance:
 - `npm run db:seed` (via `scripts/seed-transactions.ts`): Safely seeds mock transactions into a local development database.
 - `npx tsx scripts/backfill-webhook-secrets.ts`: Operational script to backfill `webhookSecret` fields for existing merchants who registered prior to HMAC signature enforcement.
 - `npx tsx scripts/backfill-organizations.ts`: One-off Phase 1 migration script — creates a matching Clerk Organization + local Organization/Membership for every pre-Phase-1 Merchant and cascades `organizationId` onto its existing ApiKey/Transaction rows. Must be run (and its zero-NULL verification confirmed) before the follow-up migration that makes `organizationId` `NOT NULL`.
+- `npx tsx scripts/seed-qa-organization.ts`: Idempotent — provisions a permanent, clearly-labeled QA Organization (with pooled sandbox Daraja credentials) for Playwright/CI use, so E2E runs don't have to create a fresh Clerk user and walk the onboarding wizard every time.
 
 ---
 
