@@ -10,8 +10,7 @@ export const paymentInitiateRequestSchema = z
       .optional()
       .nullable()
       .transform((v) => (v ? v.substring(0, 50) : null)),
-  })
-  .meta({ id: 'PaymentInitiateRequest' });
+  });
 
 export type PaymentInitiateRequest = z.infer<typeof paymentInitiateRequestSchema>;
 
@@ -22,8 +21,7 @@ export const paymentInitiateDataSchema = z
     status: z.string(),
     merchantRequestID: z.string(),
     customerMessage: z.string(),
-  })
-  .meta({ id: 'PaymentInitiateData' });
+  });
 
 export const paymentInitiateResponseSchema = successResponse(paymentInitiateDataSchema);
 
@@ -39,7 +37,6 @@ export const paymentStatusDataSchema = z
     orderReference: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
-  })
-  .meta({ id: 'PaymentStatusData' });
+  });
 
 export const paymentStatusResponseSchema = successResponse(paymentStatusDataSchema);

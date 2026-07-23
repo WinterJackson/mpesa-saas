@@ -13,8 +13,7 @@ export const refundCreateRequestSchema = z
       .optional()
       .nullable()
       .transform((v) => (v ? v.substring(0, 100) : null)),
-  })
-  .meta({ id: 'RefundCreateRequest' });
+  });
 
 export type RefundCreateRequest = z.infer<typeof refundCreateRequestSchema>;
 
@@ -25,7 +24,6 @@ export const refundCreateDataSchema = z
     amount: z.number(),
     conversationId: z.string().nullable(),
     originatorConversationId: z.string().nullable(),
-  })
-  .meta({ id: 'RefundCreateData' });
+  });
 
 export const refundCreateResponseSchema = successResponse(refundCreateDataSchema);

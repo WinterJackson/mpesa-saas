@@ -54,8 +54,7 @@ export function parseWith<T>(schema: z.ZodType<T>, raw: unknown): ParseResult<T>
 // ── Shared response fragments (documented in OpenAPI) ────────────────────────
 
 export const errorResponseSchema = z
-  .object({ success: z.literal(false), error: z.string() })
-  .meta({ id: 'ErrorResponse' });
+  .object({ success: z.literal(false), error: z.string() });
 
 /** Wraps a data schema in the platform's { success: true, data } envelope. */
 export function successResponse<T extends z.ZodType>(data: T) {

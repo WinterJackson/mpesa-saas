@@ -49,7 +49,7 @@ export default async function DashboardLayout({
                     <UserButton.Link
                       label="Documentation"
                       labelIcon={<BookOpen className="size-4" />}
-                      href="https://github.com/WinterJackson/mpesa-saas#readme"
+                      href="/docs"
                     />
                   </UserButton.MenuItems>
                 </UserButton>

@@ -14,14 +14,12 @@ export const transactionResourceSchema = z
     mpesaReceipt: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
-  })
-  .meta({ id: 'Transaction' });
+  });
 
 export const transactionListDataSchema = z
   .object({
     transactions: z.array(transactionResourceSchema),
     nextCursor: z.string().nullable(),
-  })
-  .meta({ id: 'TransactionListData' });
+  });
 
 export const transactionListResponseSchema = successResponse(transactionListDataSchema);

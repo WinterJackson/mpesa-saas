@@ -12,8 +12,7 @@ export const payLinkInitiateRequestSchema = z
   .object({
     phone: phoneSchema,
     amount: z.union([z.number(), z.string()]).optional(),
-  })
-  .meta({ id: 'PayLinkInitiateRequest' });
+  });
 
 export type PayLinkInitiateRequest = z.infer<typeof payLinkInitiateRequestSchema>;
 
@@ -23,8 +22,7 @@ export const payLinkInitiateDataSchema = z
     checkoutRequestId: z.string().nullable(),
     status: z.string(),
     customerMessage: z.string(),
-  })
-  .meta({ id: 'PayLinkInitiateData' });
+  });
 
 export const payLinkInitiateResponseSchema = successResponse(payLinkInitiateDataSchema);
 
@@ -34,7 +32,6 @@ export const payLinkStatusDataSchema = z
     status: z.string(),
     mpesaReceipt: z.string().nullable(),
     resultDesc: z.string().nullable(),
-  })
-  .meta({ id: 'PayLinkStatusData' });
+  });
 
 export const payLinkStatusResponseSchema = successResponse(payLinkStatusDataSchema);

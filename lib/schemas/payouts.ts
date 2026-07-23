@@ -18,8 +18,7 @@ export const payoutCreateRequestSchema = z
       .optional()
       .nullable()
       .transform((v) => (v ? v.substring(0, 100) : null)),
-  })
-  .meta({ id: 'PayoutCreateRequest' });
+  });
 
 export type PayoutCreateRequest = z.infer<typeof payoutCreateRequestSchema>;
 
@@ -29,7 +28,6 @@ export const payoutCreateDataSchema = z
     status: z.string(),
     conversationId: z.string().nullable(),
     originatorConversationId: z.string().nullable(),
-  })
-  .meta({ id: 'PayoutCreateData' });
+  });
 
 export const payoutCreateResponseSchema = successResponse(payoutCreateDataSchema);
