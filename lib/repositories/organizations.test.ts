@@ -76,8 +76,37 @@ describe('organizations repository', () => {
     );
   });
 
+  it('getOrganizationContext falls back to the user membership when the active org id does not match', async () => {
+    // 1st call (active-org lookup) misses; 2nd call (fallback by clerkUserId) hits.
+    vi.mocked(prisma.membership.findFirst)
+      .mockResolvedValueOnce(null as never)
+      .mockResolvedValueOnce({
+        id: 'mem-1',
+        organizationId: 'org-1',
+        clerkUserId: 'user-1',
+        role: 'owner',
+        createdAt: new Date(),
+        organization: {
+          id: 'org-1',
+          clerkOrgId: 'clerk-org-1',
+          businessName: 'Acme',
+          kycStatus: 'approved',
+          liveRequestedAt: null,
+          liveApprovedAt: null,
+          liveApprovedBy: null,
+          environment: 'sandbox',
+          createdAt: new Date(),
+          merchant: { id: 'merchant-1' },
+        },
+      } as never);
+
+    const context = await getOrganizationContext('user-1', 'some-other-active-org');
+    expect(prisma.membership.findFirst).toHaveBeenCalledTimes(2);
+    expect(context?.organization.id).toBe('org-1');
+  });
+
   it('getOrganizationContext returns null when no Membership exists', async () => {
-    vi.mocked(prisma.membership.findFirst).mockResolvedValueOnce(null as never);
+    vi.mocked(prisma.membership.findFirst).mockResolvedValue(null as never);
     const context = await getOrganizationContext('user-1');
     expect(context).toBeNull();
   });

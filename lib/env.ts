@@ -21,10 +21,17 @@ const envSchema = z.object({
   MPESA_PASSKEY_LIVE: z.string().optional(),
   MPESA_CALLBACK_URL_LIVE: z.string().url('MPESA_CALLBACK_URL_LIVE must be a valid URL').optional(),
   ENCRYPTION_KEY: z.string().min(44, 'ENCRYPTION_KEY must be a 32-byte base64 string'),
-  UPSTASH_REDIS_REST_URL: z.string().url('UPSTASH_REDIS_REST_URL must be a valid URL'),
-  UPSTASH_REDIS_REST_TOKEN: z.string().min(1, 'UPSTASH_REDIS_REST_TOKEN is required'),
-  CRON_SECRET: z.string().min(1, 'CRON_SECRET is required'),
-  NEXT_PUBLIC_SENTRY_DSN: z.string().url('NEXT_PUBLIC_SENTRY_DSN must be a valid URL'),
+  // Recommended in production, but OPTIONAL so local dev runs without an Upstash/
+  // Sentry account. Every consumer reads these via process.env directly and
+  // degrades gracefully when absent: rate-limit.ts falls back to a permissive
+  // dummy limiter, idempotency.ts uses its Postgres fallback, the cron routes and
+  // Sentry configs no-op. They are NOT read through this validated env proxy, so
+  // marking them required only served to crash the app when unset (which is what
+  // happened during local onboarding). Set them in production deployments.
+  UPSTASH_REDIS_REST_URL: z.string().url('UPSTASH_REDIS_REST_URL must be a valid URL').optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1, 'UPSTASH_REDIS_REST_TOKEN is required').optional(),
+  CRON_SECRET: z.string().min(1, 'CRON_SECRET is required').optional(),
+  NEXT_PUBLIC_SENTRY_DSN: z.string().url('NEXT_PUBLIC_SENTRY_DSN must be a valid URL').optional(),
   // Optional: KYC document storage (Cloudflare R2, S3-compatible). Not required
   // for the app to start — lib/storage.ts throws a clear error only when a KYC
   // upload is actually attempted without these configured.

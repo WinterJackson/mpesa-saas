@@ -2,9 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
-import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { seedPooledSandboxCredential } from '@/lib/repositories/daraja-credentials';
-import { ensurePlansSeeded, getPlanByName, createTrialSubscription } from '@/lib/repositories/billing';
+import { ensurePlansSeeded, ensureTrialSubscription } from '@/lib/repositories/billing';
 
 vi.mock('@clerk/nextjs/server', () => ({
   auth: vi.fn(),
@@ -14,12 +13,9 @@ vi.mock('@clerk/nextjs/server', () => ({
 vi.mock('@/lib/db', () => ({
   prisma: {
     $transaction: vi.fn(),
+    merchant: { findUnique: vi.fn() },
   },
   TransactionClient: {},
-}));
-
-vi.mock('@/lib/repositories/organizations', () => ({
-  getOrganizationContext: vi.fn(),
 }));
 
 vi.mock('@/lib/repositories/daraja-credentials', () => ({
@@ -32,8 +28,8 @@ vi.mock('@/lib/repositories/audit-log', () => ({
 
 vi.mock('@/lib/repositories/billing', () => ({
   ensurePlansSeeded: vi.fn(),
-  getPlanByName: vi.fn(),
-  createTrialSubscription: vi.fn(),
+  getPlanByName: vi.fn().mockResolvedValue({ id: 'plan-starter', name: 'Starter', monthlyFee: 0, txFeeBps: 150, txCapMonthly: 200 }),
+  ensureTrialSubscription: vi.fn(),
 }));
 
 vi.mock('@/lib/crypto', () => ({
@@ -82,13 +78,11 @@ describe('POST /api/merchant/setup', () => {
     expect(response.status).toBe(400);
   });
 
-  it('is idempotent: returns the existing merchant without creating a new Clerk org', async () => {
+  it('is idempotent by clerkUserId: self-heals an existing merchant without creating a new Clerk org', async () => {
     vi.mocked(auth).mockResolvedValueOnce({ userId: 'user-1', orgId: null } as never);
-    vi.mocked(getOrganizationContext).mockResolvedValueOnce({
-      organization: { id: 'org-1' } as never,
-      membership: {} as never,
-      merchant: { id: 'merchant-1', businessName: 'Acme' } as never,
-    });
+    vi.mocked(prisma.merchant.findUnique).mockResolvedValueOnce({
+      id: 'merchant-1', clerkUserId: 'user-1', organizationId: 'org-1', businessName: 'Acme',
+    } as never);
 
     const response = await POST(makeRequest({ businessName: 'Acme' }));
     const data = await response.json();
@@ -96,11 +90,15 @@ describe('POST /api/merchant/setup', () => {
     expect(response.status).toBe(200);
     expect(data.data.id).toBe('merchant-1');
     expect(createOrganization).not.toHaveBeenCalled();
+    // Self-heal: idempotently ensure credentials, subscription, and onboarded flag.
+    expect(seedPooledSandboxCredential).toHaveBeenCalledWith('org-1', expect.objectContaining({ consumerKey: 'ck' }));
+    expect(ensureTrialSubscription).toHaveBeenCalledWith('org-1', 'plan-starter');
+    expect(updateUserMetadata).toHaveBeenCalledWith('user-1', { publicMetadata: { onboarded: true } });
   });
 
-  it('creates a Clerk Organization, local Organization/Membership/Merchant, and seeds pooled sandbox credentials', async () => {
+  it('creates a Clerk Organization, local Organization/Membership/Merchant, and provisions credentials + subscription', async () => {
     vi.mocked(auth).mockResolvedValueOnce({ userId: 'user-1', orgId: null } as never);
-    vi.mocked(getOrganizationContext).mockResolvedValueOnce(null);
+    vi.mocked(prisma.merchant.findUnique).mockResolvedValueOnce(null);
     createOrganization.mockResolvedValueOnce({ id: 'clerk-org-1' });
 
     const tx = {
@@ -111,7 +109,6 @@ describe('POST /api/merchant/setup', () => {
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(prisma.$transaction).mockImplementationOnce(((cb: (tx: unknown) => unknown) => cb(tx)) as any);
-    vi.mocked(getPlanByName).mockResolvedValueOnce({ id: 'plan-starter', name: 'Starter', monthlyFee: 0, txFeeBps: 150, txCapMonthly: 200 });
 
     const response = await POST(makeRequest({ businessName: 'Acme Ltd' }));
     const data = await response.json();
@@ -124,7 +121,7 @@ describe('POST /api/merchant/setup', () => {
       expect.objectContaining({ consumerKey: 'ck', shortcode: '174379' })
     );
     expect(ensurePlansSeeded).toHaveBeenCalled();
-    expect(createTrialSubscription).toHaveBeenCalledWith('org-1', 'plan-starter');
+    expect(ensureTrialSubscription).toHaveBeenCalledWith('org-1', 'plan-starter');
     expect(updateUserMetadata).toHaveBeenCalledWith('user-1', { publicMetadata: { onboarded: true } });
     expect(response.status).toBe(201);
     expect(data.success).toBe(true);

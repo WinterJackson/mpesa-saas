@@ -5,11 +5,32 @@ import crypto from 'node:crypto';
 import { generateApiKey } from '@/lib/api-keys';
 import { encryptSecret } from '@/lib/crypto';
 import { env } from '@/lib/env';
-import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { seedPooledSandboxCredential } from '@/lib/repositories/daraja-credentials';
-import { ensurePlansSeeded, getPlanByName, createTrialSubscription } from '@/lib/repositories/billing';
+import { ensurePlansSeeded, getPlanByName, ensureTrialSubscription } from '@/lib/repositories/billing';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
+
+/**
+ * Ensures the post-transaction onboarding steps are complete for an organization:
+ * pooled-sandbox Daraja credentials + a Starter trial subscription. Both are
+ * idempotent, so this both provisions a fresh org and self-heals a partially
+ * onboarded one (e.g. a prior attempt that failed after the DB transaction).
+ */
+async function ensureOnboardingProvisioned(organizationId: string) {
+  await seedPooledSandboxCredential(organizationId, {
+    consumerKey: env.MPESA_CONSUMER_KEY,
+    consumerSecret: env.MPESA_CONSUMER_SECRET,
+    shortcode: env.MPESA_SHORTCODE,
+    passkey: env.MPESA_PASSKEY,
+    callbackUrl: env.MPESA_CALLBACK_URL,
+  });
+
+  await ensurePlansSeeded();
+  const starterPlan = await getPlanByName('Starter');
+  if (starterPlan) {
+    await ensureTrialSubscription(organizationId, starterPlan.id);
+  }
+}
 
 /**
  * POST /api/merchant/setup
@@ -25,7 +46,7 @@ import { logger } from '@/lib/logger';
  */
 export async function POST(request: Request) {
   try {
-    const { userId, orgId } = await auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return NextResponse.json(
@@ -53,21 +74,36 @@ export async function POST(request: Request) {
       );
     }
 
-    // Idempotency: Check if this Clerk user already belongs to an Organization
-    const existingContext = await getOrganizationContext(userId, orgId);
+    const client = await clerkClient();
 
-    if (existingContext) {
-      return NextResponse.json(
-        { success: true, data: existingContext.merchant },
-        { status: 200 }
-      );
+    // Idempotency by IDENTITY: clerkUserId is unique on Merchant, so this catches
+    // an already-onboarded user regardless of the active Clerk org (getOrgContext
+    // keyed on the active orgId could miss and cause a duplicate-create crash).
+    // If a prior attempt left the org partially provisioned (e.g. it failed after
+    // the DB transaction but before seeding credentials), self-heal and finish.
+    const existingMerchant = await prisma.merchant.findUnique({
+      where: { clerkUserId: userId },
+    });
+
+    if (existingMerchant?.organizationId) {
+      await ensureOnboardingProvisioned(existingMerchant.organizationId);
+      await client.users.updateUserMetadata(userId, { publicMetadata: { onboarded: true } });
+
+      const healed = NextResponse.json({ success: true, data: existingMerchant }, { status: 200 });
+      healed.cookies.set('payswift_just_onboarded', '1', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60,
+        path: '/',
+      });
+      return healed;
     }
 
     // 1. Create the Clerk Organization first — Clerk's API isn't part of the
     //    Postgres transaction below, so this happens outside it. If the local
     //    writes fail after this succeeds, the orphaned Clerk org is harmless
     //    (it just won't have a matching local row) and is safe to retry.
-    const client = await clerkClient();
     const clerkOrg = await client.organizations.createOrganization({
       name: businessName.trim(),
       createdBy: userId,
@@ -124,25 +160,9 @@ export async function POST(request: Request) {
       };
     });
 
-    // 3. Seed the pooled/PaySwift-managed sandbox Daraja credentials. This is
-    //    the only place PaySwift's own MPESA_* env vars are read into a
-    //    per-organization row — lib/daraja.ts never reads them directly.
-    await seedPooledSandboxCredential(created.organization.id, {
-      consumerKey: env.MPESA_CONSUMER_KEY,
-      consumerSecret: env.MPESA_CONSUMER_SECRET,
-      shortcode: env.MPESA_SHORTCODE,
-      passkey: env.MPESA_PASSKEY,
-      callbackUrl: env.MPESA_CALLBACK_URL,
-    });
-
-    // 4. Start the org on the Starter plan trial. ensurePlansSeeded() is
-    //    idempotent (upsert by Plan.name), so this is safe to call on every
-    //    signup rather than depending on a separate one-off seed step.
-    await ensurePlansSeeded();
-    const starterPlan = await getPlanByName('Starter');
-    if (starterPlan) {
-      await createTrialSubscription(created.organization.id, starterPlan.id);
-    }
+    // 3. Seed pooled sandbox Daraja credentials + start the Starter trial
+    //    (idempotent; also the self-heal path for a partial retry).
+    await ensureOnboardingProvisioned(created.organization.id);
 
     const newMerchant = created.merchant;
 

@@ -36,6 +36,16 @@ export async function createTrialSubscription(organizationId: string, planId: st
   });
 }
 
+/**
+ * Idempotent trial subscription — creates one only if the organization has none.
+ * Safe to call on every onboarding attempt (including retries/self-heal).
+ */
+export async function ensureTrialSubscription(organizationId: string, planId: string) {
+  const existing = await prisma.subscription.findUnique({ where: { organizationId }, select: { id: true } });
+  if (existing) return existing;
+  return createTrialSubscription(organizationId, planId);
+}
+
 export async function getSubscriptionForOrganization(organizationId: string) {
   return prisma.subscription.findUnique({
     where: { organizationId },

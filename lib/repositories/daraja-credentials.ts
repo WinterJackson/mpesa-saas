@@ -19,8 +19,13 @@ export async function seedPooledSandboxCredential(
   organizationId: string,
   sandbox: DarajaCredentialSet
 ) {
-  return prisma.organizationDarajaCredential.create({
-    data: {
+  // Idempotent: if a credential row already exists (e.g. a retried or previously
+  // partial onboarding), leave it untouched — never clobber an org that has since
+  // supplied its own sandbox credentials.
+  return prisma.organizationDarajaCredential.upsert({
+    where: { organizationId },
+    update: {},
+    create: {
       organizationId,
       consumerKeyEncrypted: encryptSecret(sandbox.consumerKey),
       consumerSecretEncrypted: encryptSecret(sandbox.consumerSecret),

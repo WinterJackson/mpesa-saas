@@ -505,6 +505,7 @@ The repository includes utility scripts for operational maintenance:
 - `npx tsx scripts/backfill-webhook-secrets.ts`: Operational script to backfill `webhookSecret` fields for existing merchants who registered prior to HMAC signature enforcement.
 - `npx tsx scripts/backfill-organizations.ts`: One-off Phase 1 migration script — creates a matching Clerk Organization + local Organization/Membership for every pre-Phase-1 Merchant and cascades `organizationId` onto its existing ApiKey/Transaction rows. Must be run (and its zero-NULL verification confirmed) before the follow-up migration that makes `organizationId` `NOT NULL`.
 - `npx tsx scripts/seed-qa-organization.ts`: Idempotent — provisions a permanent, clearly-labeled QA Organization (with pooled sandbox Daraja credentials) for Playwright/CI use, so E2E runs don't have to create a fresh Clerk user and walk the onboarding wizard every time.
+- `npx tsx scripts/repair-onboarding.ts`: Idempotent, non-destructive — completes onboarding for any existing merchant whose provisioning is incomplete (seeds pooled sandbox credentials, ensures a Starter trial subscription, sets the Clerk `onboarded` flag). Fixes merchants left partial by a failed onboarding attempt and the Phase-1-backfilled orgs.
 - `npx tsx scripts/daraja-sandbox-smoke.ts <organizationId> [stk|b2c|balance]`: **Manual** smoke test against Safaricom's real sandbox for one organization. Never run in CI — it depends on live sandbox availability. Use during go-live prep to confirm the full chain end-to-end.
 
 ## 💸 Daraja API Suite (Phase 2)

@@ -43,25 +43,34 @@ export interface OrganizationContext {
 /**
  * Resolves which Organization the signed-in Clerk user is currently acting in.
  *
- * Clerk's own active-organization selection (auth()'s orgId, once Organizations
- * is enabled) is the source of truth when present — pass it as activeClerkOrgId.
- * Falls back to the user's sole Membership row, which covers every Phase 1 case
- * before a user has more than one organization to switch between.
+ * Active-organization FIRST, membership fallback SECOND: Clerk's active-org id
+ * (auth()'s orgId) is preferred when it matches one of the user's memberships,
+ * but if it doesn't — e.g. Clerk assigned a different active org during sign-up
+ * (the "choose-organization" task), or the id is stale — we fall back to the
+ * user's own membership rather than returning null. Returning null here would
+ * bounce an already-onboarded user into an /onboarding ⇄ /dashboard redirect loop.
  */
 export async function getOrganizationContext(
   clerkUserId: string,
   activeClerkOrgId?: string | null
 ): Promise<OrganizationContext | null> {
-  const membership = activeClerkOrgId
+  const include = { organization: { include: { merchant: true } } } as const;
+
+  let membership = activeClerkOrgId
     ? await prisma.membership.findFirst({
         where: { clerkUserId, organization: { clerkOrgId: activeClerkOrgId } },
-        include: { organization: { include: { merchant: true } } },
+        include,
       })
-    : await prisma.membership.findFirst({
-        where: { clerkUserId },
-        orderBy: { createdAt: 'asc' },
-        include: { organization: { include: { merchant: true } } },
-      });
+    : null;
+
+  // Fallback: the user's own membership (oldest first) regardless of active org.
+  if (!membership) {
+    membership = await prisma.membership.findFirst({
+      where: { clerkUserId },
+      orderBy: { createdAt: 'asc' },
+      include,
+    });
+  }
 
   if (!membership) return null;
 
