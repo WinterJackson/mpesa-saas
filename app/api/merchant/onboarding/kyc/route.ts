@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { createKycDocument, listKycDocuments } from '@/lib/repositories/kyc-documents';
 import { uploadKycDocument } from '@/lib/storage';
+import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
 
 const ALLOWED_TYPES = ['id', 'business_registration', 'kra_pin'];
@@ -77,6 +78,13 @@ export async function POST(request: Request) {
     const document = await createKycDocument(context.organization.id, {
       type: documentType,
       storageKey,
+    });
+
+    await writeAuditLog({
+      organizationId: context.organization.id,
+      actorId: userId,
+      action: 'kyc_document.submitted',
+      metadata: { documentType, documentId: document.id },
     });
 
     return NextResponse.json({ success: true, data: document }, { status: 201 });

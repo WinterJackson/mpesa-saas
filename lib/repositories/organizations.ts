@@ -163,6 +163,7 @@ export interface MerchantSettingsUpdate {
   shopifyShopDomain?: string | null;
   shopifyAdminAccessToken?: string | null;
   shopifyWebhookSecret?: string | null;
+  webhookSecret?: string | null;
 }
 
 // `where: { organizationId }` relies on Merchant.organizationId being unique

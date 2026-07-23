@@ -1,36 +1,39 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { prisma } from '@/lib/db';
 import crypto from 'node:crypto';
 import { encryptSecret } from '@/lib/crypto';
+import { getOrganizationContext, updateMerchantForOrganization } from '@/lib/repositories/organizations';
+import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
 
 export async function POST() {
   try {
-    const { userId } = await auth();
+    const { userId, orgId } = await auth();
 
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const merchant = await prisma.merchant.findUnique({
-      where: { clerkUserId: userId },
-    });
+    const context = await getOrganizationContext(userId, orgId);
 
-    if (!merchant) {
+    if (!context || !context.merchant) {
       return NextResponse.json({ success: false, error: 'Merchant not found' }, { status: 404 });
     }
 
+    const { organization } = context;
     const newSecret = `whsec_${crypto.randomBytes(24).toString('hex')}`;
 
-    await prisma.merchant.update({
-      where: { id: merchant.id },
-      data: { webhookSecret: encryptSecret(newSecret) },
+    await updateMerchantForOrganization(organization.id, { webhookSecret: encryptSecret(newSecret) });
+
+    await writeAuditLog({
+      organizationId: organization.id,
+      actorId: userId,
+      action: 'webhook_secret.rotated',
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      data: { secret: newSecret } 
+    return NextResponse.json({
+      success: true,
+      data: { secret: newSecret }
     }, { status: 200 });
 
   } catch (error: unknown) {

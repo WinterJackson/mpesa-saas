@@ -4,6 +4,7 @@ import { auth } from '@clerk/nextjs/server';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { createKycDocument, listKycDocuments } from '@/lib/repositories/kyc-documents';
 import { uploadKycDocument } from '@/lib/storage';
+import { writeAuditLog } from '@/lib/repositories/audit-log';
 
 vi.mock('@clerk/nextjs/server', () => ({
   auth: vi.fn(),
@@ -20,6 +21,10 @@ vi.mock('@/lib/repositories/kyc-documents', () => ({
 
 vi.mock('@/lib/storage', () => ({
   uploadKycDocument: vi.fn(),
+}));
+
+vi.mock('@/lib/repositories/audit-log', () => ({
+  writeAuditLog: vi.fn(),
 }));
 
 describe('KYC document routes', () => {
@@ -82,6 +87,12 @@ describe('KYC document routes', () => {
       expect(createKycDocument).toHaveBeenCalledWith('org-1', { type: 'id', storageKey: 'kyc/org-1/id/uuid' });
       expect(response.status).toBe(201);
       expect(data.success).toBe(true);
+      expect(writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+        organizationId: 'org-1',
+        actorId: 'user-1',
+        action: 'kyc_document.submitted',
+        metadata: { documentType: 'id', documentId: 'doc-1' },
+      }));
     });
 
     it('returns 503 with a clear message when R2 is not configured', async () => {

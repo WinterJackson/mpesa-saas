@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PATCH } from './route';
 import { auth } from '@clerk/nextjs/server';
 import { getOrganizationContext, updateMerchantForOrganization } from '@/lib/repositories/organizations';
+import { writeAuditLog } from '@/lib/repositories/audit-log';
 
 vi.mock('@clerk/nextjs/server', () => ({ auth: vi.fn() }));
 vi.mock('@/lib/crypto', () => ({
@@ -11,6 +12,9 @@ vi.mock('@/lib/crypto', () => ({
 vi.mock('@/lib/repositories/organizations', () => ({
   getOrganizationContext: vi.fn(),
   updateMerchantForOrganization: vi.fn(),
+}));
+vi.mock('@/lib/repositories/audit-log', () => ({
+  writeAuditLog: vi.fn(),
 }));
 
 function makeRequest(body: unknown) {
@@ -65,6 +69,12 @@ describe('PATCH /api/merchant/settings', () => {
     const response = await PATCH(makeRequest({ environment: 'live' }));
     expect(response.status).toBe(200);
     expect(updateMerchantForOrganization).toHaveBeenCalledWith('org-1', { environment: 'live' });
+    expect(writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      organizationId: 'org-1',
+      actorId: 'user-1',
+      action: 'organization.settings_updated',
+      metadata: { fieldsChanged: ['environment'] },
+    }));
   });
 
   it('rejects a non-HTTPS webhook URL', async () => {

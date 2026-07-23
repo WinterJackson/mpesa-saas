@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { encryptSecret, decryptSecret } from '@/lib/crypto';
 import { getOrganizationContext, updateMerchantForOrganization, type MerchantSettingsUpdate } from '@/lib/repositories/organizations';
+import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
 
 export async function PATCH(request: Request) {
@@ -69,7 +70,15 @@ export async function PATCH(request: Request) {
 
     const updatedMerchant = await updateMerchantForOrganization(organization.id, updateData);
 
-    return NextResponse.json({ 
+    await writeAuditLog({
+      organizationId: organization.id,
+      actorId: userId,
+      action: 'organization.settings_updated',
+      // Field names only — never the raw secret values being set.
+      metadata: { fieldsChanged: Object.keys(updateData) },
+    });
+
+    return NextResponse.json({
       success: true, 
       data: {
         environment: updatedMerchant.environment,
