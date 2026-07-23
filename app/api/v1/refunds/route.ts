@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     const idempotencyKey = request.headers.get('Idempotency-Key');
     if (idempotencyKey) {
-      const cached = await getCachedIdempotentResponse(idempotencyKey, merchant.id);
+      const cached = await getCachedIdempotentResponse(idempotencyKey, authResult.organizationId);
       if (cached) return NextResponse.json(cached.data, { status: cached.status });
     }
 
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       const amountValidation = validateAmount(amount);
       if (!amountValidation.valid) {
         const resData = { success: false, error: amountValidation.error };
-        if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, merchant.id, resData, 400);
+        if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, authResult.organizationId, resData, 400);
         return NextResponse.json(resData, { status: 400 });
       }
       if (amountValidation.sanitized! > transaction.amount) {
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
 
     if (!result.success) {
       const resData = { success: false, error: result.error };
-      if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, merchant.id, resData, 502);
+      if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, authResult.organizationId, resData, 502);
       return NextResponse.json(resData, { status: 502 });
     }
 
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
         originatorConversationId: result.originatorConversationId,
       },
     };
-    if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, merchant.id, responseData, 201);
+    if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, authResult.organizationId, responseData, 201);
     return NextResponse.json(responseData, { status: 201 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';

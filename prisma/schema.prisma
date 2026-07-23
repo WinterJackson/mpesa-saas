@@ -314,6 +314,21 @@ model Refund {
   @@index([transactionId])
 }
 
+// Durable idempotency store — the Postgres fallback behind the Upstash Redis
+// fast path (lib/idempotency.ts). Guarantees cache-and-replay survives a Redis
+// outage/eviction. Keyed by "${organizationId}:${idempotencyKey}".
+model IdempotencyRecord {
+  id             String   @id @default(cuid())
+  key            String   @unique
+  organizationId String
+  status         Int
+  responseData   Json
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+
+  @@index([expiresAt])
+}
+
 // A single WebhookDelivery is linked to exactly one of transaction/payout/refund
 // (enforced in application code). transactionId is nullable as of the polymorphic
 // migration so payout/refund events can be recorded the same way.
