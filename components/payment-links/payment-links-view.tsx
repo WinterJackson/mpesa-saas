@@ -9,9 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Copy, ExternalLink, Link2, QrCode } from 'lucide-react';
+import { Copy, ExternalLink, Link2, QrCode, Code2 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { toast } from 'sonner';
+import { EmbedSnippet } from '@/components/payment-links/embed-snippet';
 
 export interface PaymentLinkItem {
   id: string;
@@ -59,6 +60,7 @@ export function PaymentLinksView({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [qrLink, setQrLink] = useState<PaymentLinkItem | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [embedLink, setEmbedLink] = useState<PaymentLinkItem | null>(null);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -290,6 +292,9 @@ export function PaymentLinksView({
                         <Button type="button" size="xs" variant="outline" onClick={() => handleShowQr(link)}>
                           <QrCode className="size-3.5" /> QR
                         </Button>
+                        <Button type="button" size="xs" variant="outline" onClick={() => setEmbedLink(link)}>
+                          <Code2 className="size-3.5" /> Embed
+                        </Button>
                         <a href={publicUrl(link.slug)} target="_blank" rel="noopener noreferrer">
                           <Button type="button" size="xs" variant="outline">
                             <ExternalLink className="size-3.5" /> Open
@@ -315,6 +320,23 @@ export function PaymentLinksView({
           </Table>
         </div>
       )}
+
+      <Dialog open={embedLink !== null} onOpenChange={(open) => !open && setEmbedLink(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Embed &ldquo;{embedLink?.title}&rdquo;</DialogTitle>
+            <DialogDescription>
+              Add a &ldquo;Pay with M-Pesa&rdquo; button to any website or email.
+            </DialogDescription>
+          </DialogHeader>
+          {embedLink && (
+            <EmbedSnippet
+              payUrl={publicUrl(embedLink.slug)}
+              scriptUrl={typeof window !== 'undefined' ? `${window.location.origin}/pay-button.js` : '/pay-button.js'}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={qrLink !== null} onOpenChange={(open) => !open && setQrLink(null)}>
         <DialogContent className="sm:max-w-xs">
