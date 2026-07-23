@@ -8,6 +8,7 @@ export interface Organization {
   clerkOrgId: string;
   businessName: string;
   kycStatus: string;
+  liveRequestedAt: Date | null;
   liveApprovedAt: Date | null;
   liveApprovedBy: string | null;
   environment: string;
@@ -76,6 +77,30 @@ export async function getOrganizationContext(
 
 export async function findOrganizationById(organizationId: string): Promise<Organization | null> {
   return prisma.organization.findUnique({ where: { id: organizationId } });
+}
+
+/** Merchant requested go-live; marks the org for the admin review queue. */
+export async function setLiveRequested(organizationId: string): Promise<Organization> {
+  return prisma.organization.update({
+    where: { id: organizationId },
+    data: { liveRequestedAt: new Date() },
+  });
+}
+
+/**
+ * Admin approves go-live: stamps liveApprovedAt/By and flips both the
+ * Organization (canonical approved state) and its Merchant (operational toggle)
+ * to live, atomically.
+ */
+export async function approveGoLive(organizationId: string, adminClerkUserId: string): Promise<Organization> {
+  const [org] = await prisma.$transaction([
+    prisma.organization.update({
+      where: { id: organizationId },
+      data: { liveApprovedAt: new Date(), liveApprovedBy: adminClerkUserId, environment: 'live' },
+    }),
+    prisma.merchant.update({ where: { organizationId }, data: { environment: 'live' } }),
+  ]);
+  return org;
 }
 
 export async function findMembership(

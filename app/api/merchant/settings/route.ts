@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { isLiveModeConfigured } from '@/lib/daraja';
 import { encryptSecret, decryptSecret } from '@/lib/crypto';
 import { getOrganizationContext, updateMerchantForOrganization, type MerchantSettingsUpdate } from '@/lib/repositories/organizations';
 import { logger } from '@/lib/logger';
@@ -28,8 +27,11 @@ export async function PATCH(request: Request) {
       if (body.environment !== 'sandbox' && body.environment !== 'live') {
         return NextResponse.json({ success: false, error: 'Invalid environment value' }, { status: 400 });
       }
-      if (body.environment === 'live' && !(await isLiveModeConfigured(organization.id))) {
-        return NextResponse.json({ success: false, error: 'Live M-Pesa credentials are not yet configured for your organization. Add them under Settings first.' }, { status: 400 });
+      // Going live is admin-gated: the org must have been approved for go-live
+      // (liveApprovedAt set) before a merchant can toggle themselves to live.
+      // Switching back to sandbox is always allowed.
+      if (body.environment === 'live' && !organization.liveApprovedAt) {
+        return NextResponse.json({ success: false, error: 'Live mode requires admin go-live approval. Request go-live once your KYC is approved and live credentials are added.' }, { status: 400 });
       }
       updateData.environment = body.environment;
     }

@@ -1,11 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PATCH } from './route';
 import { auth } from '@clerk/nextjs/server';
-import { isLiveModeConfigured } from '@/lib/daraja';
 import { getOrganizationContext, updateMerchantForOrganization } from '@/lib/repositories/organizations';
 
 vi.mock('@clerk/nextjs/server', () => ({ auth: vi.fn() }));
-vi.mock('@/lib/daraja', () => ({ isLiveModeConfigured: vi.fn() }));
 vi.mock('@/lib/crypto', () => ({
   encryptSecret: vi.fn((v: string) => `enc:${v}`),
   decryptSecret: vi.fn((v: string) => v.replace('enc:', '')),
@@ -42,19 +40,26 @@ describe('PATCH /api/merchant/settings', () => {
     expect(response.status).toBe(404);
   });
 
-  it('rejects switching to live when the organization has no live Daraja credentials configured', async () => {
-    vi.mocked(isLiveModeConfigured).mockResolvedValueOnce(false);
+  it('rejects switching to live when the org has not been admin-approved for go-live', async () => {
+    vi.mocked(getOrganizationContext).mockResolvedValueOnce({
+      organization: { id: 'org-1', liveApprovedAt: null },
+      membership: {},
+      merchant: { id: 'merchant-1' },
+    } as never);
     const response = await PATCH(makeRequest({ environment: 'live' }));
     const data = await response.json();
 
-    expect(isLiveModeConfigured).toHaveBeenCalledWith('org-1');
     expect(response.status).toBe(400);
-    expect(data.error).toMatch(/not yet configured for your organization/i);
+    expect(data.error).toMatch(/admin go-live approval/i);
     expect(updateMerchantForOrganization).not.toHaveBeenCalled();
   });
 
-  it('allows switching to live once the organization has live credentials configured', async () => {
-    vi.mocked(isLiveModeConfigured).mockResolvedValueOnce(true);
+  it('allows switching to live once the org has been admin-approved (liveApprovedAt set)', async () => {
+    vi.mocked(getOrganizationContext).mockResolvedValueOnce({
+      organization: { id: 'org-1', liveApprovedAt: new Date() },
+      membership: {},
+      merchant: { id: 'merchant-1' },
+    } as never);
     vi.mocked(updateMerchantForOrganization).mockResolvedValueOnce({ environment: 'live', webhookUrl: null, shopifyShopDomain: null, shopifyAdminAccessToken: null, shopifyWebhookSecret: null } as never);
 
     const response = await PATCH(makeRequest({ environment: 'live' }));

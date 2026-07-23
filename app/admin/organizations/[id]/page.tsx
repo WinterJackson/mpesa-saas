@@ -4,6 +4,7 @@ import { listAuditLogsForOrganization } from '@/lib/repositories/audit-log';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ImpersonateButton } from '@/components/admin/impersonate-button';
+import { GoLiveButton } from '@/components/admin/go-live-button';
 
 export const metadata = {
   title: 'Organization - PaySwift Admin',
@@ -19,6 +20,16 @@ export default async function AdminOrganizationDetailPage({ params }: { params: 
 
   const auditLogs = await listAuditLogsForOrganization(id, 25);
 
+  const hasLiveCreds = Boolean(organization.darajaCredential?.shortcodeLive);
+  const goLiveDisabled = Boolean(organization.liveApprovedAt) || organization.kycStatus !== 'approved' || !hasLiveCreds;
+  const goLiveReason = organization.liveApprovedAt
+    ? 'Already live'
+    : organization.kycStatus !== 'approved'
+      ? 'KYC not approved'
+      : !hasLiveCreds
+        ? 'No live credentials'
+        : undefined;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -26,7 +37,10 @@ export default async function AdminOrganizationDetailPage({ params }: { params: 
           <h1 className="text-2xl font-semibold tracking-tight">{organization.businessName}</h1>
           <p className="text-sm text-muted-foreground">{organization.id}</p>
         </div>
-        <ImpersonateButton organizationId={organization.id} />
+        <div className="flex items-start gap-3">
+          <GoLiveButton organizationId={organization.id} disabled={goLiveDisabled} disabledReason={goLiveReason} />
+          <ImpersonateButton organizationId={organization.id} />
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -52,6 +66,16 @@ export default async function AdminOrganizationDetailPage({ params }: { params: 
             <div className="flex justify-between">
               <span className="text-muted-foreground">Daraja credentials</span>
               <span>{organization.darajaCredential?.isPooledSandbox ? 'Pooled sandbox' : organization.darajaCredential ? 'Custom' : 'Not configured'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Go-live</span>
+              <span>
+                {organization.liveApprovedAt
+                  ? `Approved ${organization.liveApprovedAt.toLocaleDateString()}`
+                  : organization.liveRequestedAt
+                    ? `Requested ${organization.liveRequestedAt.toLocaleDateString()}`
+                    : 'Not requested'}
+              </span>
             </div>
           </CardContent>
         </Card>

@@ -2,9 +2,11 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { listKycDocuments } from '@/lib/repositories/kyc-documents';
+import { getCredentialSummary } from '@/lib/repositories/daraja-credentials';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { KycUploadCard } from '@/components/settings/kyc-upload-card';
+import { GoLiveRequestCard } from '@/components/settings/go-live-request-card';
 
 export const metadata = {
   title: 'KYC Verification - PaySwift',
@@ -19,6 +21,7 @@ export default async function KycSettingsPage() {
   if (!context) redirect('/onboarding');
 
   const documents = await listKycDocuments(context.organization.id);
+  const credentialSummary = await getCredentialSummary(context.organization.id);
 
   return (
     <div className="space-y-6">
@@ -41,6 +44,13 @@ export default async function KycSettingsPage() {
           <KycUploadCard documents={documents} />
         </CardContent>
       </Card>
+
+      <GoLiveRequestCard
+        kycApproved={context.organization.kycStatus === 'approved'}
+        hasLiveCredentials={Boolean(credentialSummary?.hasLiveCredentials)}
+        liveRequested={Boolean(context.organization.liveRequestedAt)}
+        liveApproved={Boolean(context.organization.liveApprovedAt)}
+      />
     </div>
   );
 }

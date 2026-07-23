@@ -10,11 +10,12 @@ model Organization {
   id             String   @id @default(cuid())
   clerkOrgId     String   @unique
   businessName   String
-  kycStatus      String   @default("pending") // pending | approved | rejected
-  liveApprovedAt DateTime?
-  liveApprovedBy String?
-  environment    String   @default("sandbox")
-  createdAt      DateTime @default(now())
+  kycStatus       String   @default("pending") // pending | approved | rejected
+  liveRequestedAt DateTime? // merchant requested go-live; awaiting admin approval
+  liveApprovedAt  DateTime?
+  liveApprovedBy  String?
+  environment     String   @default("sandbox")
+  createdAt       DateTime @default(now())
 
   merchant         Merchant?
   memberships      Membership[]
