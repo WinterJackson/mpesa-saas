@@ -29,6 +29,34 @@ model Organization {
   refunds          Refund[]
   accountBalances  AccountBalanceSnapshot[]
   darajaCommands   DarajaCommand[]
+  paymentLinks     PaymentLink[]
+}
+
+// A shareable, PaySwift-hosted payment link — the no-code way for a merchant to
+// collect an M-Pesa payment with zero API integration. The public hosted
+// checkout lives at /pay/[slug]; payments made through it attribute back via
+// Transaction.paymentLinkId. A live link requires the org's liveApprovedAt (the
+// same admin-gated go-live check as the API). findActiveLinkBySlug() is the one
+// deliberately un-scoped lookup (documented, like the C2B shortcode lookup) that
+// powers the public page.
+model PaymentLink {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  merchantId     String
+  merchant       Merchant      @relation(fields: [merchantId], references: [id])
+  slug           String        @unique // public, URL-safe id used in /pay/[slug]
+  title          String
+  description    String?
+  amountType     String        @default("fixed") // fixed | customer_set
+  amount         Int?          // KES minor units; required when amountType = fixed
+  active         Boolean       @default(true)
+  environment    String        @default("sandbox")
+  expiresAt      DateTime?
+  createdAt      DateTime      @default(now())
+  transactions   Transaction[]
+
+  @@index([organizationId, createdAt(sort: Desc)])
 }
 
 // Ledger of initiator-authenticated Daraja commands (Transaction Status, Account
@@ -213,6 +241,7 @@ model Merchant {
   transactions            Transaction[]
   payouts                 Payout[]
   refunds                 Refund[]
+  paymentLinks            PaymentLink[]
 }
 
 model ApiKey {
@@ -247,6 +276,8 @@ model Transaction {
   updatedAt         DateTime          @updatedAt
   environment       String            @default("sandbox")
   source            String            @default("api")
+  paymentLinkId     String?
+  paymentLink       PaymentLink?      @relation(fields: [paymentLinkId], references: [id])
   merchant          Merchant          @relation(fields: [merchantId], references: [id])
   webhookDeliveries WebhookDelivery[]
 
@@ -254,6 +285,7 @@ model Transaction {
   @@index([merchantId, status])
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, status])
+  @@index([paymentLinkId])
   refunds           Refund[]
 }
 
