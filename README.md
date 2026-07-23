@@ -2,6 +2,17 @@
 
 PaySwift is a production-ready, white-label Merchant SaaS platform that empowers businesses to seamlessly collect, monitor, and manage M-Pesa payments. Built on Next.js 15, Prisma, and Tailwind CSS, PaySwift offers a highly secure API integration layer, an interactive "Demo Store" for end-users to experience frictionless checkout, and a beautifully designed Dashboard for merchants to track their real-time transaction statuses via Webhooks.
 
+## ✨ Merchant integration & developer experience (Phase 3)
+
+PaySwift works for non-developers and developers alike:
+
+- **No-code Payment Links** — create a link in the dashboard (fixed or customer-set amount), share it, show its **QR code**, or paste the embeddable **"Pay with M-Pesa"** button on any site. Customers pay on a PaySwift-hosted checkout at `/pay/[slug]`.
+- **One-click Shopify** — connect a store from **Integrations** via OAuth; new orders automatically trigger an M-Pesa prompt and paid orders are marked paid. No manual app/webhook setup.
+- **Frozen REST API** at `/api/v1` with an **OpenAPI 3.1** spec (`/api/v1/openapi.json`) and an interactive reference at **`/docs`**.
+- **Cursor pagination** (`GET /api/v1/transactions`, `{ data, nextCursor }`), **per-plan rate limits** (`X-RateLimit-*` headers, `429` + `Retry-After`).
+- **Webhooks** — a canonical event catalog (incl. `payout.reversed`), a **delivery inspector** at `/settings/webhooks` with payload viewer and one-click **redelivery**, and a signed **test event**. See `/docs/webhooks`.
+- **Dashboard Sandbox/Live view filter** (a list-view filter, separate from the admin-gated payment-routing switch).
+
 ## 🚀 Quick Start & Setup
 
 ### Prerequisites
@@ -75,6 +86,19 @@ NEXT_PUBLIC_SENTRY_DSN="https://..."
 
 # Webhook Domain (Use Ngrok for local testing)
 NEXT_PUBLIC_APP_URL="https://your-ngrok-domain.ngrok-free.app"
+
+# Optional (Phase 3) — public base URL used to build the Shopify OAuth redirect
+# and auto-registered webhook address. Falls back to the request origin.
+# APP_BASE_URL=""
+
+# Optional (Phase 3) — one-click Shopify connect. Create ONE app at
+# partners.shopify.com, set its redirect URL to
+# {APP_BASE_URL}/api/integrations/shopify/oauth/callback, request read_orders +
+# write_orders, and paste the app's Client ID/Secret here. Until set, merchants
+# fall back to the manual access-token card.
+# SHOPIFY_CLIENT_ID=""
+# SHOPIFY_CLIENT_SECRET=""
+# SHOPIFY_APP_SCOPES="read_orders,write_orders"
 
 # API Key for the Demo Store
 DEMO_API_KEY="" # You will generate this automatically in step 4

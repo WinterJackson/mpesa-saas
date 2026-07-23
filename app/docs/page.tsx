@@ -111,6 +111,25 @@ export default function DocsLandingPage() {
             add optional fields. Breaking changes will ship under a new version.
           </p>
         </section>
+
+        {/* Guides */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold tracking-tight">Guides</h2>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Link href="/docs/webhooks" className="rounded-lg border border-border p-4 transition-colors hover:border-foreground">
+              <h3 className="font-medium">Webhooks</h3>
+              <p className="text-sm text-muted-foreground">Events, payloads, and signature verification.</p>
+            </Link>
+            <Link href="/integrations" className="rounded-lg border border-border p-4 transition-colors hover:border-foreground">
+              <h3 className="font-medium">Connect Shopify</h3>
+              <p className="text-sm text-muted-foreground">One-click install for your store.</p>
+            </Link>
+            <Link href="/docs/changelog" className="rounded-lg border border-border p-4 transition-colors hover:border-foreground">
+              <h3 className="font-medium">Changelog</h3>
+              <p className="text-sm text-muted-foreground">What&apos;s new in PaySwift.</p>
+            </Link>
+          </div>
+        </section>
       </main>
     </div>
   );

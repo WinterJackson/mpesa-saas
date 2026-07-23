@@ -44,3 +44,6 @@ next-env.d.ts
 
 # Safaricom public certificates for the B2C SecurityCredential (public keys, but kept out of git)
 certs/
+
+# Isolated verification build output
+.next-verify

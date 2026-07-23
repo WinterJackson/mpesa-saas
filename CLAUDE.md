@@ -59,9 +59,26 @@ Changes to any of these files should be treated as security-relevant and reviewe
 - `app/api/admin/organizations/[id]/go-live/route.ts` — superadmin go-live approval; validates live credentials against Safaricom before flipping to live
 - `app/api/cron/reconcile-ledger/route.ts` — nightly ledger reconciliation; must preserve guardrail #4 (surface mismatches, never auto-fail)
 - `lib/cron-auth.ts` — the ONLY authorizer for cron endpoints (`isAuthorizedCronRequest`); fails closed when `CRON_SECRET` is unset. Every `app/api/cron/*` route must gate on it. Cron jobs run via an external scheduler (cron-job.org), not Vercel Cron.
+- `lib/repositories/payment-links.ts` — org-scoped Payment Link CRUD; `findActiveLinkBySlug()` / `findLinkTransactionStatus()` are the ONLY deliberately un-scoped lookups (the public `/pay/[slug]` hosted checkout — the slug is the capability, documented like the C2B shortcode lookup). A `live` link must be refused until the org's `liveApprovedAt` is set.
+- `app/api/pay/[slug]/*` — public, unauthenticated hosted-checkout endpoints (no API key; IP-rate-limited via `proxy.ts`). Fixed links ignore any client amount; live links gated on go-live.
+- `lib/shopify.ts` — now also holds the one-click OAuth app-install helpers (`verifyOAuthHmac`, `exchangeCodeForToken`, `registerOrdersWebhook`); `SHOPIFY_CLIENT_SECRET` both completes the OAuth exchange and verifies inbound webhooks. Never log the access token; it is AES-encrypted at rest.
+- `app/api/integrations/shopify/oauth/{start,callback}/route.ts` — the OAuth install flow; the callback verifies the request HMAC + a CSRF `state` cookie before exchanging the code and must never store a token otherwise.
+- `lib/schemas/*` — the single Zod validation entry point for every `/api/v1/*` and public `/api/pay/*` request; reuse `validatePhone`/`validateAmount` as normalizers, never add a parallel validation path.
+- `lib/openapi.ts` — the frozen `/api/v1` contract as OpenAPI 3.1 (served at `/api/v1/openapi.json`, rendered at `/docs`). Breaking changes go to `/api/v2`; never mutate v1 in place.
+- `lib/webhook-events.ts` — canonical webhook event catalog; every emit site uses it. Adding an event means adding it here first.
+- `lib/repositories/webhook-deliveries.ts` — the ONLY writer of `WebhookDelivery` (via `recordDelivery`, which sets `event`/`organizationId`/`status`); `listDeliveries` is org-scoped and spans transaction/payout/refund. Do not reintroduce inline `prisma.webhookDelivery.create` calls.
+- `lib/plan-rate-limit.ts` — per-org, per-plan API rate limiting enforced in-route post-auth; fails OPEN when Redis is down so a limiter outage can never block money movement. The coarse `proxy.ts` limiter stays the first line.
+- `lib/view-env.ts` + `lib/actions/view-env.ts` — the dashboard Sandbox/Live VIEW filter (a per-user cookie), strictly a list-view filter; it must NEVER change a merchant's operational environment (that is the admin-gated `EnvironmentCard`).
 
 ## Phase 2 guardrails (payments engine)
 9. **B2C SecurityCredential**: never store or log the raw initiator password in plaintext — it is AES-encrypted at rest (`initiatorPassword*Encrypted`) and RSA-encrypted per call via `lib/daraja-security-credential.ts`. Never introduce a second SecurityCredential path.
 10. **Payout/refund terminal status** is written ONLY by the B2C result callback (`app/api/mpesa/b2c/result`), correlated by `originatorConversationId` — mirror the STK callback's sole-writer authority. The B2C QueueTimeout is NOT a definitive failure; leave the record pending for reconciliation.
 11. **Go-live is admin-gated**: a merchant reaches live mode only after `Organization.liveApprovedAt` is set by a superadmin (who first validates live credentials against Safaricom). Do not reintroduce a credential-presence-only self-flip.
 12. **Reconciliation surfaces, never mutates**: the nightly ledger job records `ReconciliationMismatch` rows for human review; it must never flip a record to failed (guardrail #4).
+
+## Phase 3 guardrails (merchant integration & developer experience)
+13. **Payment Links are org-scoped** except the two documented public lookups (`findActiveLinkBySlug`, `findLinkTransactionStatus`) that power `/pay/[slug]`. A `live` link must not transact until the org is go-live approved (reuse the existing gate — never a self-flip).
+14. **`/api/v1` is frozen.** Backwards-incompatible changes ship under `/api/v2`; only additive/optional changes touch v1. Keep `lib/openapi.ts` and the Zod schemas in `lib/schemas/*` in sync with the routes — the docs are generated from the schemas so they can't silently drift.
+15. **Webhook deliveries** are written only through `recordDelivery` (event + org + status), and `payout.reversed` is fired by the Reversal result callback like the other terminal events. Redelivery re-sends the stored payload to the merchant's CURRENT URL/secret.
+16. **Shopify OAuth**: the callback must verify BOTH the request HMAC (`SHOPIFY_CLIENT_SECRET`) and the CSRF `state` cookie before exchanging the code; the flow stays dormant until `SHOPIFY_CLIENT_ID`/`SHOPIFY_CLIENT_SECRET` are set. The native Payment App is deferred to Phase 5.
+17. **The dashboard Sandbox/Live toggle is a view filter only** — never let it change payment routing (`Merchant.environment`), which remains admin-gated.
