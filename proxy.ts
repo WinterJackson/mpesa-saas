@@ -45,8 +45,14 @@ export default clerkMiddleware(async (auth, req) => {
       limitResult = await paymentInitiateRateLimit.limit(apiIdentifier);
     } else if (pathname.startsWith('/api/v1/payments/status')) {
       limitResult = await paymentStatusRateLimit.limit(apiIdentifier);
-    } else if (pathname.startsWith('/api/mpesa/') || pathname.startsWith('/api/integrations/')) {
-      // All Safaricom-originated callbacks (STK, B2C, C2B, reversal, balance, status).
+    } else if (
+      pathname.startsWith('/api/mpesa/') ||
+      pathname.startsWith('/api/integrations/') ||
+      pathname.startsWith('/api/pay/')
+    ) {
+      // Safaricom-originated callbacks (STK, B2C, C2B, reversal, balance, status)
+      // AND the public hosted-checkout endpoints (/api/pay/*): both are keyed by
+      // IP since they carry no API key / user session.
       limitResult = await callbackRateLimit.limit(ip);
     } else {
       limitResult = await generalRateLimit.limit(userId ?? ip);
@@ -68,6 +74,7 @@ export default clerkMiddleware(async (auth, req) => {
     pathname.startsWith('/sign-in') ||
     pathname.startsWith('/sign-up') ||
     pathname.startsWith('/demo-store') ||
+    pathname.startsWith('/pay/') ||
     pathname.startsWith('/legal') ||
     pathname.startsWith('/api/') ||
     pathname.startsWith('/__clerk') ||

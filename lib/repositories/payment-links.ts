@@ -168,3 +168,39 @@ export async function findActiveLinkBySlug(slug: string): Promise<ActivePaymentL
   const { organization, ...rest } = link;
   return { ...rest, liveApprovedAt: organization.liveApprovedAt };
 }
+
+export interface LinkTransactionStatus {
+  transactionId: string;
+  status: string;
+  mpesaReceipt: string | null;
+  resultDesc: string | null;
+}
+
+/**
+ * Resolves a transaction's status for the public hosted-checkout poller,
+ * scoped to the link's own slug + id — a caller can only read a transaction
+ * that was created through that specific link. Deliberately does NOT require
+ * the link to still be active/unexpired, so polling survives a link that
+ * expires mid-checkout. Returns null (→ 404) for any mismatch, so the endpoint
+ * never confirms whether an arbitrary transaction id exists.
+ */
+export async function findLinkTransactionStatus(
+  slug: string,
+  transactionId: string
+): Promise<LinkTransactionStatus | null> {
+  const link = await prisma.paymentLink.findUnique({ where: { slug }, select: { id: true } });
+  if (!link) return null;
+
+  const tx = await prisma.transaction.findFirst({
+    where: { id: transactionId, paymentLinkId: link.id },
+    select: { id: true, status: true, mpesaReceipt: true, resultDesc: true },
+  });
+  if (!tx) return null;
+
+  return {
+    transactionId: tx.id,
+    status: tx.status,
+    mpesaReceipt: tx.mpesaReceipt,
+    resultDesc: tx.resultDesc,
+  };
+}

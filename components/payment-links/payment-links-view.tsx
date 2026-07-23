@@ -8,7 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Copy, ExternalLink, Link2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Copy, ExternalLink, Link2, QrCode } from 'lucide-react';
+import QRCode from 'qrcode';
 import { toast } from 'sonner';
 
 export interface PaymentLinkItem {
@@ -55,6 +57,8 @@ export function PaymentLinksView({
   const [expiresAt, setExpiresAt] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [qrLink, setQrLink] = useState<PaymentLinkItem | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -97,6 +101,18 @@ export function PaymentLinksView({
       toast.success('Link copied to clipboard.');
     } catch {
       toast.error('Could not copy — copy it manually.');
+    }
+  }
+
+  async function handleShowQr(link: PaymentLinkItem) {
+    setQrLink(link);
+    setQrDataUrl(null);
+    try {
+      const url = await QRCode.toDataURL(publicUrl(link.slug), { width: 320, margin: 2 });
+      setQrDataUrl(url);
+    } catch {
+      toast.error('Could not generate QR code.');
+      setQrLink(null);
     }
   }
 
@@ -271,6 +287,9 @@ export function PaymentLinksView({
                         <Button type="button" size="xs" variant="outline" onClick={() => handleCopy(link.slug)}>
                           <Copy className="size-3.5" /> Copy
                         </Button>
+                        <Button type="button" size="xs" variant="outline" onClick={() => handleShowQr(link)}>
+                          <QrCode className="size-3.5" /> QR
+                        </Button>
                         <a href={publicUrl(link.slug)} target="_blank" rel="noopener noreferrer">
                           <Button type="button" size="xs" variant="outline">
                             <ExternalLink className="size-3.5" /> Open
@@ -296,6 +315,41 @@ export function PaymentLinksView({
           </Table>
         </div>
       )}
+
+      <Dialog open={qrLink !== null} onOpenChange={(open) => !open && setQrLink(null)}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>{qrLink?.title}</DialogTitle>
+            <DialogDescription>
+              Customers can scan this QR code to open the payment page and pay with M-Pesa.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-2">
+            {qrDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={qrDataUrl} alt="Payment link QR code" className="rounded-lg border border-border" width={256} height={256} />
+            ) : (
+              <div className="h-64 w-64 animate-pulse rounded-lg bg-muted" />
+            )}
+            {qrLink && (
+              <div className="flex w-full flex-col gap-2">
+                <a
+                  href={qrDataUrl ?? '#'}
+                  download={`payment-link-${qrLink.slug}.png`}
+                  className={qrDataUrl ? '' : 'pointer-events-none opacity-50'}
+                >
+                  <Button type="button" variant="outline" className="w-full" disabled={!qrDataUrl}>
+                    Download PNG
+                  </Button>
+                </a>
+                <Button type="button" variant="outline" className="w-full" onClick={() => handleCopy(qrLink.slug)}>
+                  <Copy className="size-3.5" /> Copy link
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
