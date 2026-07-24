@@ -37,6 +37,15 @@ describe('deliverWebhook', () => {
     expect(options.headers).not.toHaveProperty('x-payswift-signature');
   });
 
+  it('never auto-follows redirects (SSRF guard)', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, status: 200 });
+
+    await deliverWebhook('https://example.com', { test: true });
+
+    const options = fetchMock.mock.calls[0][1];
+    expect(options.redirect).toBe('manual');
+  });
+
   it('should retry on 500 response up to 3 times', async () => {
     fetchMock
       .mockResolvedValueOnce({ ok: false, status: 500 })

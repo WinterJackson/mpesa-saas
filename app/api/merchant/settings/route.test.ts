@@ -82,6 +82,14 @@ describe('PATCH /api/merchant/settings', () => {
     expect(response.status).toBe(400);
   });
 
+  it('rejects a webhook URL pointing at a local/private address (SSRF guard)', async () => {
+    const response = await PATCH(makeRequest({ webhookUrl: 'https://169.254.169.254/latest/meta-data' }));
+    const data = await response.json();
+    expect(response.status).toBe(400);
+    expect(data.error).toMatch(/local or private address/i);
+    expect(updateMerchantForOrganization).not.toHaveBeenCalled();
+  });
+
   it('rejects a Shopify domain not ending in .myshopify.com', async () => {
     const response = await PATCH(makeRequest({ shopifyShopDomain: 'not-shopify.com' }));
     expect(response.status).toBe(400);

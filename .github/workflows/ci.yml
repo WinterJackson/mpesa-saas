@@ -9,6 +9,16 @@ jobs:
         with:
           node-version: '20'
       - run: npm ci
+      - name: Secret scan (gitleaks)
+        run: docker run --rm -v "$PWD:/repo" -w /repo zricethezav/gitleaks:latest detect --source . --verbose --redact
+      # Fails the build only on CRITICAL advisories. Not `high`: the current
+      # high-severity advisories are all rooted in Next.js itself and its
+      # transitive deps (next/sharp/postcss) with no fix available short of a
+      # major framework bump, so gating on `high` would make CI permanently
+      # red for issues we can't action. Revisit the threshold when Next ships
+      # a patched release in-range.
+      - name: Dependency audit (critical only)
+        run: npm audit --audit-level=critical
       - run: npx prisma generate
       - run: npm run lint
       - run: npm run test

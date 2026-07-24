@@ -56,6 +56,12 @@ export async function deliverWebhook(
           method: 'POST',
           headers,
           body: payloadString,
+          // Never auto-follow redirects: a merchant-configured webhook URL is
+          // untrusted input, and following a redirect here would let it
+          // silently retarget this server-side request at an internal
+          // address (SSRF). A 3xx response is treated as a failed delivery
+          // instead of being followed.
+          redirect: 'manual',
           signal: controller.signal as AbortSignal,
         });
 

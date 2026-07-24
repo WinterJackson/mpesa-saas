@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { encryptSecret, decryptSecret } from '@/lib/crypto';
 import { getOrganizationContext, updateMerchantForOrganization, type MerchantSettingsUpdate } from '@/lib/repositories/organizations';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
+import { isBlockedWebhookHostname } from '@/lib/url-safety';
 import { logger } from '@/lib/logger';
 
 export async function PATCH(request: Request) {
@@ -43,6 +44,9 @@ export async function PATCH(request: Request) {
           const parsed = new URL(body.webhookUrl);
           if (parsed.protocol !== 'https:') {
             return NextResponse.json({ success: false, error: 'Webhook URL must use HTTPS protocol' }, { status: 400 });
+          }
+          if (isBlockedWebhookHostname(parsed.hostname)) {
+            return NextResponse.json({ success: false, error: 'Webhook URL must not point to a local or private address' }, { status: 400 });
           }
         } catch {
           return NextResponse.json({ success: false, error: 'Invalid Webhook URL format' }, { status: 400 });
