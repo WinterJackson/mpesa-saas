@@ -5,6 +5,14 @@ export interface AdminUser {
   id: string;
   clerkUserId: string;
   role: string;
+  // Phase 4.5 fields — optional in the interface so legacy rows and test
+  // fixtures that predate them still satisfy the type; the DB always populates
+  // `status` with a default.
+  status?: string;
+  displayName?: string | null;
+  email?: string | null;
+  createdBy?: string | null;
+  lastActiveAt?: Date | null;
   createdAt: Date;
 }
 
@@ -12,12 +20,38 @@ export async function findAdminUserByClerkId(clerkUserId: string): Promise<Admin
   return prisma.adminUser.findUnique({ where: { clerkUserId } });
 }
 
+export async function findAdminUserByEmail(email: string): Promise<AdminUser | null> {
+  return prisma.adminUser.findFirst({ where: { email } });
+}
+
 export async function listAdminUsers(): Promise<AdminUser[]> {
   return prisma.adminUser.findMany({ orderBy: { createdAt: 'asc' } });
 }
 
-export async function createAdminUser(clerkUserId: string, role: string): Promise<AdminUser> {
-  return prisma.adminUser.create({ data: { clerkUserId, role } });
+export async function createAdminUser(
+  clerkUserId: string,
+  role: string,
+  extra?: { displayName?: string | null; email?: string | null; createdBy?: string | null }
+): Promise<AdminUser> {
+  return prisma.adminUser.create({
+    data: {
+      clerkUserId,
+      role,
+      displayName: extra?.displayName ?? null,
+      email: extra?.email ?? null,
+      createdBy: extra?.createdBy ?? null,
+    },
+  });
+}
+
+export async function setAdminUserStatus(id: string, status: 'active' | 'disabled'): Promise<AdminUser> {
+  return prisma.adminUser.update({ where: { id }, data: { status } });
+}
+
+export async function touchAdminLastActive(clerkUserId: string): Promise<void> {
+  // Best-effort activity heartbeat (Phase 4.5 Stage H) — never block a request
+  // on it.
+  await prisma.adminUser.update({ where: { clerkUserId }, data: { lastActiveAt: new Date() } }).catch(() => {});
 }
 
 export async function removeAdminUser(id: string): Promise<void> {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { requireAdmin } from '@/lib/admin-auth';
+import { requireAdminCapability } from '@/lib/admin-auth';
+import { isAdminRole, ALL_ADMIN_ROLES } from '@/lib/admin-rbac';
 import { listAdminUsers, createAdminUser } from '@/lib/repositories/admin';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
@@ -11,7 +12,7 @@ export async function GET() {
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
-    const adminAuth = await requireAdmin(userId);
+    const adminAuth = await requireAdminCapability(userId, 'admin:manage');
     if (!adminAuth.allowed) {
       return NextResponse.json({ success: false, error: adminAuth.error }, { status: adminAuth.status });
     }
@@ -31,9 +32,9 @@ export async function POST(request: Request) {
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
-    // Only superadmins may grant admin access — prevents a support admin
-    // from escalating themselves or a colleague to superadmin.
-    const adminAuth = await requireAdmin(userId, ['superadmin']);
+    // Only holders of `admin:manage` (superadmin) may grant admin access —
+    // prevents a lower-privileged admin from escalating themselves or a colleague.
+    const adminAuth = await requireAdminCapability(userId, 'admin:manage');
     if (!adminAuth.allowed) {
       return NextResponse.json({ success: false, error: adminAuth.error }, { status: adminAuth.status });
     }
@@ -49,8 +50,11 @@ export async function POST(request: Request) {
     if (typeof clerkUserId !== 'string' || clerkUserId.trim().length === 0) {
       return NextResponse.json({ success: false, error: 'clerkUserId is required' }, { status: 400 });
     }
-    if (role !== 'support' && role !== 'superadmin') {
-      return NextResponse.json({ success: false, error: 'role must be "support" or "superadmin"' }, { status: 400 });
+    if (typeof role !== 'string' || !isAdminRole(role)) {
+      return NextResponse.json(
+        { success: false, error: `role must be one of: ${ALL_ADMIN_ROLES.join(', ')}` },
+        { status: 400 }
+      );
     }
 
     const admin = await createAdminUser(clerkUserId.trim(), role);

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { requireAdmin } from '@/lib/admin-auth';
+import { requireAdminCapability } from '@/lib/admin-auth';
 import { markInvoicePaid } from '@/lib/repositories/billing';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
@@ -20,7 +20,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const adminAuth = await requireAdmin(userId);
+    const adminAuth = await requireAdminCapability(userId, 'billing:write');
     if (!adminAuth.allowed) {
       return NextResponse.json({ success: false, error: adminAuth.error }, { status: adminAuth.status });
     }

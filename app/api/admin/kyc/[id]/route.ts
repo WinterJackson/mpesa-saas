@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { requireAdmin } from '@/lib/admin-auth';
+import { requireAdminCapability } from '@/lib/admin-auth';
 import { updateKycDocumentReviewStatus, allRequiredDocumentsApproved } from '@/lib/repositories/kyc-documents';
 import { updateOrganizationKycStatus } from '@/lib/repositories/admin';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
@@ -13,7 +13,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const adminAuth = await requireAdmin(userId);
+    const adminAuth = await requireAdminCapability(userId, 'kyc:review');
     if (!adminAuth.allowed) {
       return NextResponse.json({ success: false, error: adminAuth.error }, { status: adminAuth.status });
     }

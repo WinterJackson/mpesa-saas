@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
 import { auth } from '@clerk/nextjs/server';
-import { requireAdmin } from '@/lib/admin-auth';
+import { requireAdminCapability } from '@/lib/admin-auth';
 import { findOrganizationById } from '@/lib/repositories/organizations';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 
 vi.mock('@clerk/nextjs/server', () => ({ auth: vi.fn() }));
-vi.mock('@/lib/admin-auth', () => ({ requireAdmin: vi.fn() }));
+vi.mock('@/lib/admin-auth', () => ({ requireAdminCapability: vi.fn() }));
 vi.mock('@/lib/repositories/organizations', () => ({ findOrganizationById: vi.fn() }));
 vi.mock('@/lib/repositories/audit-log', () => ({ writeAuditLog: vi.fn() }));
 
@@ -19,17 +19,17 @@ describe('POST /api/admin/organizations/[id]/impersonate', () => {
 
   it('requires superadmin, not just any admin', async () => {
     vi.mocked(auth).mockResolvedValueOnce({ userId: 'user-1' } as never);
-    vi.mocked(requireAdmin).mockResolvedValueOnce({ allowed: false, error: 'Insufficient admin permissions for this action', status: 403 });
+    vi.mocked(requireAdminCapability).mockResolvedValueOnce({ allowed: false, error: 'Insufficient admin permissions for this action', status: 403 });
 
     const response = await POST(makeRequest(), { params: Promise.resolve({ id: 'org-1' }) });
     expect(response.status).toBe(403);
-    expect(requireAdmin).toHaveBeenCalledWith('user-1', ['superadmin']);
+    expect(requireAdminCapability).toHaveBeenCalledWith('user-1', 'impersonate');
     expect(writeAuditLog).not.toHaveBeenCalled();
   });
 
   it('writes an audit log before returning the not-yet-implemented response', async () => {
     vi.mocked(auth).mockResolvedValueOnce({ userId: 'user-1' } as never);
-    vi.mocked(requireAdmin).mockResolvedValueOnce({ allowed: true, admin: { id: 'a1', clerkUserId: 'user-1', role: 'superadmin', createdAt: new Date() } });
+    vi.mocked(requireAdminCapability).mockResolvedValueOnce({ allowed: true, admin: { id: 'a1', clerkUserId: 'user-1', role: 'superadmin', createdAt: new Date() } });
     vi.mocked(findOrganizationById).mockResolvedValueOnce({ id: 'org-1', businessName: 'Acme' } as never);
 
     const response = await POST(makeRequest(), { params: Promise.resolve({ id: 'org-1' }) });
@@ -42,7 +42,7 @@ describe('POST /api/admin/organizations/[id]/impersonate', () => {
 
   it('returns 404 for an unknown organization without writing an audit log', async () => {
     vi.mocked(auth).mockResolvedValueOnce({ userId: 'user-1' } as never);
-    vi.mocked(requireAdmin).mockResolvedValueOnce({ allowed: true, admin: { id: 'a1', clerkUserId: 'user-1', role: 'superadmin', createdAt: new Date() } });
+    vi.mocked(requireAdminCapability).mockResolvedValueOnce({ allowed: true, admin: { id: 'a1', clerkUserId: 'user-1', role: 'superadmin', createdAt: new Date() } });
     vi.mocked(findOrganizationById).mockResolvedValueOnce(null);
 
     const response = await POST(makeRequest(), { params: Promise.resolve({ id: 'org-missing' }) });

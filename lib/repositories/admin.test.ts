@@ -32,7 +32,9 @@ describe('admin repository', () => {
   it('createAdminUser writes clerkUserId and role', async () => {
     vi.mocked(prisma.adminUser.create).mockResolvedValueOnce({} as never);
     await createAdminUser('user-1', 'superadmin');
-    expect(prisma.adminUser.create).toHaveBeenCalledWith({ data: { clerkUserId: 'user-1', role: 'superadmin' } });
+    expect(prisma.adminUser.create).toHaveBeenCalledWith({
+      data: { clerkUserId: 'user-1', role: 'superadmin', displayName: null, email: null, createdBy: null },
+    });
   });
 
   it('removeAdminUser deletes by id', async () => {

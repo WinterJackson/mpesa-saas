@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { requireAdmin } from '@/lib/admin-auth';
+import { requireAdminCapability } from '@/lib/admin-auth';
 import { resolveMismatch } from '@/lib/repositories/reconciliation';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
@@ -11,7 +11,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
 
-    const adminAuth = await requireAdmin(userId);
+    const adminAuth = await requireAdminCapability(userId, 'recon:resolve');
     if (!adminAuth.allowed) return NextResponse.json({ success: false, error: adminAuth.error }, { status: adminAuth.status });
 
     const { id } = await params;

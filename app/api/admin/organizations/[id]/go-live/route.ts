@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { requireAdmin } from '@/lib/admin-auth';
+import { requireAdminCapability } from '@/lib/admin-auth';
 import { findOrganizationById, approveGoLive } from '@/lib/repositories/organizations';
 import { isLiveCredentialConfigured } from '@/lib/repositories/daraja-credentials';
 import { getAccessToken } from '@/lib/daraja';
@@ -18,7 +18,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
 
-    const adminAuth = await requireAdmin(userId, ['superadmin']);
+    const adminAuth = await requireAdminCapability(userId, 'org:golive');
     if (!adminAuth.allowed) return NextResponse.json({ success: false, error: adminAuth.error }, { status: adminAuth.status });
 
     const { id } = await params;

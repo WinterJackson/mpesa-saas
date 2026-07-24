@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
 import { auth } from '@clerk/nextjs/server';
-import { requireAdmin } from '@/lib/admin-auth';
+import { requireAdminCapability } from '@/lib/admin-auth';
 import { findOrganizationById, approveGoLive } from '@/lib/repositories/organizations';
 import { isLiveCredentialConfigured } from '@/lib/repositories/daraja-credentials';
 import { getAccessToken } from '@/lib/daraja';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 
 vi.mock('@clerk/nextjs/server', () => ({ auth: vi.fn() }));
-vi.mock('@/lib/admin-auth', () => ({ requireAdmin: vi.fn() }));
+vi.mock('@/lib/admin-auth', () => ({ requireAdminCapability: vi.fn() }));
 vi.mock('@/lib/repositories/organizations', () => ({ findOrganizationById: vi.fn(), approveGoLive: vi.fn() }));
 vi.mock('@/lib/repositories/daraja-credentials', () => ({ isLiveCredentialConfigured: vi.fn() }));
 vi.mock('@/lib/daraja', () => ({ getAccessToken: vi.fn() }));
@@ -23,15 +23,15 @@ describe('POST /api/admin/organizations/[id]/go-live', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(auth).mockResolvedValue({ userId: 'admin-1' } as never);
-    vi.mocked(requireAdmin).mockResolvedValue({ allowed: true, admin: { id: 'a', clerkUserId: 'admin-1', role: 'superadmin', createdAt: new Date() } });
+    vi.mocked(requireAdminCapability).mockResolvedValue({ allowed: true, admin: { id: 'a', clerkUserId: 'admin-1', role: 'superadmin', createdAt: new Date() } });
     vi.mocked(isLiveCredentialConfigured).mockResolvedValue(true);
   });
 
   it('requires superadmin', async () => {
-    vi.mocked(requireAdmin).mockResolvedValueOnce({ allowed: false, error: 'no', status: 403 });
+    vi.mocked(requireAdminCapability).mockResolvedValueOnce({ allowed: false, error: 'no', status: 403 });
     const res = await POST(req(), ctx('org-1'));
     expect(res.status).toBe(403);
-    expect(requireAdmin).toHaveBeenCalledWith('admin-1', ['superadmin']);
+    expect(requireAdminCapability).toHaveBeenCalledWith('admin-1', 'org:golive');
   });
 
   it('400s when KYC is not approved', async () => {

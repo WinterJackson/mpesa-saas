@@ -149,10 +149,51 @@ model UsageRecord {
 // inherit tenant-scoped permissions through this table. Auth is gated via
 // lib/admin-auth.ts's requireAdmin(), never lib/rbac.ts's requireRole().
 model AdminUser {
-  id          String   @id @default(cuid())
-  clerkUserId String   @unique
-  role        String   @default("support") // support | superadmin
-  createdAt   DateTime @default(now())
+  id           String    @id @default(cuid())
+  clerkUserId  String    @unique
+  role         String    @default("support") // support | kyc_reviewer | finance | ops | superadmin
+  status       String    @default("active") // active | disabled
+  displayName  String?
+  email        String?
+  createdBy    String?   // clerkUserId of the superadmin who provisioned this account
+  lastActiveAt DateTime?
+  createdAt    DateTime  @default(now())
+}
+
+// A pending admin-console invite. A superadmin issues one by email + role;
+// the invitee signs in via Clerk and is bound to a real AdminUser on first
+// admin request (see lib/admin-auth onboarding, Phase 4.5 Stage B). Replaces
+// the old "paste a raw clerkUserId" admin-creation path.
+model AdminInvite {
+  id          String    @id @default(cuid())
+  email       String
+  role        String    @default("support")
+  token       String    @unique
+  invitedBy   String    // clerkUserId of the issuing superadmin
+  acceptedAt  DateTime?
+  acceptedBy  String?   // clerkUserId that consumed the invite
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+
+  @@index([email])
+}
+
+// Internal ops alert feed (Phase 4.5 Stage F) — distinct from the public
+// /status page. Raised by cron jobs and finalizers when platform conditions
+// need staff attention; acknowledged in the admin console.
+model AdminAlert {
+  id             String    @id @default(cuid())
+  severity       String    @default("info") // info | warning | critical
+  category       String    // kyc_backlog | dunning | live_credential_failure | reconciliation | health | webhook_failure
+  message        String
+  organizationId String?
+  dedupeKey      String?   @unique // collapses repeated identical alerts
+  acknowledged   Boolean   @default(false)
+  acknowledgedBy String?
+  acknowledgedAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([acknowledged, createdAt(sort: Desc)])
 }
 
 model AuditLog {

@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
 import { auth } from '@clerk/nextjs/server';
-import { requireAdmin } from '@/lib/admin-auth';
+import { requireAdminCapability } from '@/lib/admin-auth';
 import { adminFindPayoutById } from '@/lib/repositories/payouts';
 import { reverseTransaction } from '@/lib/daraja-reversal';
 import { createDarajaCommand } from '@/lib/repositories/daraja-commands';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 
 vi.mock('@clerk/nextjs/server', () => ({ auth: vi.fn() }));
-vi.mock('@/lib/admin-auth', () => ({ requireAdmin: vi.fn() }));
+vi.mock('@/lib/admin-auth', () => ({ requireAdminCapability: vi.fn() }));
 vi.mock('@/lib/repositories/payouts', () => ({ adminFindPayoutById: vi.fn() }));
 vi.mock('@/lib/daraja-reversal', () => ({ reverseTransaction: vi.fn() }));
 vi.mock('@/lib/repositories/daraja-commands', () => ({ createDarajaCommand: vi.fn() }));
@@ -26,22 +26,22 @@ describe('POST /api/admin/payouts/[id]/reverse', () => {
   });
 
   it('requires superadmin', async () => {
-    vi.mocked(requireAdmin).mockResolvedValueOnce({ allowed: false, error: 'no', status: 403 });
+    vi.mocked(requireAdminCapability).mockResolvedValueOnce({ allowed: false, error: 'no', status: 403 });
     const res = await POST(req(), ctx('p-1'));
     expect(res.status).toBe(403);
-    expect(requireAdmin).toHaveBeenCalledWith('admin-1', ['superadmin']);
+    expect(requireAdminCapability).toHaveBeenCalledWith('admin-1', 'payout:reverse');
     expect(reverseTransaction).not.toHaveBeenCalled();
   });
 
   it('400s a non-completed payout', async () => {
-    vi.mocked(requireAdmin).mockResolvedValueOnce({ allowed: true, admin: { id: 'a', clerkUserId: 'admin-1', role: 'superadmin', createdAt: new Date() } });
+    vi.mocked(requireAdminCapability).mockResolvedValueOnce({ allowed: true, admin: { id: 'a', clerkUserId: 'admin-1', role: 'superadmin', createdAt: new Date() } });
     vi.mocked(adminFindPayoutById).mockResolvedValueOnce({ ...completedPayout, status: 'pending' } as never);
     const res = await POST(req(), ctx('p-1'));
     expect(res.status).toBe(400);
   });
 
   it('queues the reversal, records a DarajaCommand with targetPayoutId, and audit-logs', async () => {
-    vi.mocked(requireAdmin).mockResolvedValueOnce({ allowed: true, admin: { id: 'a', clerkUserId: 'admin-1', role: 'superadmin', createdAt: new Date() } });
+    vi.mocked(requireAdminCapability).mockResolvedValueOnce({ allowed: true, admin: { id: 'a', clerkUserId: 'admin-1', role: 'superadmin', createdAt: new Date() } });
     vi.mocked(adminFindPayoutById).mockResolvedValueOnce(completedPayout as never);
     vi.mocked(reverseTransaction).mockResolvedValueOnce({ OriginatorConversationID: 'OC', ConversationID: 'C', ResponseCode: '0', ResponseDescription: 'ok' });
 

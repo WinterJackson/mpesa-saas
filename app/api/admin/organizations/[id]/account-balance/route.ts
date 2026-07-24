@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { requireAdmin } from '@/lib/admin-auth';
+import { requireAdminCapability } from '@/lib/admin-auth';
 import { findOrganizationById } from '@/lib/repositories/organizations';
 import { queryAccountBalance } from '@/lib/daraja-account-balance';
 import { createDarajaCommand } from '@/lib/repositories/daraja-commands';
@@ -17,7 +17,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
 
-    const adminAuth = await requireAdmin(userId);
+    const adminAuth = await requireAdminCapability(userId, 'ops:view');
     if (!adminAuth.allowed) return NextResponse.json({ success: false, error: adminAuth.error }, { status: adminAuth.status });
 
     const { id } = await params;
