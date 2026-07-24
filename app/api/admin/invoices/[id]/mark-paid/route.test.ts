@@ -9,13 +9,14 @@ vi.mock('next/server', async (importOriginal) => ({
 import { POST } from './route';
 import { auth } from '@clerk/nextjs/server';
 import { requireAdminCapability } from '@/lib/admin-auth';
-import { markInvoicePaid } from '@/lib/repositories/billing';
+import { markInvoicePaid, setSubscriptionStatus } from '@/lib/repositories/billing';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 
 vi.mock('@clerk/nextjs/server', () => ({ auth: vi.fn() }));
 vi.mock('@/lib/admin-auth', () => ({ requireAdminCapability: vi.fn() }));
-vi.mock('@/lib/repositories/billing', () => ({ markInvoicePaid: vi.fn() }));
+vi.mock('@/lib/repositories/billing', () => ({ markInvoicePaid: vi.fn(), setSubscriptionStatus: vi.fn() }));
 vi.mock('@/lib/repositories/audit-log', () => ({ writeAuditLog: vi.fn() }));
+vi.mock('@/lib/email/notifications', () => ({ notifyInvoicePaid: vi.fn() }));
 
 function makeRequest() {
   return new Request('http://localhost/api/admin/invoices/inv-1/mark-paid', { method: 'POST' });
@@ -36,11 +37,13 @@ describe('POST /api/admin/invoices/[id]/mark-paid', () => {
   it('marks the invoice paid and writes an audit log', async () => {
     vi.mocked(auth).mockResolvedValueOnce({ userId: 'admin-1' } as never);
     vi.mocked(requireAdminCapability).mockResolvedValueOnce({ allowed: true, admin: { id: 'a1', clerkUserId: 'admin-1', role: 'support', createdAt: new Date() } });
-    vi.mocked(markInvoicePaid).mockResolvedValueOnce({ id: 'inv-1', amount: 5000, status: 'paid' } as never);
+    vi.mocked(markInvoicePaid).mockResolvedValueOnce({ id: 'inv-1', amount: 5000, status: 'paid', subscription: { id: 'sub-1', organizationId: 'org-1' } } as never);
 
     const response = await POST(makeRequest(), { params: Promise.resolve({ id: 'inv-1' }) });
     expect(response.status).toBe(200);
     expect(markInvoicePaid).toHaveBeenCalledWith('inv-1');
+    // Manual settlement reactivates a dunned subscription.
+    expect(setSubscriptionStatus).toHaveBeenCalledWith('sub-1', 'active', null);
     expect(writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({ action: 'invoice.marked_paid' }));
   });
 });

@@ -24,6 +24,13 @@ vi.mock('@/lib/db', () => ({
   },
 }));
 
+vi.mock('@/lib/db-readonly', () => ({
+  prismaReadonly: { subscription: { findMany: vi.fn() }, invoice: { findMany: vi.fn() } },
+}));
+
+import { prismaReadonly } from '@/lib/db-readonly';
+import { getAdminBillingOverview } from './billing';
+
 describe('billing repository', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -87,8 +94,8 @@ describe('billing repository', () => {
     await markInvoicePaid('inv-1');
     expect(prisma.invoice.update).toHaveBeenCalledWith({
       where: { id: 'inv-1' },
-      data: { status: 'paid' },
-      include: { subscription: { select: { organizationId: true } } },
+      data: { status: 'paid', paidAt: expect.any(Date) },
+      include: { subscription: { select: { id: true, organizationId: true } } },
     });
   });
 
@@ -123,5 +130,24 @@ describe('billing repository', () => {
     expect(projection.overageCount).toBe(200);
     // Projection uses the same flat-fee formula the usage cron will invoice.
     expect(projection.projectedAmount).toBe(computeInvoiceAmount(plan, 1200));
+  });
+
+  it('getAdminBillingOverview computes MRR (active+past_due), segments, and at-risk list', async () => {
+    vi.mocked(prismaReadonly.subscription.findMany).mockResolvedValueOnce([
+      { id: 's1', status: 'active', gracePeriodEnd: null, plan: { name: 'Growth', monthlyFee: 2900 }, organization: { id: 'o1', businessName: 'A' }, invoices: [] },
+      { id: 's2', status: 'active', gracePeriodEnd: null, plan: { name: 'Growth', monthlyFee: 2900 }, organization: { id: 'o2', businessName: 'B' }, invoices: [] },
+      { id: 's3', status: 'past_due', gracePeriodEnd: new Date('2026-08-01'), plan: { name: 'Scale', monthlyFee: 9900 }, organization: { id: 'o3', businessName: 'C' }, invoices: [{ id: 'inv-9', amount: 9900, status: 'failed' }] },
+      { id: 's4', status: 'suspended', gracePeriodEnd: new Date('2026-07-01'), plan: { name: 'Starter', monthlyFee: 0 }, organization: { id: 'o4', businessName: 'D' }, invoices: [{ id: 'inv-10', amount: 0, status: 'failed' }] },
+    ] as never);
+
+    const overview = await getAdminBillingOverview();
+
+    // MRR = active + past_due plan fees: 2900 + 2900 + 9900 (suspended excluded).
+    expect(overview.mrr).toBe(15_700);
+    expect(overview.activeCount).toBe(2);
+    expect(overview.atRiskCount).toBe(2); // past_due + suspended
+    // Segments sorted by MRR desc: Growth (5800) before Scale (9900)? Scale=9900 > Growth=5800.
+    expect(overview.byPlan[0].name).toBe('Scale');
+    expect(overview.atRisk.find((a) => a.subscriptionId === 's3')?.outstandingAmount).toBe(9900);
   });
 });

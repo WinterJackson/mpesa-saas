@@ -1,7 +1,7 @@
 import { NextResponse, after } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { requireAdminCapability } from '@/lib/admin-auth';
-import { markInvoicePaid } from '@/lib/repositories/billing';
+import { markInvoicePaid, setSubscriptionStatus } from '@/lib/repositories/billing';
 import { notifyInvoicePaid } from '@/lib/email/notifications';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
@@ -29,10 +29,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const { id } = await params;
     const invoice = await markInvoicePaid(id);
 
+    // Manual settlement is also the admin override to recover a dunned account:
+    // clear any past_due/suspended state and the grace window.
+    if (invoice.subscription?.id) {
+      await setSubscriptionStatus(invoice.subscription.id, 'active', null);
+    }
+
     await writeAuditLog({
       actorId: userId,
       action: 'invoice.marked_paid',
-      metadata: { invoiceId: id, amount: invoice.amount },
+      metadata: { invoiceId: id, amount: invoice.amount, reactivatedSubscription: Boolean(invoice.subscription?.id) },
     });
 
     const organizationId = invoice.subscription?.organizationId;

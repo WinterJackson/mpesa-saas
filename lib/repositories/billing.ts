@@ -277,11 +277,67 @@ export async function listAllInvoices(status?: 'pending' | 'paid' | 'failed') {
 }
 
 export async function markInvoicePaid(invoiceId: string) {
-  // Include the owning organizationId so callers can send the paid-receipt
-  // email without a second query.
+  // Include the owning subscription id + organizationId so the admin route can
+  // reactivate the subscription and send the paid-receipt email without a
+  // second query.
   return prisma.invoice.update({
     where: { id: invoiceId },
-    data: { status: 'paid' },
-    include: { subscription: { select: { organizationId: true } } },
+    data: { status: 'paid', paidAt: new Date() },
+    include: { subscription: { select: { id: true, organizationId: true } } },
   });
+}
+
+/**
+ * Admin billing overview (read-heavy → replica-friendly client): MRR, active +
+ * at-risk counts, per-plan segment revenue, and the at-risk subscription list.
+ * MRR counts active + past_due subscriptions (still subscribed) at their plan's
+ * monthly fee; at-risk = past_due + suspended, with their latest owing invoice.
+ */
+export async function getAdminBillingOverview() {
+  const subs = await prismaReadonly.subscription.findMany({
+    include: {
+      plan: { select: { name: true, monthlyFee: true } },
+      organization: { select: { id: true, businessName: true } },
+      invoices: {
+        where: { status: { in: ['pending', 'failed'] } },
+        orderBy: { issuedAt: 'desc' },
+        take: 1,
+        select: { id: true, amount: true, status: true },
+      },
+    },
+  });
+
+  const paying = subs.filter((s) => s.status === 'active' || s.status === 'past_due');
+  const mrr = paying.reduce((sum, s) => sum + s.plan.monthlyFee, 0);
+  const activeCount = subs.filter((s) => s.status === 'active').length;
+
+  const byPlanMap = new Map<string, { name: string; monthlyFee: number; count: number; mrr: number }>();
+  for (const s of paying) {
+    const existing = byPlanMap.get(s.plan.name) ?? { name: s.plan.name, monthlyFee: s.plan.monthlyFee, count: 0, mrr: 0 };
+    existing.count += 1;
+    existing.mrr += s.plan.monthlyFee;
+    byPlanMap.set(s.plan.name, existing);
+  }
+
+  const atRisk = subs
+    .filter((s) => s.status === 'past_due' || s.status === 'suspended')
+    .map((s) => ({
+      subscriptionId: s.id,
+      organizationId: s.organization.id,
+      businessName: s.organization.businessName,
+      planName: s.plan.name,
+      status: s.status,
+      gracePeriodEnd: s.gracePeriodEnd,
+      outstandingInvoiceId: s.invoices[0]?.id ?? null,
+      outstandingAmount: s.invoices[0]?.amount ?? null,
+    }));
+
+  return {
+    mrr,
+    activeCount,
+    atRiskCount: atRisk.length,
+    totalSubscriptions: subs.length,
+    byPlan: [...byPlanMap.values()].sort((a, b) => b.mrr - a.mrr),
+    atRisk,
+  };
 }
