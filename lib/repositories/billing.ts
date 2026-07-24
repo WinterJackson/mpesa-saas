@@ -1,6 +1,15 @@
 import { prisma } from '@/lib/db';
 import { prismaReadonly } from '@/lib/db-readonly';
 import { SEEDABLE_TIERS } from '@/lib/pricing';
+import { transactionUsageForPeriod } from '@/lib/repositories/transactions';
+
+/** Fixed billing-cycle length (30 days). The single source for the period window. */
+export const BILLING_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** Start of the billing period that ends at `currentPeriodEnd`. */
+export function billingPeriodStart(currentPeriodEnd: Date): Date {
+  return new Date(currentPeriodEnd.getTime() - BILLING_PERIOD_MS);
+}
 
 // Real plan tiers (billing/pricing strategy doc §3). FLAT overage fee per
 // transaction beyond the included volume — PaySwift never takes a % of a sale.
@@ -117,6 +126,25 @@ export function computeInvoiceAmount(
 ): number {
   const overageCount = Math.max(0, txCount - plan.includedTransactions);
   return plan.monthlyFee + overageCount * plan.overageFeeKes;
+}
+
+/**
+ * Live usage + projected charge for a subscription's IN-PROGRESS billing period
+ * (read-only — the definitive UsageRecord/Invoice are written by the usage cron
+ * at period end). Reuses the flat-fee `computeInvoiceAmount` so the projection
+ * shown to the merchant matches the eventual invoice exactly.
+ */
+export async function getCurrentPeriodProjection(subscription: {
+  organizationId: string;
+  currentPeriodEnd: Date;
+  plan: { monthlyFee: number; includedTransactions: number; overageFeeKes: number };
+}) {
+  const periodEnd = subscription.currentPeriodEnd;
+  const periodStart = billingPeriodStart(periodEnd);
+  const usage = await transactionUsageForPeriod(subscription.organizationId, periodStart, periodEnd);
+  const overageCount = Math.max(0, usage.txCount - subscription.plan.includedTransactions);
+  const projectedAmount = computeInvoiceAmount(subscription.plan, usage.txCount);
+  return { periodStart, periodEnd, ...usage, overageCount, projectedAmount };
 }
 
 export async function createInvoice(subscriptionId: string, amount: number) {

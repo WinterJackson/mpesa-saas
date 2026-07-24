@@ -8,6 +8,10 @@ import {
   createInvoice,
   advanceBillingPeriod,
   markInvoicePaid,
+  computeInvoiceAmount,
+  billingPeriodStart,
+  getCurrentPeriodProjection,
+  BILLING_PERIOD_MS,
 } from './billing';
 
 vi.mock('@/lib/db', () => ({
@@ -16,6 +20,7 @@ vi.mock('@/lib/db', () => ({
     subscription: { create: vi.fn(), findMany: vi.fn(), update: vi.fn() },
     usageRecord: { create: vi.fn() },
     invoice: { create: vi.fn(), update: vi.fn() },
+    transaction: { aggregate: vi.fn() },
   },
 }));
 
@@ -85,5 +90,38 @@ describe('billing repository', () => {
       data: { status: 'paid' },
       include: { subscription: { select: { organizationId: true } } },
     });
+  });
+
+  it('computeInvoiceAmount is flat-fee: monthlyFee + flat overage, never a % of value', () => {
+    const plan = { monthlyFee: 2900, includedTransactions: 1000, overageFeeKes: 6 };
+    // Under the included volume → just the monthly fee, regardless of txVolume.
+    expect(computeInvoiceAmount(plan, 500)).toBe(2900);
+    // Over the included volume → monthly fee + flat per-tx overage.
+    expect(computeInvoiceAmount(plan, 1500)).toBe(2900 + 500 * 6);
+  });
+
+  it('billingPeriodStart is exactly one billing period before the period end', () => {
+    const end = new Date('2026-07-24T00:00:00.000Z');
+    expect(billingPeriodStart(end).getTime()).toBe(end.getTime() - BILLING_PERIOD_MS);
+  });
+
+  it('getCurrentPeriodProjection reflects live usage and matches the eventual invoice', async () => {
+    const currentPeriodEnd = new Date('2026-08-01T00:00:00.000Z');
+    const plan = { monthlyFee: 2900, includedTransactions: 1000, overageFeeKes: 6 };
+    vi.mocked(prisma.transaction.aggregate).mockResolvedValueOnce({
+      _count: { id: 1200 },
+      _sum: { amount: 5_000_000 },
+    } as never);
+
+    const projection = await getCurrentPeriodProjection({ organizationId: 'org-1', currentPeriodEnd, plan });
+
+    // Window is [end - period, end).
+    const call = vi.mocked(prisma.transaction.aggregate).mock.calls[0][0];
+    expect(call?.where?.organizationId).toBe('org-1');
+    expect(call?.where?.status).toBe('completed');
+    expect(projection.txCount).toBe(1200);
+    expect(projection.overageCount).toBe(200);
+    // Projection uses the same flat-fee formula the usage cron will invoice.
+    expect(projection.projectedAmount).toBe(computeInvoiceAmount(plan, 1200));
   });
 });
