@@ -151,6 +151,37 @@ export async function createInvoice(subscriptionId: string, amount: number) {
   return prisma.invoice.create({ data: { subscriptionId, amount, status: 'pending' } });
 }
 
+// ─── Billing details + manual pay-now (Stage E) ──────────────────────────────
+
+/** The org's billing/tax details for the billing page (no secrets). */
+export async function getBillingDetails(organizationId: string) {
+  return prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { billingMpesaPhone: true, billingContactEmail: true, kraPin: true },
+  });
+}
+
+/** Updates the org's billing payment method / contact (never touches secrets). */
+export async function updateBillingDetails(
+  organizationId: string,
+  data: { billingMpesaPhone?: string | null; billingContactEmail?: string | null }
+) {
+  return prisma.organization.update({ where: { id: organizationId }, data });
+}
+
+/**
+ * The org's most recent still-owing invoice (pending or failed), in the shape
+ * chargeInvoice needs. Used by the manual "Pay now" action. Returns null when
+ * nothing is outstanding or the invoice is already processing/paid.
+ */
+export async function getLatestUnpaidInvoiceForOrg(organizationId: string) {
+  return prisma.invoice.findFirst({
+    where: { status: { in: ['pending', 'failed'] }, subscription: { organizationId } },
+    orderBy: { issuedAt: 'desc' },
+    include: { subscription: { include: { organization: true } } },
+  });
+}
+
 // ─── Subscription STK collection + dunning (Stage D) ─────────────────────────
 
 /**

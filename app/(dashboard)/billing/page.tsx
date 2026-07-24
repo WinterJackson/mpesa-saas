@@ -1,14 +1,16 @@
 import Link from 'next/link';
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check, AlertTriangle } from 'lucide-react';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
-import { getSubscriptionForOrganization, getCurrentPeriodProjection } from '@/lib/repositories/billing';
+import { getSubscriptionForOrganization, getCurrentPeriodProjection, getBillingDetails } from '@/lib/repositories/billing';
 import { PRICING_TIERS } from '@/lib/pricing';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { BillingSettingsForm } from '@/components/billing/billing-settings-form';
+import { PayNowButton } from '@/components/billing/pay-now-button';
 
 export const metadata = {
   title: 'Billing - PaySwift',
@@ -27,6 +29,7 @@ export default async function BillingPage() {
   if (!context) redirect('/onboarding');
 
   const subscription = await getSubscriptionForOrganization(context.organization.id);
+  const billingDetails = await getBillingDetails(context.organization.id);
   const projection = subscription
     ? await getCurrentPeriodProjection({
         organizationId: context.organization.id,
@@ -34,6 +37,11 @@ export default async function BillingPage() {
         plan: subscription.plan,
       })
     : null;
+
+  const canManageBilling = ['owner', 'admin', 'finance'].includes(context.membership.role);
+  const hasOutstanding = subscription?.invoices.some((i) => i.status === 'pending' || i.status === 'failed') ?? false;
+  const isPastDue = subscription?.status === 'past_due';
+  const isSuspended = subscription?.status === 'suspended';
 
   return (
     <div className="space-y-6">
@@ -45,6 +53,35 @@ export default async function BillingPage() {
           payment-provider integration.
         </p>
       </div>
+
+      {/* Failed-payment banner */}
+      {(isPastDue || isSuspended) && (
+        <div
+          className={`flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
+            isSuspended ? 'border-destructive/40 bg-destructive/10' : 'border-amber-500/40 bg-amber-500/10'
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle className={`mt-0.5 size-5 shrink-0 ${isSuspended ? 'text-destructive' : 'text-amber-600'}`} />
+            <div className="text-sm">
+              <p className="font-medium text-foreground">
+                {isSuspended ? 'Your subscription is paused' : 'Your last subscription payment didn’t go through'}
+              </p>
+              <p className="text-muted-foreground">
+                {isSuspended
+                  ? 'Settle your outstanding invoice to restore full access — reactivation is immediate once payment is confirmed.'
+                  : 'Pay now to keep your account active. We’ll also retry automatically over the next few days.'}
+              </p>
+            </div>
+          </div>
+          {canManageBilling && hasOutstanding && (
+            <PayNowButton
+              variant={isSuspended ? 'default' : 'outline'}
+              label={isSuspended ? 'Reactivate' : 'Pay now'}
+            />
+          )}
+        </div>
+      )}
 
       {!subscription ? (
         <p className="text-sm text-muted-foreground">No subscription found for this organization yet.</p>
@@ -80,6 +117,28 @@ export default async function BillingPage() {
                   monthlyFee={subscription.plan.monthlyFee}
                 />
               )}
+            </CardContent>
+          </Card>
+
+          {/* Payment method */}
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-base">Payment method</CardTitle>
+                <CardDescription>
+                  We charge your subscription by M-Pesa STK Push — approve the prompt with your PIN.
+                </CardDescription>
+              </div>
+              {canManageBilling && hasOutstanding && !isPastDue && !isSuspended && (
+                <PayNowButton variant="outline" label="Pay now" />
+              )}
+            </CardHeader>
+            <CardContent>
+              <BillingSettingsForm
+                initialPhone={billingDetails?.billingMpesaPhone ?? ''}
+                initialEmail={billingDetails?.billingContactEmail ?? ''}
+                canEdit={canManageBilling}
+              />
             </CardContent>
           </Card>
 
