@@ -1,18 +1,19 @@
 import { prisma } from '@/lib/db';
 import { prismaReadonly } from '@/lib/db-readonly';
+import { SEEDABLE_TIERS } from '@/lib/pricing';
 
-// ─── Placeholder pricing ──────────────────────────────────────────────────
-// NOT a confirmed product/pricing decision — clearly-labeled placeholders per
-// the master plan's explicit instruction not to invent real KES figures.
-// Flag for a real product decision before onboarding merchants beyond a pilot.
 // Real plan tiers (billing/pricing strategy doc §3). FLAT overage fee per
 // transaction beyond the included volume — PaySwift never takes a % of a sale.
-// Enterprise is "talk to sales" (custom/negotiated), so it is not seeded here.
-const SEED_PLANS = [
-  { name: 'Starter', monthlyFee: 0, includedTransactions: 100, overageFeeKes: 10, apiRateLimitPerMin: 60 },
-  { name: 'Growth', monthlyFee: 2900, includedTransactions: 1000, overageFeeKes: 6, apiRateLimitPerMin: 300 },
-  { name: 'Scale', monthlyFee: 9900, includedTransactions: 10000, overageFeeKes: 3, apiRateLimitPerMin: 1200 },
-] as const;
+// Derived from the single pricing catalog in lib/pricing.ts (which the public
+// /pricing page and its estimator also read) so display and DB billing can
+// never drift. Enterprise is "talk to sales" (custom) and is not seeded.
+const SEED_PLANS = SEEDABLE_TIERS.map((t) => ({
+  name: t.name,
+  monthlyFee: t.monthlyFee,
+  includedTransactions: t.includedTransactions,
+  overageFeeKes: t.overageFeeKes,
+  apiRateLimitPerMin: t.apiRateLimitPerMin,
+}));
 
 /** Platform fallback when an org has no subscription/plan or the plan's limit is null. */
 export const DEFAULT_API_RATE_LIMIT_PER_MIN = 60;
