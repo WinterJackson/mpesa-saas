@@ -30,6 +30,7 @@ model Organization {
   accountBalances  AccountBalanceSnapshot[]
   darajaCommands   DarajaCommand[]
   paymentLinks     PaymentLink[]
+  deletionRequests DataDeletionRequest[]
 }
 
 // A shareable, PaySwift-hosted payment link — the no-code way for a merchant to
@@ -413,6 +414,25 @@ model DarajaToken {
   id          String   @id @default("singleton")
   accessToken String
   expiresAt   DateTime
+}
+
+// Data-deletion (right-to-erasure) request awaiting admin review (Phase 4,
+// Stage 9). Deletion is NEVER auto-executed: financial-record retention
+// obligations (AML/POCAMLA) conflict with blanket erasure, so a request is
+// recorded here and surfaced in the admin console for a human decision.
+model DataDeletionRequest {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  requestedBy    String       // Clerk user id of the requesting owner/admin
+  reason         String?
+  status         String       @default("pending") // pending | reviewed | rejected
+  reviewedBy     String?      // AdminUser clerkUserId
+  reviewedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([organizationId])
 }
 
 // Rolling health-check history backing the public self-hosted /status page
