@@ -103,6 +103,26 @@ NEXT_PUBLIC_APP_URL="https://your-ngrok-domain.ngrok-free.app"
 # and auto-registered webhook address. Falls back to the request origin.
 # APP_BASE_URL=""
 
+# Optional (Billing) — PaySwift's OWN M-Pesa collector for subscription billing.
+# The Paybill merchants' subscription fees are charged INTO (distinct from any
+# merchant's own shortcode). Until set, subscription billing FALLS BACK to the
+# pooled sandbox credentials (MPESA_* above) so the STK billing + dunning flow is
+# fully demonstrable in sandbox. Callback falls back to
+# {MPESA_CALLBACK_BASE_URL or MPESA_CALLBACK_URL origin}/api/mpesa/billing/callback.
+# PLATFORM_BILLING_CONSUMER_KEY=""
+# PLATFORM_BILLING_CONSUMER_SECRET=""
+# PLATFORM_BILLING_SHORTCODE=""
+# PLATFORM_BILLING_PASSKEY=""
+# PLATFORM_BILLING_CALLBACK_URL=""
+# PLATFORM_BILLING_ENV="sandbox" # sandbox | live (defaults to live when a Paybill is set)
+
+# Optional (Billing/Tax) — PaySwift's own KRA tax identity for the invoices it
+# issues. Until PLATFORM_VAT_REGISTERED="true", invoices are interim non-tax
+# documents (VAT 0, no eTIMS/CU number). Flip the flag + set the PIN once
+# VAT-registered; the eTIMS OSCU integration then stamps the CU number.
+# PLATFORM_KRA_PIN=""
+# PLATFORM_VAT_REGISTERED="false"
+
 # Optional (Phase 3) — one-click Shopify connect. Create ONE app at
 # partners.shopify.com, set its redirect URL to
 # {APP_BASE_URL}/api/integrations/shopify/oauth/callback, request read_orders +

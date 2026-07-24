@@ -81,7 +81,25 @@ NEXT_PUBLIC_SENTRY_DSN="..."
 # point at OUR routes). Falls back to MPESA_CALLBACK_URL's origin. Set this to a
 # fixed-IP proxy origin if Safaricom requires a static outbound IP for production.
 # MPESA_CALLBACK_BASE_URL="https://your-app.example.com"
+
+# Optional (Billing) — PaySwift's OWN subscription-billing M-Pesa collector (the
+# Paybill merchants' subscription fees are charged INTO, distinct from a merchant's
+# own shortcode). Until set, billing FALLS BACK to the pooled sandbox credentials
+# so the STK billing + dunning flow runs end-to-end in sandbox.
+# PLATFORM_BILLING_CONSUMER_KEY / _SECRET / _SHORTCODE / _PASSKEY / _CALLBACK_URL
+# PLATFORM_BILLING_ENV="sandbox"          # sandbox | live
+# Optional (Billing/Tax) — PaySwift's KRA tax identity. Invoices stay interim
+# (VAT 0, no eTIMS/CU number) until PLATFORM_VAT_REGISTERED="true".
+# PLATFORM_KRA_PIN="" ; PLATFORM_VAT_REGISTERED="false"
 ```
+
+## Cron jobs (cron-job.org)
+Four external cron routes, all gated by `lib/cron-auth.ts` (`CRON_SECRET`):
+`/api/cron/reconcile-transactions`, `/api/cron/reconcile-ledger`,
+`/api/cron/aggregate-usage` (period close → usage + invoice → first STK charge),
+and `/api/cron/process-billing` (subscription dunning: retries due charges,
+soft-locks after grace). Add `process-billing` to the cron-job.org schedule
+(every few hours is sufficient).
 
 ## Setup Steps
 1. Clone the repository.
