@@ -5,7 +5,7 @@ import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSlim } from "@tsparticles/slim";
 import { useTheme } from "@wrksz/themes/client";
 
-export function ParticlesBackground() {
+export function ParticlesBackground({ id = "tsparticles" }: { id?: string }) {
   const [init, setInit] = useState(false);
   const { resolvedTheme } = useTheme();
 
@@ -102,7 +102,7 @@ export function ParticlesBackground() {
 
   return (
     <Particles
-      id="tsparticles"
+      id={id}
       className="absolute inset-0 z-0"
       options={options}
     />
