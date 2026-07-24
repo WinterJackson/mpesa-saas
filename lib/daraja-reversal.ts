@@ -30,5 +30,5 @@ export async function reverseTransaction(params: {
     Occasion: '',
   };
 
-  return postInitiatorCommand(environment, '/mpesa/reversal/v1/request', payload, auth.accessToken, 'Reversal');
+  return postInitiatorCommand(environment, '/mpesa/reversal/v1/request', payload, auth.accessToken, 'Reversal', organizationId);
 }

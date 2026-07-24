@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { withApiSpan } from '@/lib/tracing';
 import { getDecryptedCredentials, isLiveCredentialConfigured, type DarajaCredentialSet } from '@/lib/repositories/daraja-credentials';
 
 export const DARAJA_BASE_URLS = {
@@ -64,61 +65,63 @@ export async function getAccessToken(organizationId: string, environment: 'sandb
   const credentials = await getDarajaCredentials(organizationId, environment);
   const base64Auth = Buffer.from(`${credentials.consumerKey}:${credentials.consumerSecret}`).toString('base64');
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+  return withApiSpan('daraja.oauth_token', 'http.client', organizationId, async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
-  try {
-    const response = await fetch(`${DARAJA_BASE_URLS[environment]}/oauth/v1/generate?grant_type=client_credentials`, {
-      method: 'GET', // Daraja OAuth endpoint uses GET
-      headers: {
-        Authorization: `Basic ${base64Auth}`,
-      },
-      signal: controller.signal as AbortSignal,
-    });
+    try {
+      const response = await fetch(`${DARAJA_BASE_URLS[environment]}/oauth/v1/generate?grant_type=client_credentials`, {
+        method: 'GET', // Daraja OAuth endpoint uses GET
+        headers: {
+          Authorization: `Basic ${base64Auth}`,
+        },
+        signal: controller.signal as AbortSignal,
+      });
 
-    clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'No response body');
-      logger.error(`Daraja OAuth Error [${response.status}]:`, errorText);
-      throw new Error(`Daraja authentication failed with status ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'No response body');
+        logger.error(`Daraja OAuth Error [${response.status}]:`, errorText);
+        throw new Error(`Daraja authentication failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.access_token) {
+        logger.error('Daraja OAuth returned no access_token:', data);
+        throw new Error('Daraja returned an invalid token response');
+      }
+
+      const accessToken: string = data.access_token;
+
+      // Cache the new token in the database
+      await prisma.darajaToken.upsert({
+        where: { id: TOKEN_ID },
+        update: {
+          accessToken,
+          expiresAt: new Date(Date.now() + CACHE_TTL_MS),
+        },
+        create: {
+          id: TOKEN_ID,
+          accessToken,
+          expiresAt: new Date(Date.now() + CACHE_TTL_MS),
+        },
+      });
+
+      return accessToken;
+    } catch (error: unknown) {
+      clearTimeout(timeoutId);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Daraja token generation failed:', message);
+
+      // Sanitize error — never leak credentials or internal details to callers
+      if (message.includes('AbortError') || (error instanceof DOMException && error.name === 'AbortError')) {
+        throw new Error('Payment gateway timed out during authentication. Please try again.');
+      }
+      throw new Error('Could not authenticate with the payment gateway.');
     }
-
-    const data = await response.json();
-
-    if (!data.access_token) {
-      logger.error('Daraja OAuth returned no access_token:', data);
-      throw new Error('Daraja returned an invalid token response');
-    }
-
-    const accessToken: string = data.access_token;
-
-    // Cache the new token in the database
-    await prisma.darajaToken.upsert({
-      where: { id: TOKEN_ID },
-      update: {
-        accessToken,
-        expiresAt: new Date(Date.now() + CACHE_TTL_MS),
-      },
-      create: {
-        id: TOKEN_ID,
-        accessToken,
-        expiresAt: new Date(Date.now() + CACHE_TTL_MS),
-      },
-    });
-
-    return accessToken;
-  } catch (error: unknown) {
-    clearTimeout(timeoutId);
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Daraja token generation failed:', message);
-
-    // Sanitize error — never leak credentials or internal details to callers
-    if (message.includes('AbortError') || (error instanceof DOMException && error.name === 'AbortError')) {
-      throw new Error('Payment gateway timed out during authentication. Please try again.');
-    }
-    throw new Error('Could not authenticate with the payment gateway.');
-  }
+  });
 }
 
 // ─── Timestamp & Password Generation ─────────────────────────────────────────
@@ -215,44 +218,46 @@ export async function initiateSTKPush({
     TransactionDesc: transactionDesc.substring(0, 13),
   };
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+  return withApiSpan('daraja.stk_push', 'http.client', organizationId, async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
-  try {
-    const response = await fetch(`${DARAJA_BASE_URLS[environment]}/mpesa/stkpush/v1/processrequest`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal as AbortSignal,
-    });
+    try {
+      const response = await fetch(`${DARAJA_BASE_URLS[environment]}/mpesa/stkpush/v1/processrequest`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal as AbortSignal,
+      });
 
-    clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
 
-    const responseData = await response.json();
+      const responseData = await response.json();
 
-    if (!response.ok) {
-      logger.error(`Daraja STK Push Error [${response.status}]:`, JSON.stringify(responseData));
-      throw new Error(`Payment gateway rejected request: ${response.status}`);
+      if (!response.ok) {
+        logger.error(`Daraja STK Push Error [${response.status}]:`, JSON.stringify(responseData));
+        throw new Error(`Payment gateway rejected request: ${response.status}`);
+      }
+
+      return responseData as STKPushResponse;
+    } catch (error: unknown) {
+      clearTimeout(timeoutId);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Daraja STK Push failed:', message);
+
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('Payment gateway timed out. Please try again.');
+      }
+      // Re-throw if it's already our sanitized error
+      if (error instanceof Error && error.message.startsWith('Payment gateway')) {
+        throw error;
+      }
+      throw new Error('Failed to initiate payment prompt.');
     }
-
-    return responseData as STKPushResponse;
-  } catch (error: unknown) {
-    clearTimeout(timeoutId);
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Daraja STK Push failed:', message);
-
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error('Payment gateway timed out. Please try again.');
-    }
-    // Re-throw if it's already our sanitized error
-    if (error instanceof Error && error.message.startsWith('Payment gateway')) {
-      throw error;
-    }
-    throw new Error('Failed to initiate payment prompt.');
-  }
+  });
 }
 
 // ─── STK Push Status Query ───────────────────────────────────────────────────
@@ -287,41 +292,43 @@ export async function querySTKPushStatus(
     CheckoutRequestID: checkoutRequestId,
   };
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+  return withApiSpan('daraja.stk_query', 'http.client', organizationId, async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
-  try {
-    const response = await fetch(`${DARAJA_BASE_URLS[environment]}/mpesa/stkpushquery/v1/query`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal as AbortSignal,
-    });
+    try {
+      const response = await fetch(`${DARAJA_BASE_URLS[environment]}/mpesa/stkpushquery/v1/query`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal as AbortSignal,
+      });
 
-    clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      logger.error(`Daraja STK Query Error [${response.status}]:`, JSON.stringify(data));
-      throw new Error(`Failed to query transaction status: ${response.status}`);
+      if (!response.ok) {
+        logger.error(`Daraja STK Query Error [${response.status}]:`, JSON.stringify(data));
+        throw new Error(`Failed to query transaction status: ${response.status}`);
+      }
+
+      return data as STKQueryResponse;
+    } catch (error: unknown) {
+      clearTimeout(timeoutId);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Daraja status query failed:', message);
+
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('Transaction status query timed out. Please try again.');
+      }
+      if (error instanceof Error && error.message.startsWith('Failed to query')) {
+        throw error;
+      }
+      throw new Error('Failed to query transaction status.');
     }
-
-    return data as STKQueryResponse;
-  } catch (error: unknown) {
-    clearTimeout(timeoutId);
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Daraja status query failed:', message);
-
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error('Transaction status query timed out. Please try again.');
-    }
-    if (error instanceof Error && error.message.startsWith('Failed to query')) {
-      throw error;
-    }
-    throw new Error('Failed to query transaction status.');
-  }
+  });
 }

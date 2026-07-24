@@ -33,7 +33,7 @@ export function finalizePayoutAsync(payout: Payout, merchant: Merchant) {
   after(async () => {
     try {
       const secret = merchant.webhookSecret ? decryptSecret(merchant.webhookSecret) ?? undefined : undefined;
-      const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, secret);
+      const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, secret, undefined, undefined, payout.organizationId);
       await recordDelivery({
         organizationId: payout.organizationId,
         event,
@@ -77,7 +77,7 @@ export function finalizeRefundAsync(refund: Refund, merchant: Merchant) {
   after(async () => {
     try {
       const secret = merchant.webhookSecret ? decryptSecret(merchant.webhookSecret) ?? undefined : undefined;
-      const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, secret);
+      const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, secret, undefined, undefined, refund.organizationId);
       await recordDelivery({
         organizationId: refund.organizationId,
         event,

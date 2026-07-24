@@ -24,5 +24,5 @@ export async function queryAccountBalance(params: {
     QueueTimeOutURL: accountBalanceTimeoutUrl(),
   };
 
-  return postInitiatorCommand(environment, '/mpesa/accountbalance/v1/query', payload, auth.accessToken, 'Account Balance');
+  return postInitiatorCommand(environment, '/mpesa/accountbalance/v1/query', payload, auth.accessToken, 'Account Balance', organizationId);
 }

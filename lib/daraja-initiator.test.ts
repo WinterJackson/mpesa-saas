@@ -53,13 +53,13 @@ describe('postInitiatorCommand', () => {
 
   it('posts to the environment base URL and returns the parsed response', async () => {
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ OriginatorConversationID: 'OC', ConversationID: 'C', ResponseCode: '0', ResponseDescription: 'ok' }) });
-    const res = await postInitiatorCommand('sandbox', '/mpesa/reversal/v1/request', { a: 1 }, 'token', 'Reversal');
+    const res = await postInitiatorCommand('sandbox', '/mpesa/reversal/v1/request', { a: 1 }, 'token', 'Reversal', 'org-1');
     expect(fetchMock.mock.calls[0][0]).toBe('https://sandbox.safaricom.co.ke/mpesa/reversal/v1/request');
     expect(res.OriginatorConversationID).toBe('OC');
   });
 
   it('sanitizes a non-OK gateway response', async () => {
     fetchMock.mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({ errorMessage: 'bad' }) });
-    await expect(postInitiatorCommand('sandbox', '/x', {}, 'token', 'Reversal')).rejects.toThrow(/Payment gateway rejected the Reversal request/i);
+    await expect(postInitiatorCommand('sandbox', '/x', {}, 'token', 'Reversal', 'org-1')).rejects.toThrow(/Payment gateway rejected the Reversal request/i);
   });
 });

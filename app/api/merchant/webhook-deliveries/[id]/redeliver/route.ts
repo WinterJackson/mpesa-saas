@@ -46,7 +46,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       merchant.webhookUrl,
       delivery.payload as Record<string, unknown>,
       secret,
-      { 'x-payswift-redelivery': 'true' }
+      { 'x-payswift-redelivery': 'true' },
+      undefined,
+      context.organization.id
     );
 
     await recordDelivery({

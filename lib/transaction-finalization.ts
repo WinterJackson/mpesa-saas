@@ -33,7 +33,7 @@ export function finalizeTransactionAsync(
     after(async () => {
       try {
         const secret = merchant.webhookSecret ? decryptSecret(merchant.webhookSecret) ?? undefined : undefined;
-        const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, secret);
+        const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, secret, undefined, undefined, updatedTransaction.organizationId);
 
         await recordDelivery({
           organizationId: updatedTransaction.organizationId,

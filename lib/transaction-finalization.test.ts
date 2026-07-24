@@ -59,7 +59,10 @@ describe('transaction-finalization', () => {
     expect(deliverWebhook).toHaveBeenCalledWith(
       'https://example.com/hook',
       expect.objectContaining({ event: 'payment.completed' }),
-      'secret123'
+      'secret123',
+      undefined,
+      undefined,
+      tx.organizationId
     );
     expect(prisma.webhookDelivery.create).toHaveBeenCalled();
   });

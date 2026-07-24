@@ -50,7 +50,7 @@ export async function POST() {
     const result = await deliverWebhook(merchant.webhookUrl, payload, secret, {
       'x-payswift-event': WEBHOOK_EVENTS.WEBHOOK_TEST,
       'x-payswift-test': 'true',
-    });
+    }, undefined, organization.id);
 
     await recordDelivery({
       organizationId: organization.id,

@@ -1,6 +1,7 @@
 import { DARAJA_BASE_URLS, getAccessToken } from '@/lib/daraja';
 import { getDecryptedCredentials } from '@/lib/repositories/daraja-credentials';
 import { c2bConfirmationUrl, c2bValidationUrl } from '@/lib/daraja-urls';
+import { withApiSpan } from '@/lib/tracing';
 import { logger } from '@/lib/logger';
 
 // ─── C2B (Customer → Business) — direct Paybill/Till payments ──────────────
@@ -38,34 +39,36 @@ export async function registerC2BUrls(params: {
     ValidationURL: c2bValidationUrl(),
   };
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+  return withApiSpan('daraja.c2b_register_url', 'http.client', organizationId, async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
-  try {
-    const response = await fetch(`${DARAJA_BASE_URLS[environment]}/mpesa/c2b/v1/registerurl`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller.signal as AbortSignal,
-    });
-    clearTimeout(timeoutId);
-    const data = await response.json();
+    try {
+      const response = await fetch(`${DARAJA_BASE_URLS[environment]}/mpesa/c2b/v1/registerurl`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal as AbortSignal,
+      });
+      clearTimeout(timeoutId);
+      const data = await response.json();
 
-    if (!response.ok) {
-      logger.error(`Daraja C2B RegisterURL Error [${response.status}]:`, JSON.stringify(data));
-      throw new Error(`Failed to register C2B URLs: ${response.status}`);
+      if (!response.ok) {
+        logger.error(`Daraja C2B RegisterURL Error [${response.status}]:`, JSON.stringify(data));
+        throw new Error(`Failed to register C2B URLs: ${response.status}`);
+      }
+      return data as RegisterC2BResponse;
+    } catch (error: unknown) {
+      clearTimeout(timeoutId);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Daraja C2B RegisterURL failed:', message);
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('Payment gateway timed out while registering C2B URLs. Please try again.');
+      }
+      if (error instanceof Error && (message.startsWith('Failed to register') || message.includes('not configured'))) {
+        throw error;
+      }
+      throw new Error('Failed to register C2B URLs.');
     }
-    return data as RegisterC2BResponse;
-  } catch (error: unknown) {
-    clearTimeout(timeoutId);
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Daraja C2B RegisterURL failed:', message);
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error('Payment gateway timed out while registering C2B URLs. Please try again.');
-    }
-    if (error instanceof Error && (message.startsWith('Failed to register') || message.includes('not configured'))) {
-      throw error;
-    }
-    throw new Error('Failed to register C2B URLs.');
-  }
+  });
 }

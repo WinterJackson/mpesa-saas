@@ -29,5 +29,5 @@ export async function queryTransactionStatus(params: {
     Occasion: '',
   };
 
-  return postInitiatorCommand(environment, '/mpesa/transactionstatus/v1/query', payload, auth.accessToken, 'Transaction Status');
+  return postInitiatorCommand(environment, '/mpesa/transactionstatus/v1/query', payload, auth.accessToken, 'Transaction Status', organizationId);
 }

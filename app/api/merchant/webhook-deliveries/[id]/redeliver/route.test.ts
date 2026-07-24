@@ -53,7 +53,9 @@ describe('POST webhook-deliveries/[id]/redeliver', () => {
       'https://hook',
       expect.objectContaining({ event: 'payment.completed' }),
       'dec(enc)',
-      expect.objectContaining({ 'x-payswift-redelivery': 'true' })
+      expect.objectContaining({ 'x-payswift-redelivery': 'true' }),
+      undefined,
+      'org-1'
     );
     expect(recordDelivery).toHaveBeenCalledWith(
       expect.objectContaining({ organizationId: 'org-1', event: 'payment.completed', transactionId: 'tx-1', success: true })
