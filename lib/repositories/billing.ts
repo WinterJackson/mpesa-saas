@@ -153,6 +153,14 @@ export async function createInvoice(subscriptionId: string, amount: number) {
 
 // ─── Billing details + manual pay-now (Stage E) ──────────────────────────────
 
+/** A single invoice, ownership-scoped to the org, for the download/PDF route. */
+export async function getInvoiceForOrg(invoiceId: string, organizationId: string) {
+  return prisma.invoice.findFirst({
+    where: { id: invoiceId, subscription: { organizationId } },
+    include: { subscription: { include: { plan: true, organization: true } } },
+  });
+}
+
 /** The org's billing/tax details for the billing page (no secrets). */
 export async function getBillingDetails(organizationId: string) {
   return prisma.organization.findUnique({

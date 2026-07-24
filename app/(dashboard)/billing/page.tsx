@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import { ArrowRight, Check, AlertTriangle } from 'lucide-react';
+import { ArrowRight, Check, AlertTriangle, Download } from 'lucide-react';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { getSubscriptionForOrganization, getCurrentPeriodProjection, getBillingDetails } from '@/lib/repositories/billing';
 import { PRICING_TIERS } from '@/lib/pricing';
@@ -241,6 +241,7 @@ export default async function BillingPage() {
                       <TableHead>Issued</TableHead>
                       <TableHead className="text-right">Amount (KES)</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Invoice</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -260,6 +261,14 @@ export default async function BillingPage() {
                           >
                             {invoice.status}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <a
+                            href={`/api/merchant/billing/invoices/${invoice.id}/pdf`}
+                            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                          >
+                            <Download className="size-3.5" /> PDF
+                          </a>
                         </TableCell>
                       </TableRow>
                     ))}

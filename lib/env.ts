@@ -42,6 +42,13 @@ const envSchema = z.object({
   PLATFORM_BILLING_PASSKEY: z.string().optional(),
   PLATFORM_BILLING_CALLBACK_URL: z.string().url('PLATFORM_BILLING_CALLBACK_URL must be a valid URL').optional(),
   PLATFORM_BILLING_ENV: z.enum(['sandbox', 'live']).optional(),
+  // Optional: PaySwift's OWN tax identity for the invoices it issues to merchants
+  // (Stage F). Until PLATFORM_VAT_REGISTERED === 'true', invoices are interim
+  // (VAT shown as 0, no eTIMS/CU number — an honest non-tax invoice). Set the KRA
+  // PIN + flip the flag once VAT-registered; the eTIMS OSCU integration (a
+  // KRA-certified provider behind lib/billing/etims.ts) then stamps the CU number.
+  PLATFORM_KRA_PIN: z.string().optional(),
+  PLATFORM_VAT_REGISTERED: z.enum(['true', 'false']).optional(),
   ENCRYPTION_KEY: z.string().min(44, 'ENCRYPTION_KEY must be a 32-byte base64 string'),
   // Optional: only set during a key-rotation window (see lib/crypto.ts's doc
   // comment / AGENTS.md runbook). Lets decryptSecret() still read rows
@@ -136,6 +143,8 @@ function validateEnv(): Env {
     PLATFORM_BILLING_PASSKEY: process.env.PLATFORM_BILLING_PASSKEY,
     PLATFORM_BILLING_CALLBACK_URL: process.env.PLATFORM_BILLING_CALLBACK_URL,
     PLATFORM_BILLING_ENV: process.env.PLATFORM_BILLING_ENV,
+    PLATFORM_KRA_PIN: process.env.PLATFORM_KRA_PIN,
+    PLATFORM_VAT_REGISTERED: process.env.PLATFORM_VAT_REGISTERED,
     ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
     ENCRYPTION_KEY_PREVIOUS: process.env.ENCRYPTION_KEY_PREVIOUS,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
