@@ -20,6 +20,9 @@ NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
 # Cryptography (Foundation Hardening)
 # 32-byte base64 encoded AES-256-GCM key
 ENCRYPTION_KEY="..."
+# Optional — only set during a key-rotation window, see "Encryption key
+# rotation" under Operational Runbooks below.
+# ENCRYPTION_KEY_PREVIOUS="..."
 
 # M-Pesa Daraja Central Credentials
 MPESA_CONSUMER_KEY="..."
@@ -90,3 +93,23 @@ Use Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `security
     - **Per-plan rate limits** (`lib/plan-rate-limit.ts`) are enforced in-route post-auth and fail OPEN when Redis is down — never let the limiter block money movement.
     - **Shopify** uses a one-click OAuth app install; the callback verifies HMAC + a CSRF state cookie before storing an (encrypted) token. Dormant until `SHOPIFY_CLIENT_ID`/`SHOPIFY_CLIENT_SECRET` are set.
     - The dashboard **Sandbox/Live toggle is a view filter only** (`lib/view-env.ts`) — it must never change `Merchant.environment`.
+
+## Operational Runbooks
+
+### Encryption key rotation
+`lib/crypto.ts`'s `encryptSecret`/`decryptSecret` support rotating `ENCRYPTION_KEY` without breaking
+decryption of already-encrypted rows (Shopify tokens, per-organization Daraja credentials, webhook
+secrets). Each ciphertext is tagged with a short fingerprint of the key it was written under, so
+decryption can pick the right key out of at most two candidates.
+
+To rotate:
+1. Generate a new 32-byte base64 key (e.g. `openssl rand -base64 32`).
+2. Set `ENCRYPTION_KEY_PREVIOUS` to the **current** `ENCRYPTION_KEY` value.
+3. Set `ENCRYPTION_KEY` to the **new** value. Deploy.
+4. New writes are encrypted under the new key immediately. Existing rows keep decrypting correctly via
+   `ENCRYPTION_KEY_PREVIOUS` until they're next re-encrypted (e.g. their next update) or backfilled by a
+   one-off re-encryption script.
+5. Once no row still depends on the old key, remove `ENCRYPTION_KEY_PREVIOUS`.
+
+Ciphertext written before this rotation-support existed (no fingerprint prefix) keeps decrypting under
+whatever `ENCRYPTION_KEY` is current, exactly as before — no migration needed for those rows.

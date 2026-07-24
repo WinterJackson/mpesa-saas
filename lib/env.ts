@@ -21,6 +21,10 @@ const envSchema = z.object({
   MPESA_PASSKEY_LIVE: z.string().optional(),
   MPESA_CALLBACK_URL_LIVE: z.string().url('MPESA_CALLBACK_URL_LIVE must be a valid URL').optional(),
   ENCRYPTION_KEY: z.string().min(44, 'ENCRYPTION_KEY must be a 32-byte base64 string'),
+  // Optional: only set during a key-rotation window (see lib/crypto.ts's doc
+  // comment / AGENTS.md runbook). Lets decryptSecret() still read rows
+  // written under the previous ENCRYPTION_KEY while it's being retired.
+  ENCRYPTION_KEY_PREVIOUS: z.string().min(44, 'ENCRYPTION_KEY_PREVIOUS must be a 32-byte base64 string').optional(),
   // Recommended in production, but OPTIONAL so local dev runs without an Upstash/
   // Sentry account. Every consumer reads these via process.env directly and
   // degrades gracefully when absent: rate-limit.ts falls back to a permissive
@@ -94,6 +98,7 @@ function validateEnv(): Env {
     MPESA_PASSKEY_LIVE: process.env.MPESA_PASSKEY_LIVE,
     MPESA_CALLBACK_URL_LIVE: process.env.MPESA_CALLBACK_URL_LIVE,
     ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
+    ENCRYPTION_KEY_PREVIOUS: process.env.ENCRYPTION_KEY_PREVIOUS,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
     CRON_SECRET: process.env.CRON_SECRET,
