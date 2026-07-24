@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { prismaReadonly } from '@/lib/db-readonly';
 
 // Platform-level reconciliation queries — deliberately NOT org-scoped (the
 // nightly ledger job scans every organization), same posture as lib/repositories/admin.ts.
@@ -72,7 +73,8 @@ export async function upsertMismatch(record: StaleRecord) {
 }
 
 export async function listOpenMismatches(take = 100) {
-  return prisma.reconciliationMismatch.findMany({
+  // Read-heavy admin listing — see lib/db-readonly.ts.
+  return prismaReadonly.reconciliationMismatch.findMany({
     where: { status: 'open' },
     orderBy: { detectedAt: 'desc' },
     take,

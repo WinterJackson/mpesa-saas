@@ -12,6 +12,11 @@ const envSchema = z.object({
   // policies actually enforce (lib/db.ts, scripts/create-app-runtime-role.ts).
   // Falls back to DATABASE_URL when unset.
   DATABASE_APP_URL: z.string().optional(),
+  // Optional: Neon read-replica connection string for read-heavy admin/
+  // reporting queries (lib/db-readonly.ts). Falls back to the primary
+  // client when unset — provisioning a real replica is deliberately
+  // deferred until it's actually needed (see AGENTS.md).
+  DATABASE_REPLICA_URL: z.string().optional(),
   MPESA_CONSUMER_KEY: z.string().min(1, 'MPESA_CONSUMER_KEY is required'),
   MPESA_CONSUMER_SECRET: z.string().min(1, 'MPESA_CONSUMER_SECRET is required'),
   MPESA_SHORTCODE: z.string().min(1, 'MPESA_SHORTCODE is required'),
@@ -90,6 +95,7 @@ function validateEnv(): Env {
   const result = envSchema.safeParse({
     DATABASE_URL: process.env.DATABASE_URL,
     DATABASE_APP_URL: process.env.DATABASE_APP_URL,
+    DATABASE_REPLICA_URL: process.env.DATABASE_REPLICA_URL,
     MPESA_CONSUMER_KEY: process.env.MPESA_CONSUMER_KEY,
     MPESA_CONSUMER_SECRET: process.env.MPESA_CONSUMER_SECRET,
     MPESA_SHORTCODE: process.env.MPESA_SHORTCODE,

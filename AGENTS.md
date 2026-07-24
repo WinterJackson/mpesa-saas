@@ -153,3 +153,12 @@ To extend RLS to another table:
 
 To rotate `app_runtime`'s password: re-run `npx tsx scripts/create-app-runtime-role.ts` (idempotent — it
 rotates the password on every run) and update `DATABASE_APP_URL` everywhere it's set.
+
+### Read replica (deferred provisioning)
+`lib/db-readonly.ts`'s `prismaReadonly` client already routes the admin organizations list, billing/MRR
+listing, and reconciliation-mismatch listing (the read-heavy, non-transactional admin/reporting queries)
+away from the primary client — but falls back to the exact same primary client when `DATABASE_REPLICA_URL`
+is unset, which it is today. **Do not provision an actual Neon read replica branch preemptively.** Do it
+only when admin/reporting queries measurably contend with the transactional payment-write path (e.g. slow
+admin dashboard loads correlating with payment-processing latency in Sentry). At that point: create a Neon
+read replica branch, set `DATABASE_REPLICA_URL` to its connection string, done — no code change needed.

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { prismaReadonly } from '@/lib/db-readonly';
 
 // ─── Placeholder pricing ──────────────────────────────────────────────────
 // NOT a confirmed product/pricing decision — clearly-labeled placeholders per
@@ -105,7 +106,8 @@ export async function advanceBillingPeriod(subscriptionId: string) {
 // ─── Admin-only (manual collection fallback — no live payment provider yet) ──
 
 export async function listAllInvoices(status?: 'pending' | 'paid' | 'failed') {
-  return prisma.invoice.findMany({
+  // Read-heavy admin billing listing — see lib/db-readonly.ts.
+  return prismaReadonly.invoice.findMany({
     where: status ? { status } : undefined,
     orderBy: { issuedAt: 'desc' },
     include: { subscription: { include: { organization: { select: { id: true, businessName: true } } } } },
