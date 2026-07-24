@@ -1,6 +1,6 @@
 # PaySwift — M-Pesa SaaS Platform
 
-PaySwift is a production-ready, white-label Merchant SaaS platform that empowers businesses to seamlessly collect, monitor, and manage M-Pesa payments. Built on Next.js 15, Prisma, and Tailwind CSS, PaySwift offers a highly secure API integration layer, an interactive "Demo Store" for end-users to experience frictionless checkout, and a beautifully designed Dashboard for merchants to track their real-time transaction statuses via Webhooks.
+PaySwift is a production-ready, white-label Merchant SaaS platform that empowers businesses to seamlessly collect, monitor, and manage M-Pesa payments. Built on Next.js 16, Prisma, and Tailwind CSS, PaySwift offers a highly secure API integration layer, an interactive "Demo Store" for end-users to experience frictionless checkout, and a beautifully designed Dashboard for merchants to track their real-time transaction statuses via Webhooks.
 
 ## ✨ Merchant integration & developer experience (Phase 3)
 
@@ -12,6 +12,17 @@ PaySwift works for non-developers and developers alike:
 - **Cursor pagination** (`GET /api/v1/transactions`, `{ data, nextCursor }`), **per-plan rate limits** (`X-RateLimit-*` headers, `429` + `Retry-After`).
 - **Webhooks** — a canonical event catalog (incl. `payout.reversed`), a **delivery inspector** at `/settings/webhooks` with payload viewer and one-click **redelivery**, and a signed **test event**. See `/docs/webhooks`.
 - **Dashboard Sandbox/Live view filter** (a list-view filter, separate from the admin-gated payment-routing switch).
+
+## 🛡️ Scale, observability & compliance (Phase 4)
+
+- **Database-level tenant isolation** — Postgres Row-Level Security on `WebhookDelivery`/`Refund` as defense-in-depth behind the repository-layer `organizationId` scoping. The app connects as a restricted `app_runtime` role (`DATABASE_APP_URL`) so RLS actually enforces; `DATABASE_URL` (owner) is migrations-only. See AGENTS.md.
+- **Rotatable encryption keys** — `ENCRYPTION_KEY` can rotate with `ENCRYPTION_KEY_PREVIOUS` bridging existing rows (no downtime, no backfill required).
+- **Durable webhook delivery** via Inngest (optional; webhook-delivery only — cron stays on cron-job.org). Dormant until `INNGEST_EVENT_KEY`/`INNGEST_SIGNING_KEY` are set; falls back to direct delivery otherwise.
+- **Tracing** — Sentry spans around every outbound Daraja call and webhook dispatch, tagged per-organization (never PII).
+- **Public status page** at `/status`, backed by an `app/api/cron/health-check` self-check (DB, Redis, Daraja sandbox).
+- **Read-replica-ready** — read-heavy admin/reporting queries route through `prismaReadonly`; set `DATABASE_REPLICA_URL` to point them at a Neon replica when needed.
+- **Compliance groundwork (Kenya DPA)** — self-service data export and an admin-reviewed data-deletion request flow (deletion is never auto-executed). Runbooks: `scripts/restore-drill.md` (Neon PITR DR) and `scripts/incident-response.md` (Sev scale + breach notification). Reliability/SLA docs at `/docs/reliability`.
+- **CI hardening** — gitleaks secret scanning and `npm audit` (critical) added, alongside the existing CodeQL + Dependabot.
 
 ## 🚀 Quick Start & Setup
 

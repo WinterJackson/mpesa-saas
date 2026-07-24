@@ -9,6 +9,19 @@ export const metadata = {
 
 const ENTRIES = [
   {
+    date: '2026-07-24',
+    title: 'Scale, observability & compliance',
+    items: [
+      'Database-level tenant isolation (Postgres Row-Level Security) as defense-in-depth behind application scoping.',
+      'Encryption keys are now rotatable without downtime.',
+      'Durable webhook delivery: deliveries survive beyond a single request when enabled, with failed deliveries surfaced for redelivery.',
+      'End-to-end tracing of Daraja calls and webhook dispatch in our monitoring.',
+      'Public status page at /status with rolling uptime history.',
+      'Self-service data export, and an admin-reviewed data-deletion request flow (Kenya DPA groundwork).',
+      'Hardened webhook URL handling (SSRF protections) and added secret/dependency scanning to CI.',
+    ],
+  },
+  {
     date: '2026-07-23',
     title: 'Merchant integration & developer experience',
     items: [

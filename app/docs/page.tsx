@@ -128,6 +128,10 @@ export default function DocsLandingPage() {
               <h3 className="font-medium">Changelog</h3>
               <p className="text-sm text-muted-foreground">What&apos;s new in PaySwift.</p>
             </Link>
+            <Link href="/docs/reliability" className="rounded-lg border border-border p-4 transition-colors hover:border-foreground">
+              <h3 className="font-medium">Reliability &amp; SLA</h3>
+              <p className="text-sm text-muted-foreground">Uptime targets, status, and data protection.</p>
+            </Link>
           </div>
         </section>
       </main>

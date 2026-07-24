@@ -103,6 +103,14 @@ Use Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `security
     - **Per-plan rate limits** (`lib/plan-rate-limit.ts`) are enforced in-route post-auth and fail OPEN when Redis is down — never let the limiter block money movement.
     - **Shopify** uses a one-click OAuth app install; the callback verifies HMAC + a CSRF state cookie before storing an (encrypted) token. Dormant until `SHOPIFY_CLIENT_ID`/`SHOPIFY_CLIENT_SECRET` are set.
     - The dashboard **Sandbox/Live toggle is a view filter only** (`lib/view-env.ts`) — it must never change `Merchant.environment`.
+12. **Scale, observability & compliance (Phase 4)**:
+    - **Row-Level Security** on `WebhookDelivery`/`Refund` is defense-in-depth BEHIND the `lib/repositories/*` scoping, queried only via `withTenantContext`/`withPlatformContext` (`lib/db.ts`). It only enforces because the app connects as the restricted `app_runtime` role (`DATABASE_APP_URL`) — Neon's owner role has BYPASSRLS. See the Row-Level Security runbook below before enabling RLS on a new table.
+    - **Encryption keys are rotatable** (`lib/crypto.ts`, fingerprint-tagged ciphertext + optional `ENCRYPTION_KEY_PREVIOUS`) — see the runbook below. Never add a second encryption path.
+    - **Durable webhook delivery** goes through `dispatchWebhook` (`lib/webhook-dispatch.ts`): Inngest when configured (webhook-delivery ONLY — the 3 `app/api/cron/*` jobs stay on cron-job.org), direct fallback otherwise.
+    - **Observability** — `lib/tracing.ts`'s `withApiSpan` wraps Daraja calls + webhook dispatch in Sentry spans tagged with `organizationId` only.
+    - **Read replica** — `prismaReadonly` (`lib/db-readonly.ts`) for read-heavy admin/reporting only; never the payment-write path. Provision a real replica only when it's measurably needed (`DATABASE_REPLICA_URL`).
+    - **Status page** — `/status` backed by `app/api/cron/health-check` (add it to the cron-job.org schedule).
+    - **Compliance** — `data-export` (never includes secrets) and `data-deletion-request` (admin-reviewed, never auto-deleted). Sanctions screening is a deliberate deferred gap; CBK PSP authorization and ODPC registration are legal/organizational action items, not code.
 
 ## Operational Runbooks
 
