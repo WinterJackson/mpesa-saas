@@ -162,3 +162,10 @@ is unset, which it is today. **Do not provision an actual Neon read replica bran
 only when admin/reporting queries measurably contend with the transactional payment-write path (e.g. slow
 admin dashboard loads correlating with payment-processing latency in Sentry). At that point: create a Neon
 read replica branch, set `DATABASE_REPLICA_URL` to its connection string, done — no code change needed.
+
+### Status page health checks
+`app/api/cron/health-check` (new in Phase 4, Stage 7) needs adding to the same cron-job.org schedule as the
+other 3 `app/api/cron/*` jobs — every few minutes is enough, this isn't a sub-minute uptime monitor. It
+backs the public `/status` page (`lib/repositories/health-checks.ts`). A component whose prerequisite env
+vars aren't configured (e.g. no Upstash Redis) is simply omitted from both the check and the page, never
+reported with a misleading status.

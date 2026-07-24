@@ -414,3 +414,16 @@ model DarajaToken {
   accessToken String
   expiresAt   DateTime
 }
+
+// Rolling health-check history backing the public self-hosted /status page
+// (Phase 4, Stage 7). Platform-level, not tenant-scoped — never holds
+// merchant data.
+model HealthCheck {
+  id        String   @id @default(cuid())
+  component String   // database | redis | daraja_sandbox
+  status    String   // operational | degraded | down
+  latencyMs Int?
+  checkedAt DateTime @default(now())
+
+  @@index([component, checkedAt(sort: Desc)])
+}
