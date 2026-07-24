@@ -96,10 +96,13 @@ export async function findTransactionById(
 
 export async function listTransactions(
   organizationId: string,
-  opts: { take?: number } = {}
+  opts: { take?: number; environment?: string } = {}
 ): Promise<TransactionRow[]> {
   return prisma.transaction.findMany({
-    where: { organizationId },
+    where: {
+      organizationId,
+      ...(opts.environment ? { environment: opts.environment } : {}),
+    },
     orderBy: { createdAt: 'desc' },
     take: opts.take ?? 50,
     select: LIST_SELECT,
@@ -134,10 +137,16 @@ export async function listTransactionsPage(
   return toPage(rows, limit);
 }
 
-export async function transactionStatusSummary(organizationId: string) {
+export async function transactionStatusSummary(
+  organizationId: string,
+  opts: { environment?: string } = {}
+) {
   const stats = await prisma.transaction.groupBy({
     by: ['status'],
-    where: { organizationId },
+    where: {
+      organizationId,
+      ...(opts.environment ? { environment: opts.environment } : {}),
+    },
     _count: { id: true },
     _sum: { amount: true },
   });

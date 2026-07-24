@@ -1,0 +1,29 @@
+{
+  "projectId": "95c305eb-5a3c-4722-916e-a1b4fe8f6769",
+  "shape": "package",
+  "pkg": "payswift",
+  "globalName": "PaySwiftUI",
+  "entry": "./.design-sync/ds-entry.tsx",
+  "tsconfig": "./tsconfig.json",
+  "cssEntry": ".design-sync/compiled.css",
+  "readmeHeader": ".design-sync/conventions.md",
+  "componentSrcMap": {
+    "Badge": "components/ui/badge.tsx",
+    "Button": "components/ui/button.tsx",
+    "Card": "components/ui/card.tsx",
+    "Dialog": "components/ui/dialog.tsx",
+    "DropdownMenu": "components/ui/dropdown-menu.tsx",
+    "Input": "components/ui/input.tsx",
+    "Label": "components/ui/label.tsx",
+    "Separator": "components/ui/separator.tsx",
+    "Skeleton": "components/ui/skeleton.tsx",
+    "Toaster": "components/ui/sonner.tsx",
+    "Table": "components/ui/table.tsx",
+    "Tabs": "components/ui/tabs.tsx"
+  },
+  "overrides": {
+    "Dialog": { "cardMode": "single", "viewport": "460x360" },
+    "DropdownMenu": { "cardMode": "single", "viewport": "320x340" },
+    "Table": { "cardMode": "column" }
+  }
+}

@@ -156,7 +156,29 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--sidebar) transparent;
   }
+  
+  /* Platform-wide Custom Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: var(--sidebar);
+    border-radius: 40px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--sidebar) 80%, black);
+  }
+
   body {
     @apply bg-background text-foreground;
   }

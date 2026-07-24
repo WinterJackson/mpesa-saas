@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Settings, Receipt, Users, CreditCard, Link2, Plug } from "lucide-react";
+import { LayoutDashboard, Settings, Receipt, Users, CreditCard, Link2, Blocks } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
 
@@ -25,7 +25,7 @@ const navItems = [
   {
     name: "Integrations",
     href: "/integrations",
-    icon: Plug,
+    icon: Blocks,
   },
   {
     name: "Team",
@@ -51,7 +51,7 @@ export function Sidebar() {
     <>
       {/* Desktop Sidebar */}
       <div className="hidden md:flex h-full shrink-0 py-floating-header pl-0">
-        <aside className="flex flex-col w-64 rounded-floating-header rounded-l-none bg-sidebar text-sidebar-foreground shadow-floating-header overflow-hidden">
+        <aside className="flex flex-col w-64 rounded-l-none rounded-r-[40px] bg-sidebar text-sidebar-foreground shadow-floating-header overflow-hidden">
           <div className="p-6 border-b border-sidebar-border flex items-center">
             <Logo inverted />
           </div>
@@ -80,7 +80,7 @@ export function Sidebar() {
 
       {/* Mobile Bottom Nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 pl-[15px] pr-0 pb-[calc(var(--spacing-floating-header)+env(safe-area-inset-bottom))]">
-        <nav className="flex items-center justify-around rounded-floating-header rounded-r-none bg-sidebar text-sidebar-foreground shadow-floating-header p-3">
+        <nav className="flex h-20 items-center justify-around rounded-l-[40px] rounded-r-none bg-sidebar text-sidebar-foreground shadow-floating-header px-3">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -89,7 +89,9 @@ export function Sidebar() {
                 href={item.href}
                 className={cn(
                   "flex flex-col items-center justify-center p-2 rounded-md transition-colors",
-                  isActive ? "text-primary" : "text-sidebar-foreground/60 hover:text-sidebar-foreground"
+                  isActive
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 )}
               >
                 <item.icon className="size-6" />

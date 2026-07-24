@@ -37,20 +37,26 @@ export default async function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 md:pb-0">
         {/* Header */}
         <div className="w-full shrink-0 pt-floating-header pl-[15px] md:pl-[30px] pr-0 pb-4">
-          <header className="w-full rounded-floating-header rounded-r-none bg-background dark:bg-card text-foreground backdrop-blur-md shadow-floating-header">
+          <header className="w-full rounded-l-[40px] rounded-r-none bg-background dark:bg-card text-foreground backdrop-blur-md shadow-floating-header">
             <div className="flex h-20 w-full items-center justify-between px-4 md:px-6">
-              <div className="flex items-center gap-4 min-w-0">
-                <h1 className="text-lg font-semibold tracking-tight text-foreground truncate max-w-[200px] md:max-w-[320px]">
+              <div className="flex items-center gap-4 min-w-0 border-b-2 border-r-2 border-sidebar pr-4 pb-1 rounded-br-xl">
+                <h1 className="text-sm md:text-lg font-semibold tracking-tight text-foreground truncate max-w-[200px] md:max-w-[320px]">
                   {businessName}
                 </h1>
               </div>
               <div className="flex items-center gap-4 ml-auto">
-                <EnvViewToggle initial={viewEnv} />
+                <div className="hidden md:block">
+                  <EnvViewToggle initial={viewEnv} />
+                </div>
                 <ThemeToggle />
                 <UserMenu />
               </div>
             </div>
           </header>
+          {/* Mobile Sandbox/Live Toggle */}
+          <div className="md:hidden flex justify-end pr-4 mt-4">
+            <EnvViewToggle initial={viewEnv} />
+          </div>
         </div>
 
         {/* Scrollable Main Area */}
