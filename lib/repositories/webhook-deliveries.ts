@@ -1,6 +1,5 @@
-import { prisma } from '@/lib/db';
+import { withTenantContext, type TransactionClient } from '@/lib/db';
 import { clampLimit, cursorWhere, toPage, DEFAULT_PAGE_SIZE, type Page } from '@/lib/pagination';
-import type { TransactionClient } from '@/lib/db';
 
 export interface RecordDeliveryInput {
   organizationId: string;
@@ -20,24 +19,34 @@ export interface RecordDeliveryInput {
  * table — the ONE place all four emit sites (payment/payout/refund/test) write
  * through, so event/organizationId/status are always populated consistently.
  * `status` is dead-letter aware: a non-delivered attempt is 'failed'.
+ *
+ * WebhookDelivery has Row-Level Security enabled (Phase 4, Stage 3) — if the
+ * caller doesn't already have a tenant-scoped `client` (e.g. from an outer
+ * `withTenantContext`), this opens its own so the insert is always scoped to
+ * `input.organizationId` at the database level, not just the `where`/`data`
+ * clause below.
  */
-export async function recordDelivery(input: RecordDeliveryInput, client: TransactionClient = prisma) {
-  return client.webhookDelivery.create({
-    data: {
-      organizationId: input.organizationId,
-      event: input.event,
-      url: input.url,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      payload: input.payload as any,
-      statusCode: input.statusCode,
-      success: input.success,
-      status: input.success ? 'delivered' : 'failed',
-      attempt: input.attempt,
-      transactionId: input.transactionId ?? null,
-      payoutId: input.payoutId ?? null,
-      refundId: input.refundId ?? null,
-    },
-  });
+export async function recordDelivery(input: RecordDeliveryInput, client?: TransactionClient) {
+  const create = (c: TransactionClient) =>
+    c.webhookDelivery.create({
+      data: {
+        organizationId: input.organizationId,
+        event: input.event,
+        url: input.url,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        payload: input.payload as any,
+        statusCode: input.statusCode,
+        success: input.success,
+        status: input.success ? 'delivered' : 'failed',
+        attempt: input.attempt,
+        transactionId: input.transactionId ?? null,
+        payoutId: input.payoutId ?? null,
+        refundId: input.refundId ?? null,
+      },
+    });
+
+  if (client) return create(client);
+  return withTenantContext(input.organizationId, create);
 }
 
 export interface WebhookDeliveryRow {
@@ -114,12 +123,14 @@ export async function listDeliveries(
   opts: { cursor?: string | null; limit?: number } = {}
 ): Promise<Page<WebhookDeliveryRow>> {
   const limit = clampLimit(opts.limit ?? DEFAULT_PAGE_SIZE);
-  const rows = await prisma.webhookDelivery.findMany({
-    where: { organizationId, ...cursorWhere(opts.cursor) },
-    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-    take: limit + 1,
-    select: LIST_SELECT,
-  });
+  const rows = await withTenantContext(organizationId, (tx) =>
+    tx.webhookDelivery.findMany({
+      where: { organizationId, ...cursorWhere(opts.cursor) },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+      select: LIST_SELECT,
+    })
+  );
   const page = toPage(rows, limit);
   return { data: page.data.map(toRow), nextCursor: page.nextCursor };
 }
@@ -129,10 +140,12 @@ export async function findDelivery(
   organizationId: string,
   id: string
 ): Promise<(WebhookDeliveryRow & { organizationId: string }) | null> {
-  const d = await prisma.webhookDelivery.findFirst({
-    where: { id, organizationId },
-    select: { ...LIST_SELECT, organizationId: true },
-  });
+  const d = await withTenantContext(organizationId, (tx) =>
+    tx.webhookDelivery.findFirst({
+      where: { id, organizationId },
+      select: { ...LIST_SELECT, organizationId: true },
+    })
+  );
   if (!d) return null;
   return { ...toRow(d), organizationId: d.organizationId! };
 }

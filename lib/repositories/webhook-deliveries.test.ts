@@ -1,16 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { prisma } from '@/lib/db';
+import { prisma, withTenantContext } from '@/lib/db';
 import { recordDelivery, listDeliveries, findDelivery } from './webhook-deliveries';
 
-vi.mock('@/lib/db', () => ({
-  prisma: {
+// WebhookDelivery has Row-Level Security enabled — the repository now routes
+// every call through withTenantContext instead of the bare prisma client.
+// Mocked here as "open a transaction and hand back the same fake client",
+// so assertions against prisma.webhookDelivery.* below still see the calls
+// (it's the same object reference passed through as `tx`).
+vi.mock('@/lib/db', () => {
+  const client = {
     webhookDelivery: {
       create: vi.fn(),
       findMany: vi.fn(),
       findFirst: vi.fn(),
     },
-  },
-}));
+  };
+  return {
+    prisma: client,
+    withTenantContext: vi.fn((_organizationId: string, fn: (tx: typeof client) => unknown) => fn(client)),
+  };
+});
 
 describe('webhook-deliveries repository', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -70,5 +79,43 @@ describe('webhook-deliveries repository', () => {
     expect(prisma.webhookDelivery.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'wd-1', organizationId: 'org-1' } })
     );
+  });
+
+  it('every read/write opens its Row-Level Security tenant context for the right organization', async () => {
+    await recordDelivery({
+      organizationId: 'org-1',
+      event: 'payment.completed',
+      url: 'https://h',
+      payload: {},
+      statusCode: 200,
+      success: true,
+      attempt: 1,
+    });
+    vi.mocked(prisma.webhookDelivery.findMany).mockResolvedValueOnce([]);
+    await listDeliveries('org-2');
+    await findDelivery('org-3', 'wd-1');
+
+    expect(withTenantContext).toHaveBeenNthCalledWith(1, 'org-1', expect.any(Function));
+    expect(withTenantContext).toHaveBeenNthCalledWith(2, 'org-2', expect.any(Function));
+    expect(withTenantContext).toHaveBeenNthCalledWith(3, 'org-3', expect.any(Function));
+  });
+
+  it('recordDelivery uses an already-open tenant-scoped client when one is passed, without opening a new one', async () => {
+    vi.mocked(withTenantContext).mockClear();
+    const suppliedClient = { webhookDelivery: { create: vi.fn().mockResolvedValueOnce({ id: 'wd-3' }) } };
+    await recordDelivery(
+      {
+        organizationId: 'org-1',
+        event: 'payment.completed',
+        url: 'https://h',
+        payload: {},
+        statusCode: 200,
+        success: true,
+        attempt: 1,
+      },
+      suppliedClient as never
+    );
+    expect(withTenantContext).not.toHaveBeenCalled();
+    expect(suppliedClient.webhookDelivery.create).toHaveBeenCalled();
   });
 });

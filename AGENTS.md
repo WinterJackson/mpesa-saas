@@ -8,6 +8,10 @@ To operate the backend locally, you must provide the following variables in `.en
 ```ini
 # Database
 DATABASE_URL="postgresql://user:pass@localhost:5432/payswift"
+# Optional — restricted role (no BYPASSRLS) the running app connects as so
+# Postgres Row-Level Security actually enforces. See "Row-Level Security" under
+# Operational Runbooks below. Falls back to DATABASE_URL when unset.
+# DATABASE_APP_URL="postgresql://app_runtime:pass@localhost:5432/payswift"
 
 # Authentication (Clerk)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
@@ -113,3 +117,33 @@ To rotate:
 
 Ciphertext written before this rotation-support existed (no fingerprint prefix) keeps decrypting under
 whatever `ENCRYPTION_KEY` is current, exactly as before — no migration needed for those rows.
+
+### Row-Level Security (RLS)
+Some tenant-scoped tables (currently `WebhookDelivery`, `Refund` — see `prisma/migrations/20260724000000_enable_rls_webhookdelivery_refund`)
+have Postgres RLS enabled as defense-in-depth **behind** the existing `lib/repositories/*` application-level
+scoping, not a replacement for it. Every affected repository function routes through `withTenantContext`/
+`withPlatformContext` (`lib/db.ts`).
+
+**Critical gotcha, confirmed by direct testing:** Neon's default `neondb_owner` role has the `BYPASSRLS`
+attribute, which makes RLS policies a complete no-op for any connection using that role — `FORCE ROW LEVEL
+SECURITY` does not override `BYPASSRLS`. The app must connect as a separate, restricted role for RLS to mean
+anything. `scripts/create-app-runtime-role.ts` provisions this role (`app_runtime`, no BYPASSRLS/SUPERUSER/
+CREATEDB/CREATEROLE, granted DML on all current + future tables). Its connection string goes in
+`DATABASE_APP_URL` — `DATABASE_URL` (owner role) stays in use for migrations only, since the restricted role
+has no DDL privileges.
+
+To extend RLS to another table:
+1. Audit every call site of that Prisma model (not just its own repository file — grep the whole `app/`
+   and `lib/` trees) and confirm every one already routes through `lib/repositories/*`. If any don't,
+   fix that first — enabling `FORCE ROW LEVEL SECURITY` before every call site is updated will silently
+   break those call sites (they'll see zero rows / get insert failures).
+2. Convert the repository functions to route through `withTenantContext` (org-scoped) or
+   `withPlatformContext` (documented cross-org lookups only).
+3. Write the migration (`ENABLE`/`FORCE ROW LEVEL SECURITY` + `CREATE POLICY`, see the migration above
+   for the exact pattern).
+4. Run `npx tsx scripts/verify-rls.ts` (or an equivalent check for the new table) against
+   `DATABASE_APP_URL` — NOT `DATABASE_URL` — before considering it done. Testing against the owner role
+   will pass trivially and prove nothing.
+
+To rotate `app_runtime`'s password: re-run `npx tsx scripts/create-app-runtime-role.ts` (idempotent — it
+rotates the password on every run) and update `DATABASE_APP_URL` everywhere it's set.

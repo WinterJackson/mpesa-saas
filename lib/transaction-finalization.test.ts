@@ -8,13 +8,17 @@ vi.mock('next/server', () => ({
   after: vi.fn((fn) => { afterCallback = fn; }),
 }));
 
-vi.mock('@/lib/db', () => ({
-  prisma: {
+vi.mock('@/lib/db', () => {
+  const client = {
     webhookDelivery: {
       create: vi.fn().mockResolvedValue({}),
     },
-  },
-}));
+  };
+  return {
+    prisma: client,
+    withTenantContext: vi.fn((_organizationId: string, fn: (tx: typeof client) => unknown) => fn(client)),
+  };
+});
 
 vi.mock('@/lib/webhook', () => ({
   deliverWebhook: vi.fn().mockResolvedValue({ statusCode: 200, delivered: true, attempts: 1 }),
