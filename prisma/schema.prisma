@@ -129,6 +129,9 @@ model Subscription {
   plan             Plan          @relation(fields: [planId], references: [id])
   status           String        @default("active") // active | past_due | suspended | canceled
   currentPeriodEnd DateTime
+  // Dunning: when a charge fails the subscription goes past_due and gets a grace
+  // window; once gracePeriodEnd elapses unpaid it is soft-locked (suspended).
+  gracePeriodEnd   DateTime?
   invoices         Invoice[]
   usageRecords     UsageRecord[]
 }
@@ -138,8 +141,19 @@ model Invoice {
   subscriptionId String
   subscription   Subscription @relation(fields: [subscriptionId], references: [id])
   amount         Int          // total incl. VAT once VAT-registered, whole KES
-  status         String       @default("pending") // pending | paid | failed
+  // Lifecycle: pending (awaiting first charge) | processing (STK sent, awaiting
+  // the billing callback) | paid | failed (a charge attempt failed; dunning may
+  // retry). Terminal paid/failed for a given attempt is written ONLY by the
+  // billing STK callback — mirrors the merchant callback's sole-writer authority.
+  status         String       @default("pending")
   pdfUrl         String?
+  // ── PaySwift subscription collection via M-Pesa STK (Stage D) ──
+  mpesaCheckoutRequestId String?   @unique // correlates the platform billing STK callback
+  mpesaReceipt           String?   // M-Pesa receipt on a successful subscription charge
+  paidAt                 DateTime?
+  attemptCount           Int       @default(0) // dunning: number of STK charge attempts made
+  lastAttemptAt          DateTime?
+  failureReason          String?   // last charge failure (ResultDesc); never a secret
   // Kenyan tax compliance (Finance Act 2023 / eTIMS). etimsReference is null for
   // interim invoices issued before the eTIMS integration lands (flagged as a
   // known compliance gap); vatAmountKes is the 16% VAT component once PaySwift
@@ -147,6 +161,8 @@ model Invoice {
   etimsReference String?
   vatAmountKes   Int?
   issuedAt       DateTime     @default(now())
+
+  @@index([status])
 }
 
 model UsageRecord {

@@ -9,6 +9,7 @@ import {
   computeInvoiceAmount,
 } from '@/lib/repositories/billing';
 import { transactionUsageForPeriod } from '@/lib/repositories/transactions';
+import { chargeInvoice } from '@/lib/billing/subscription-billing';
 import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -46,10 +47,19 @@ export async function GET(request: Request) {
       await recordUsage(subscription.id, { periodStart, periodEnd, ...usage });
 
       const amount = computeInvoiceAmount(subscription.plan, usage.txCount);
-      await createInvoice(subscription.id, amount);
+      const invoice = await createInvoice(subscription.id, amount);
       await advanceBillingPeriod(subscription.id);
 
       after(() => notifyInvoiceIssued(subscription.organizationId, amount));
+      // Fire the first STK charge for this invoice post-response (fire-and-forget,
+      // never throws). Dunning (cron/process-billing) handles retries thereafter.
+      after(() =>
+        chargeInvoice({
+          id: invoice.id,
+          amount,
+          subscription: { organization: { billingMpesaPhone: subscription.organization.billingMpesaPhone } },
+        })
+      );
 
       processed++;
     }

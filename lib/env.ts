@@ -30,6 +30,18 @@ const envSchema = z.object({
   MPESA_SHORTCODE_LIVE: z.string().optional(),
   MPESA_PASSKEY_LIVE: z.string().optional(),
   MPESA_CALLBACK_URL_LIVE: z.string().url('MPESA_CALLBACK_URL_LIVE must be a valid URL').optional(),
+  // Optional: PaySwift's OWN M-Pesa collector for subscription billing (Stage D)
+  // — the Paybill that receives merchants' subscription payments, DISTINCT from
+  // any merchant's own shortcode. All optional: until a real Paybill is set,
+  // billing falls back to the pooled sandbox credentials (MPESA_* above) so the
+  // STK subscription-billing flow is demonstrable end-to-end in sandbox. Set
+  // these to go live with real subscription collection.
+  PLATFORM_BILLING_CONSUMER_KEY: z.string().optional(),
+  PLATFORM_BILLING_CONSUMER_SECRET: z.string().optional(),
+  PLATFORM_BILLING_SHORTCODE: z.string().optional(),
+  PLATFORM_BILLING_PASSKEY: z.string().optional(),
+  PLATFORM_BILLING_CALLBACK_URL: z.string().url('PLATFORM_BILLING_CALLBACK_URL must be a valid URL').optional(),
+  PLATFORM_BILLING_ENV: z.enum(['sandbox', 'live']).optional(),
   ENCRYPTION_KEY: z.string().min(44, 'ENCRYPTION_KEY must be a 32-byte base64 string'),
   // Optional: only set during a key-rotation window (see lib/crypto.ts's doc
   // comment / AGENTS.md runbook). Lets decryptSecret() still read rows
@@ -118,6 +130,12 @@ function validateEnv(): Env {
     MPESA_SHORTCODE_LIVE: process.env.MPESA_SHORTCODE_LIVE,
     MPESA_PASSKEY_LIVE: process.env.MPESA_PASSKEY_LIVE,
     MPESA_CALLBACK_URL_LIVE: process.env.MPESA_CALLBACK_URL_LIVE,
+    PLATFORM_BILLING_CONSUMER_KEY: process.env.PLATFORM_BILLING_CONSUMER_KEY,
+    PLATFORM_BILLING_CONSUMER_SECRET: process.env.PLATFORM_BILLING_CONSUMER_SECRET,
+    PLATFORM_BILLING_SHORTCODE: process.env.PLATFORM_BILLING_SHORTCODE,
+    PLATFORM_BILLING_PASSKEY: process.env.PLATFORM_BILLING_PASSKEY,
+    PLATFORM_BILLING_CALLBACK_URL: process.env.PLATFORM_BILLING_CALLBACK_URL,
+    PLATFORM_BILLING_ENV: process.env.PLATFORM_BILLING_ENV,
     ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
     ENCRYPTION_KEY_PREVIOUS: process.env.ENCRYPTION_KEY_PREVIOUS,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,

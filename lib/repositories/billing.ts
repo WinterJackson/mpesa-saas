@@ -151,6 +151,74 @@ export async function createInvoice(subscriptionId: string, amount: number) {
   return prisma.invoice.create({ data: { subscriptionId, amount, status: 'pending' } });
 }
 
+// ─── Subscription STK collection + dunning (Stage D) ─────────────────────────
+
+/**
+ * Marks an invoice as an in-flight STK charge: records the CheckoutRequestID to
+ * correlate the billing callback, flips status to `processing`, and increments
+ * the dunning attempt counter. A conditional update (only from pending/failed)
+ * guards against double-charging an invoice already awaiting a callback.
+ */
+export async function attachInvoiceCharge(invoiceId: string, checkoutRequestId: string) {
+  const result = await prisma.invoice.updateMany({
+    where: { id: invoiceId, status: { in: ['pending', 'failed'] } },
+    data: {
+      status: 'processing',
+      mpesaCheckoutRequestId: checkoutRequestId,
+      attemptCount: { increment: 1 },
+      lastAttemptAt: new Date(),
+    },
+  });
+  return result.count; // 0 = someone else already advanced it (idempotent no-op)
+}
+
+export async function findInvoiceByCheckoutRequestId(checkoutRequestId: string) {
+  return prisma.invoice.findUnique({
+    where: { mpesaCheckoutRequestId: checkoutRequestId },
+    include: { subscription: { include: { organization: true, plan: true } } },
+  });
+}
+
+/** Terminal success for a subscription charge — written ONLY by the billing callback. */
+export async function markInvoicePaidViaMpesa(invoiceId: string, mpesaReceipt: string | null) {
+  return prisma.invoice.update({
+    where: { id: invoiceId },
+    data: { status: 'paid', paidAt: new Date(), ...(mpesaReceipt ? { mpesaReceipt } : {}) },
+    include: { subscription: { select: { id: true, organizationId: true } } },
+  });
+}
+
+/** A charge attempt failed (callback non-zero, or the STK call itself threw). */
+export async function markInvoiceChargeFailed(invoiceId: string, failureReason: string) {
+  return prisma.invoice.updateMany({
+    where: { id: invoiceId, status: { in: ['processing', 'pending'] } },
+    data: { status: 'failed', failureReason: failureReason.slice(0, 200), lastAttemptAt: new Date() },
+  });
+}
+
+/**
+ * Open invoices needing dunning attention: not paid, not currently awaiting a
+ * callback. Oldest first. Includes the org (for the billing phone/email) + plan.
+ */
+export async function listInvoicesForDunning() {
+  return prisma.invoice.findMany({
+    where: { status: { in: ['pending', 'failed'] } },
+    orderBy: { issuedAt: 'asc' },
+    include: { subscription: { include: { organization: true, plan: true } } },
+  });
+}
+
+export async function setSubscriptionStatus(
+  subscriptionId: string,
+  status: 'active' | 'past_due' | 'suspended' | 'canceled',
+  gracePeriodEnd?: Date | null
+) {
+  return prisma.subscription.update({
+    where: { id: subscriptionId },
+    data: { status, ...(gracePeriodEnd !== undefined ? { gracePeriodEnd } : {}) },
+  });
+}
+
 export async function advanceBillingPeriod(subscriptionId: string) {
   return prisma.subscription.update({
     where: { id: subscriptionId },

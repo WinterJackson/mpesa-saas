@@ -202,6 +202,52 @@ export function invoicePaidEmail(p: { businessName: string; amount: number }): R
   };
 }
 
+export function invoicePaymentFailedEmail(p: {
+  businessName: string;
+  amount: number;
+  attemptsRemaining: number;
+}): RenderedEmail {
+  const willRetry = p.attemptsRemaining > 0;
+  return {
+    subject: `Action needed — subscription payment of ${money(p.amount)} didn't go through`,
+    html: renderEmail({
+      preview: `We couldn't collect your PaySwift subscription payment of ${money(p.amount)}.`,
+      heading: 'Subscription payment failed',
+      bodyHtml:
+        paragraph(
+          `Hi ${esc(p.businessName)}, we tried to collect your PaySwift subscription payment by M-Pesa but it didn't go through.`
+        ) +
+        infoTable([infoRow('Amount due', money(p.amount))]) +
+        paragraph(
+          willRetry
+            ? `We'll automatically try again over the next few days. To settle it now, open billing and tap Pay now — your account stays active in the meantime.`
+            : `We've made all our automatic attempts. Please settle this now to avoid your account being paused.`
+        ) +
+        paragraph(button('Pay now', `${appBaseUrl()}/billing`)),
+    }),
+    text: `Hi ${p.businessName}, your PaySwift subscription payment of ${money(p.amount)} failed. Settle it at ${appBaseUrl()}/billing`,
+  };
+}
+
+export function subscriptionSuspendedEmail(p: { businessName: string; amount: number }): RenderedEmail {
+  return {
+    subject: 'Your PaySwift subscription has been paused',
+    html: renderEmail({
+      preview: `Your PaySwift subscription is paused pending payment of ${money(p.amount)}.`,
+      heading: 'Subscription paused',
+      bodyHtml:
+        paragraph(
+          `Hi ${esc(p.businessName)}, after several unsuccessful attempts to collect ${money(p.amount)}, your PaySwift subscription has been paused.`
+        ) +
+        paragraph(
+          `Your data is safe. Settle the outstanding invoice to restore full access — reactivation is immediate once payment is confirmed.`
+        ) +
+        paragraph(button('Reactivate', `${appBaseUrl()}/billing`)),
+    }),
+    text: `Hi ${p.businessName}, your PaySwift subscription is paused pending payment of ${money(p.amount)}. Reactivate: ${appBaseUrl()}/billing`,
+  };
+}
+
 // ─── Security (events PaySwift owns — NOT Clerk auth) ─────────────────────────
 
 export function apiKeyCreatedEmail(p: { businessName: string; scope: string; keyPrefix: string }): RenderedEmail {

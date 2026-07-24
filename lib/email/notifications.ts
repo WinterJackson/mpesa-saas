@@ -123,6 +123,16 @@ export function notifyInvoicePaid(organizationId: string, amount: number): Promi
   return safe('invoice_paid', () => sendToOrg(organizationId, (name) => t.invoicePaidEmail({ businessName: name, amount }), 'invoice_paid'));
 }
 
+export function notifyInvoicePaymentFailed(organizationId: string, amount: number, attemptsRemaining: number): Promise<void> {
+  return safe('invoice_payment_failed', () =>
+    sendToOrg(organizationId, (name) => t.invoicePaymentFailedEmail({ businessName: name, amount, attemptsRemaining }), 'invoice_payment_failed'));
+}
+
+export function notifySubscriptionSuspended(organizationId: string, amount: number): Promise<void> {
+  return safe('subscription_suspended', () =>
+    sendToOrg(organizationId, (name) => t.subscriptionSuspendedEmail({ businessName: name, amount }), 'subscription_suspended'));
+}
+
 // ─── Security (PaySwift-owned, not Clerk auth) ───────────────────────────────
 
 export function notifyApiKeyCreated(organizationId: string, scope: string, keyPrefix: string): Promise<void> {
