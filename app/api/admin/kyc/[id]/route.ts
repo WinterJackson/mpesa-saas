@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { requireAdminCapability } from '@/lib/admin-auth';
+import { notifyKycApproved, notifyKycRejected } from '@/lib/email/notifications';
 import { updateKycDocumentReviewStatus, allRequiredDocumentsApproved } from '@/lib/repositories/kyc-documents';
 import { updateOrganizationKycStatus } from '@/lib/repositories/admin';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
@@ -52,10 +53,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         actorId: userId,
         action: 'organization.kyc_approved',
       });
+      // Only email the merchant once the WHOLE org is verified, not per-document.
+      after(() => notifyKycApproved(organizationId));
     }
 
     if (reviewStatus === 'rejected') {
       await updateOrganizationKycStatus(organizationId, 'rejected');
+      after(() => notifyKycRejected(organizationId));
     }
 
     return NextResponse.json({ success: true, data: document }, { status: 200 });

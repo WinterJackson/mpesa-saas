@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma, TransactionClient } from '@/lib/db';
 import { generateApiKey } from '@/lib/api-keys';
+import { notifyApiKeyCreated } from '@/lib/email/notifications';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { revokeActiveApiKeys, createApiKey } from '@/lib/repositories/api-keys';
 import { requireRole } from '@/lib/rbac';
@@ -69,6 +70,9 @@ export async function POST(request: Request) {
       action: 'api_key.regenerated',
       metadata: { scope: requestedScope, newKeyId: result.keyRecord.id },
     });
+
+    // Security notice (never includes the raw key — only the non-secret prefix).
+    after(() => notifyApiKeyCreated(organization.id, requestedScope, result.keyRecord.keyPrefix));
 
     return NextResponse.json({
       success: true,

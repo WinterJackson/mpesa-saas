@@ -80,6 +80,10 @@ describe('billing repository', () => {
   it('markInvoicePaid sets status to paid', async () => {
     vi.mocked(prisma.invoice.update).mockResolvedValueOnce({} as never);
     await markInvoicePaid('inv-1');
-    expect(prisma.invoice.update).toHaveBeenCalledWith({ where: { id: 'inv-1' }, data: { status: 'paid' } });
+    expect(prisma.invoice.update).toHaveBeenCalledWith({
+      where: { id: 'inv-1' },
+      data: { status: 'paid' },
+      include: { subscription: { select: { organizationId: true } } },
+    });
   });
 });

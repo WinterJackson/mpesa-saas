@@ -115,5 +115,11 @@ export async function listAllInvoices(status?: 'pending' | 'paid' | 'failed') {
 }
 
 export async function markInvoicePaid(invoiceId: string) {
-  return prisma.invoice.update({ where: { id: invoiceId }, data: { status: 'paid' } });
+  // Include the owning organizationId so callers can send the paid-receipt
+  // email without a second query.
+  return prisma.invoice.update({
+    where: { id: invoiceId },
+    data: { status: 'paid' },
+    include: { subscription: { select: { organizationId: true } } },
+  });
 }

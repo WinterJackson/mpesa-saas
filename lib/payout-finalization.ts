@@ -2,6 +2,7 @@ import { after } from 'next/server';
 import { dispatchWebhook } from '@/lib/webhook-dispatch';
 import { decryptSecret } from '@/lib/crypto';
 import { payoutEvent, refundEvent } from '@/lib/webhook-events';
+import { notifyPayoutConcluded, notifyRefundConcluded } from '@/lib/email/notifications';
 import type { Payout, Refund, Merchant } from '@prisma/client';
 import { logger } from '@/lib/logger';
 
@@ -10,6 +11,12 @@ import { logger } from '@/lib/logger';
 // finalizeTransactionAsync — fire-and-forget via after(), never throws.
 
 export function finalizePayoutAsync(payout: Payout, merchant: Merchant) {
+  // Email is independent of webhook config — a merchant with no webhook URL
+  // still gets the payout notification. Only terminal statuses email.
+  if (payout.status === 'completed' || payout.status === 'failed') {
+    after(() => notifyPayoutConcluded(payout));
+  }
+
   if (!merchant.webhookUrl) return;
 
   const event = payoutEvent(payout.status);
@@ -48,6 +55,9 @@ export function finalizePayoutAsync(payout: Payout, merchant: Merchant) {
 }
 
 export function finalizeRefundAsync(refund: Refund, merchant: Merchant) {
+  // notifyRefundConcluded self-limits to the terminal 'completed' refund.
+  after(() => notifyRefundConcluded(refund));
+
   if (!merchant.webhookUrl) return;
 
   const event = refundEvent(refund.status);

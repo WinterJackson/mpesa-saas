@@ -1,4 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// Real next/server after() throws outside a request scope; stub it to a
+// no-op so fire-and-forget email dispatch doesn't break the route under test.
+vi.mock('next/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/server')>()),
+  after: () => {},
+}));
 import { GET } from './route';
 import { findStalePendingRecords, upsertMismatch } from '@/lib/repositories/reconciliation';
 

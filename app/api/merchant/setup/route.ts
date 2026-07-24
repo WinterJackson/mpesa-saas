@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
+import { notifyWelcome } from '@/lib/email/notifications';
 import { prisma, TransactionClient } from '@/lib/db';
 import crypto from 'node:crypto';
 import { generateApiKey } from '@/lib/api-keys';
@@ -177,6 +178,9 @@ export async function POST(request: Request) {
     await client.users.updateUserMetadata(userId, {
       publicMetadata: { onboarded: true },
     });
+
+    // Business onboarding email (fire-and-forget; not a Clerk auth email).
+    after(() => notifyWelcome(created.organization.id));
 
     const response = NextResponse.json(
       { success: true, data: newMerchant },

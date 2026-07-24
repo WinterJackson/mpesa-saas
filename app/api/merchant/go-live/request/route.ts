@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getOrganizationContext, setLiveRequested } from '@/lib/repositories/organizations';
 import { isLiveCredentialConfigured } from '@/lib/repositories/daraja-credentials';
+import { notifyGoLiveRequested } from '@/lib/email/notifications';
 import { requireRole } from '@/lib/rbac';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
@@ -39,6 +40,8 @@ export async function POST() {
       actorId: userId,
       action: 'organization.go_live_requested',
     });
+
+    after(() => notifyGoLiveRequested(context.organization.id));
 
     return NextResponse.json({ success: true, data: { status: 'requested' } }, { status: 200 });
   } catch (error: unknown) {

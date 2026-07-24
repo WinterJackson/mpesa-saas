@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import crypto from 'node:crypto';
 import { encryptSecret } from '@/lib/crypto';
 import { getOrganizationContext, updateMerchantForOrganization } from '@/lib/repositories/organizations';
+import { notifyWebhookSecretRotated } from '@/lib/email/notifications';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
 
@@ -30,6 +31,8 @@ export async function POST() {
       actorId: userId,
       action: 'webhook_secret.rotated',
     });
+
+    after(() => notifyWebhookSecretRotated(organization.id));
 
     return NextResponse.json({
       success: true,

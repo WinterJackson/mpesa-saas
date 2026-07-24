@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { requireRole } from '@/lib/rbac';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { buildDataExport } from '@/lib/data-export';
+import { notifyDataExportReady } from '@/lib/email/notifications';
 import { logger } from '@/lib/logger';
 
 /**
@@ -37,6 +38,9 @@ export async function GET() {
       actorId: userId,
       action: 'data.exported',
     });
+
+    // Security notice that a personal-data export was generated (DPA audit trail).
+    after(() => notifyDataExportReady(context.organization.id));
 
     return new NextResponse(JSON.stringify({ success: true, data }, null, 2), {
       status: 200,

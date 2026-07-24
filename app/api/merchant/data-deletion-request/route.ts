@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { requireRole } from '@/lib/rbac';
@@ -8,6 +8,7 @@ import {
   hasPendingDeletionRequest,
   listDeletionRequestsForOrganization,
 } from '@/lib/repositories/data-deletion-requests';
+import { notifyDataDeletionRequested } from '@/lib/email/notifications';
 import { logger } from '@/lib/logger';
 
 /**
@@ -57,6 +58,8 @@ export async function POST(request: Request) {
       action: 'data.deletion_requested',
       metadata: { requestId: created.id },
     });
+
+    after(() => notifyDataDeletionRequested(context.organization.id));
 
     return NextResponse.json(
       {

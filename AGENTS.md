@@ -52,6 +52,15 @@ CRON_SECRET="..."
 # Observability
 NEXT_PUBLIC_SENTRY_DSN="..."
 
+# Optional — transactional email via Resend (Phase 4.5, lib/email/*). Business-
+# workflow notifications ONLY (KYC/go-live/payout/invoice/security/compliance);
+# Clerk still owns every identity/auth email. Dormant + fail-open until set:
+# nothing is sent, and no request is ever blocked. EMAIL_FROM must be a verified
+# Resend sender once enabled.
+# RESEND_API_KEY="re_..."
+# EMAIL_FROM="PaySwift <notifications@yourdomain.com>"
+# EMAIL_REPLY_TO="support@yourdomain.com"
+
 # Optional — KYC document storage (Cloudflare R2). lib/storage.ts throws a
 # clear error only when a KYC upload is attempted without these set.
 # R2_ACCOUNT_ID="..."

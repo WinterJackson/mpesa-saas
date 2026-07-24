@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { requireAdminCapability } from '@/lib/admin-auth';
 import { findOrganizationById, approveGoLive } from '@/lib/repositories/organizations';
+import { notifyGoLiveApproved } from '@/lib/email/notifications';
 import { isLiveCredentialConfigured } from '@/lib/repositories/daraja-credentials';
 import { getAccessToken } from '@/lib/daraja';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
@@ -50,6 +51,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       action: 'organization.live_approved',
       metadata: { approvedBy: userId },
     });
+
+    after(() => notifyGoLiveApproved(id));
 
     return NextResponse.json({ success: true, data: { environment: 'live' } }, { status: 200 });
   } catch (error: unknown) {

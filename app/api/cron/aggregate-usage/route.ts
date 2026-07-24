@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { isAuthorizedCronRequest } from '@/lib/cron-auth';
+import { notifyInvoiceIssued } from '@/lib/email/notifications';
 import {
   listSubscriptionsDueForBilling,
   recordUsage,
@@ -45,6 +46,8 @@ export async function GET(request: Request) {
       const amount = subscription.plan.monthlyFee + Math.round((usage.txVolume * subscription.plan.txFeeBps) / 10_000);
       await createInvoice(subscription.id, amount);
       await advanceBillingPeriod(subscription.id);
+
+      after(() => notifyInvoiceIssued(subscription.organizationId, amount));
 
       processed++;
     }

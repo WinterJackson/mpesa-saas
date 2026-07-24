@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { createKycDocument, listKycDocuments } from '@/lib/repositories/kyc-documents';
 import { uploadKycDocument } from '@/lib/storage';
+import { notifyKycSubmitted } from '@/lib/email/notifications';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
 
@@ -86,6 +87,9 @@ export async function POST(request: Request) {
       action: 'kyc_document.submitted',
       metadata: { documentType, documentId: document.id },
     });
+
+    // Confirm to the merchant + alert KYC reviewers (fire-and-forget).
+    after(() => notifyKycSubmitted(context.organization.id, documentType));
 
     return NextResponse.json({ success: true, data: document }, { status: 201 });
   } catch (error: unknown) {

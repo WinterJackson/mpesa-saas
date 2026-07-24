@@ -77,6 +77,15 @@ const envSchema = z.object({
   // Optional: public base URL used to build the Shopify OAuth redirect_uri and
   // the auto-registered webhook address. Falls back to the request origin.
   APP_BASE_URL: z.string().url('APP_BASE_URL must be a valid URL').optional(),
+  // Optional: Resend transactional email (lib/email/*). Sends business-workflow
+  // notifications only — Clerk still owns every identity/auth email (password
+  // reset, verification, team invites). The whole email layer stays dormant and
+  // fails OPEN when RESEND_API_KEY is unset, so it can never block a request or
+  // money movement. EMAIL_FROM must be a verified Resend sender; falls back to a
+  // safe onboarding@ placeholder that Resend will reject (logged, non-fatal).
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
+  EMAIL_REPLY_TO: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -127,6 +136,9 @@ function validateEnv(): Env {
     SHOPIFY_CLIENT_SECRET: process.env.SHOPIFY_CLIENT_SECRET,
     SHOPIFY_APP_SCOPES: process.env.SHOPIFY_APP_SCOPES,
     APP_BASE_URL: process.env.APP_BASE_URL,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    EMAIL_FROM: process.env.EMAIL_FROM,
+    EMAIL_REPLY_TO: process.env.EMAIL_REPLY_TO,
   });
 
   if (!result.success) {

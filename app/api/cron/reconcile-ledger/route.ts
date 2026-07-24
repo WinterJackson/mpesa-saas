@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { isAuthorizedCronRequest } from '@/lib/cron-auth';
 import { findStalePendingRecords, upsertMismatch } from '@/lib/repositories/reconciliation';
+import { notifyReconciliationMismatches } from '@/lib/email/notifications';
 import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -23,6 +24,9 @@ export async function GET(request: Request) {
     for (const record of stale) {
       await upsertMismatch(record);
     }
+
+    // Alert ops staff so mismatches don't sit unnoticed until someone opens the console.
+    after(() => notifyReconciliationMismatches(stale.length));
 
     logger.info(`[Reconcile Ledger] Surfaced ${stale.length} stale record(s) for review.`);
     return NextResponse.json({ success: true, surfaced: stale.length });

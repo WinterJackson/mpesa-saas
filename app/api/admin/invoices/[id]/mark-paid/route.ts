@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { requireAdminCapability } from '@/lib/admin-auth';
 import { markInvoicePaid } from '@/lib/repositories/billing';
+import { notifyInvoicePaid } from '@/lib/email/notifications';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
 
@@ -33,6 +34,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       action: 'invoice.marked_paid',
       metadata: { invoiceId: id, amount: invoice.amount },
     });
+
+    const organizationId = invoice.subscription?.organizationId;
+    if (organizationId) {
+      after(() => notifyInvoicePaid(organizationId, invoice.amount));
+    }
 
     return NextResponse.json({ success: true, data: invoice }, { status: 200 });
   } catch (error: unknown) {

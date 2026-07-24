@@ -23,6 +23,7 @@ PaySwift works for non-developers and developers alike:
 - **Read-replica-ready** — read-heavy admin/reporting queries route through `prismaReadonly`; set `DATABASE_REPLICA_URL` to point them at a Neon replica when needed.
 - **Compliance groundwork (Kenya DPA)** — self-service data export and an admin-reviewed data-deletion request flow (deletion is never auto-executed). Runbooks: `scripts/restore-drill.md` (Neon PITR DR) and `scripts/incident-response.md` (Sev scale + breach notification). Reliability/SLA docs at `/docs/reliability`.
 - **CI hardening** — gitleaks secret scanning and `npm audit` (critical) added, alongside the existing CodeQL + Dependabot.
+- **Transactional email (Resend)** — branded business-workflow notifications across the lifecycle: onboarding, KYC (submitted/approved/rejected), go-live (requested/approved), payouts/refunds, invoices (issued/paid), security notices (API key created, webhook secret rotated), and Kenya-DPA data export/deletion — plus internal staff alerts (new KYC, go-live requested, reconciliation mismatches). Merchant addresses resolve from Clerk, staff from `AdminUser`. **Clerk still owns all identity/auth email** (password, verification, sign-in, team invites) — Resend never touches those. Optional and fail-open: dormant until `RESEND_API_KEY`/`EMAIL_FROM` are set, and email can never block a request or money movement.
 
 ## 🚀 Quick Start & Setup
 
