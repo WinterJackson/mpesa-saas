@@ -8,20 +8,8 @@ vi.mock('next/server', () => ({
   after: vi.fn((fn) => { afterCallback = fn; }),
 }));
 
-vi.mock('@/lib/db', () => {
-  const client = {
-    webhookDelivery: {
-      create: vi.fn().mockResolvedValue({}),
-    },
-  };
-  return {
-    prisma: client,
-    withTenantContext: vi.fn((_organizationId: string, fn: (tx: typeof client) => unknown) => fn(client)),
-  };
-});
-
-vi.mock('@/lib/webhook', () => ({
-  deliverWebhook: vi.fn().mockResolvedValue({ statusCode: 200, delivered: true, attempts: 1 }),
+vi.mock('@/lib/webhook-dispatch', () => ({
+  dispatchWebhook: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/lib/shopify', () => ({
@@ -34,37 +22,36 @@ vi.mock('@/lib/crypto', () => ({
 
 describe('transaction-finalization', () => {
   it('calls webhook if merchant has webhookUrl', async () => {
-    const { deliverWebhook } = await import('@/lib/webhook');
-    const { prisma } = await import('@/lib/db');
-    
+    const { dispatchWebhook } = await import('@/lib/webhook-dispatch');
+
     // reset mocks
     vi.clearAllMocks();
-    
+
     const tx = {
       id: 'tx_123',
       amount: 100,
       phone: '254700000000',
       status: 'completed',
     } as unknown as Transaction;
-    
+
     const merchant = {
       webhookUrl: 'https://example.com/hook',
       webhookSecret: 'enc_secret123',
     } as unknown as Merchant;
-    
+
     finalizeTransactionAsync(tx, merchant);
     await afterCallback!();
-    
+
     // next/server after() was mocked to be captured and executed
-    expect(deliverWebhook).toHaveBeenCalledWith(
-      'https://example.com/hook',
-      expect.objectContaining({ event: 'payment.completed' }),
-      'secret123',
-      undefined,
-      undefined,
-      tx.organizationId
+    expect(dispatchWebhook).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: tx.organizationId,
+        event: 'payment.completed',
+        transactionId: 'tx_123',
+        url: 'https://example.com/hook',
+        secret: 'secret123',
+      })
     );
-    expect(prisma.webhookDelivery.create).toHaveBeenCalled();
   });
   
   it('calls shopify confirmation if source is shopify and merchant has config', async () => {

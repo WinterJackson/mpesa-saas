@@ -1,8 +1,7 @@
 import { after } from 'next/server';
-import { deliverWebhook } from '@/lib/webhook';
+import { dispatchWebhook } from '@/lib/webhook-dispatch';
 import { markShopifyOrderPaid } from '@/lib/shopify';
 import { decryptSecret } from '@/lib/crypto';
-import { recordDelivery } from '@/lib/repositories/webhook-deliveries';
 import { paymentEvent } from '@/lib/webhook-events';
 import type { Transaction, Merchant } from '@prisma/client';
 import { logger } from '@/lib/logger';
@@ -33,22 +32,14 @@ export function finalizeTransactionAsync(
     after(async () => {
       try {
         const secret = merchant.webhookSecret ? decryptSecret(merchant.webhookSecret) ?? undefined : undefined;
-        const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, secret, undefined, undefined, updatedTransaction.organizationId);
-
-        await recordDelivery({
+        await dispatchWebhook({
           organizationId: updatedTransaction.organizationId,
           event,
           transactionId: updatedTransaction.id,
           url: merchant.webhookUrl!,
           payload: webhookPayload,
-          statusCode: result.statusCode ?? null,
-          success: result.delivered,
-          attempt: result.attempts,
+          secret,
         });
-
-        if (!result.delivered) {
-          logger.warn(`[Finalize Webhook] Delivery failed to ${merchant.webhookUrl} (HTTP ${result.statusCode})`);
-        }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
         logger.error(`[Finalize Webhook] Uncaught error for ${merchant.webhookUrl}: ${msg}`);

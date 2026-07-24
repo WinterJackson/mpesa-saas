@@ -1,7 +1,6 @@
 import { after } from 'next/server';
-import { deliverWebhook } from '@/lib/webhook';
+import { dispatchWebhook } from '@/lib/webhook-dispatch';
 import { decryptSecret } from '@/lib/crypto';
-import { recordDelivery } from '@/lib/repositories/webhook-deliveries';
 import { payoutEvent, refundEvent } from '@/lib/webhook-events';
 import type { Payout, Refund, Merchant } from '@prisma/client';
 import { logger } from '@/lib/logger';
@@ -33,20 +32,14 @@ export function finalizePayoutAsync(payout: Payout, merchant: Merchant) {
   after(async () => {
     try {
       const secret = merchant.webhookSecret ? decryptSecret(merchant.webhookSecret) ?? undefined : undefined;
-      const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, secret, undefined, undefined, payout.organizationId);
-      await recordDelivery({
+      await dispatchWebhook({
         organizationId: payout.organizationId,
         event,
         payoutId: payout.id,
         url: merchant.webhookUrl!,
         payload: webhookPayload,
-        statusCode: result.statusCode ?? null,
-        success: result.delivered,
-        attempt: result.attempts,
+        secret,
       });
-      if (!result.delivered) {
-        logger.warn(`[Finalize Payout Webhook] Delivery failed to ${merchant.webhookUrl} (HTTP ${result.statusCode})`);
-      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       logger.error(`[Finalize Payout Webhook] Uncaught error for ${merchant.webhookUrl}: ${msg}`);
@@ -77,20 +70,14 @@ export function finalizeRefundAsync(refund: Refund, merchant: Merchant) {
   after(async () => {
     try {
       const secret = merchant.webhookSecret ? decryptSecret(merchant.webhookSecret) ?? undefined : undefined;
-      const result = await deliverWebhook(merchant.webhookUrl!, webhookPayload, secret, undefined, undefined, refund.organizationId);
-      await recordDelivery({
+      await dispatchWebhook({
         organizationId: refund.organizationId,
         event,
         refundId: refund.id,
         url: merchant.webhookUrl!,
         payload: webhookPayload,
-        statusCode: result.statusCode ?? null,
-        success: result.delivered,
-        attempt: result.attempts,
+        secret,
       });
-      if (!result.delivered) {
-        logger.warn(`[Finalize Refund Webhook] Delivery failed to ${merchant.webhookUrl} (HTTP ${result.statusCode})`);
-      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       logger.error(`[Finalize Refund Webhook] Uncaught error for ${merchant.webhookUrl}: ${msg}`);

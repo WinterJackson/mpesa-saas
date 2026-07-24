@@ -43,6 +43,12 @@ UPSTASH_REDIS_REST_TOKEN="..."
 # Cron Jobs
 CRON_SECRET="..."
 
+# Optional — durable webhook delivery via Inngest (Phase 4, Stage 5). Scoped to
+# webhook delivery only; the 3 app/api/cron/* jobs stay on cron-job.org. Until
+# set, webhook delivery falls back to the direct in-request path (unchanged).
+# INNGEST_EVENT_KEY="..."
+# INNGEST_SIGNING_KEY="..."
+
 # Observability
 NEXT_PUBLIC_SENTRY_DSN="..."
 
