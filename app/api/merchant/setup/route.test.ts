@@ -35,7 +35,7 @@ vi.mock('@/lib/repositories/audit-log', () => ({
 
 vi.mock('@/lib/repositories/billing', () => ({
   ensurePlansSeeded: vi.fn(),
-  getPlanByName: vi.fn().mockResolvedValue({ id: 'plan-starter', name: 'Starter', monthlyFee: 0, txFeeBps: 150, txCapMonthly: 200 }),
+  getPlanByName: vi.fn().mockResolvedValue({ id: 'plan-starter', name: 'Starter', monthlyFee: 0, includedTransactions: 100, overageFeeKes: 10 }),
   ensureTrialSubscription: vi.fn(),
 }));
 

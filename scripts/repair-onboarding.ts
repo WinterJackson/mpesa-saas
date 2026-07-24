@@ -23,10 +23,12 @@ const TRIAL_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 async function main() {
   console.log('Repairing incomplete onboarding for existing merchants...\n');
 
-  // Ensure the placeholder plans exist (idempotent).
+  // Ensure the real plan tiers exist (idempotent). Flat overage model — keep in
+  // sync with SEED_PLANS in lib/repositories/billing.ts.
   for (const plan of [
-    { name: 'Starter', monthlyFee: 0, txFeeBps: 150, txCapMonthly: 200 },
-    { name: 'Growth', monthlyFee: 5000, txFeeBps: 100, txCapMonthly: null },
+    { name: 'Starter', monthlyFee: 0, includedTransactions: 100, overageFeeKes: 10, apiRateLimitPerMin: 60 },
+    { name: 'Growth', monthlyFee: 2900, includedTransactions: 1000, overageFeeKes: 6, apiRateLimitPerMin: 300 },
+    { name: 'Scale', monthlyFee: 9900, includedTransactions: 10000, overageFeeKes: 3, apiRateLimitPerMin: 1200 },
   ]) {
     await prisma.plan.upsert({ where: { name: plan.name }, update: {}, create: plan });
   }

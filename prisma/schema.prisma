@@ -15,6 +15,13 @@ model Organization {
   liveApprovedAt  DateTime?
   liveApprovedBy  String?
   environment     String   @default("sandbox")
+  // Billing/tax details (PaySwift subscription billing — Stage A of the billing
+  // strategy doc). billingMpesaPhone is the number charged for the PaySwift
+  // subscription and is DISTINCT from the org's own live Daraja shortcode used
+  // for its customers' payments — never conflate the two.
+  kraPin              String? // KRA PIN — required on a valid Kenyan (eTIMS) tax invoice
+  billingContactEmail String? // invoice/dunning recipient; may differ from the owner's login email
+  billingMpesaPhone   String? // M-Pesa number billed for the PaySwift subscription
   createdAt       DateTime @default(now())
 
   merchant         Merchant?
@@ -102,13 +109,16 @@ model AccountBalanceSnapshot {
 // ensurePlansSeeded() — NOT a confirmed product/pricing decision, flagged
 // explicitly in that module for a real decision before launch.
 model Plan {
-  id                String         @id @default(cuid())
-  name              String         @unique // Starter | Growth | Scale
-  monthlyFee        Int            // KES, minor units (whole shillings, matching Transaction.amount's convention)
-  txFeeBps          Int            // basis points of transaction volume
-  txCapMonthly      Int?           // null = uncapped
-  apiRateLimitPerMin Int?          // per-org API requests/min per route class; null = platform default
-  subscriptions     Subscription[]
+  id                   String         @id @default(cuid())
+  name                 String         @unique // Starter | Growth | Scale | Enterprise
+  monthlyFee           Int            // KES, whole shillings (matching Transaction.amount's convention)
+  // FLAT-fee pricing (never a % of GMV — see the billing/pricing strategy doc):
+  // a plan includes `includedTransactions` live transactions per period, then
+  // charges a flat `overageFeeKes` per transaction beyond that.
+  includedTransactions Int            @default(0)
+  overageFeeKes        Int            @default(0) // flat KES per overage transaction, NOT basis points
+  apiRateLimitPerMin   Int?           // per-org API requests/min per route class; null = platform default
+  subscriptions        Subscription[]
 }
 
 model Subscription {
@@ -127,9 +137,15 @@ model Invoice {
   id             String       @id @default(cuid())
   subscriptionId String
   subscription   Subscription @relation(fields: [subscriptionId], references: [id])
-  amount         Int
+  amount         Int          // total incl. VAT once VAT-registered, whole KES
   status         String       @default("pending") // pending | paid | failed
   pdfUrl         String?
+  // Kenyan tax compliance (Finance Act 2023 / eTIMS). etimsReference is null for
+  // interim invoices issued before the eTIMS integration lands (flagged as a
+  // known compliance gap); vatAmountKes is the 16% VAT component once PaySwift
+  // itself is VAT-registered, else null.
+  etimsReference String?
+  vatAmountKes   Int?
   issuedAt       DateTime     @default(now())
 }
 

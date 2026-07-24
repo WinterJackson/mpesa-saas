@@ -6,6 +6,7 @@ import {
   recordUsage,
   createInvoice,
   advanceBillingPeriod,
+  computeInvoiceAmount,
 } from '@/lib/repositories/billing';
 import { transactionUsageForPeriod } from '@/lib/repositories/transactions';
 import { logger } from '@/lib/logger';
@@ -20,7 +21,8 @@ const PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
  * Scheduled job (external cron via cron-job.org): for every Subscription whose billing
  * period has elapsed, aggregates the org's completed-transaction volume for
  * that period into a UsageRecord, generates a pending Invoice
- * (monthlyFee + txVolume * txFeeBps), and advances the billing period.
+ * (monthlyFee + flat overageFeeKes per transaction beyond the plan's included
+ * volume — never a % of value), and advances the billing period.
  *
  * This phase ships manual collection only (per the explicit scope decision
  * to defer live Flutterwave/Paystack integration) — an admin marks the
@@ -43,7 +45,7 @@ export async function GET(request: Request) {
       const usage = await transactionUsageForPeriod(subscription.organizationId, periodStart, periodEnd);
       await recordUsage(subscription.id, { periodStart, periodEnd, ...usage });
 
-      const amount = subscription.plan.monthlyFee + Math.round((usage.txVolume * subscription.plan.txFeeBps) / 10_000);
+      const amount = computeInvoiceAmount(subscription.plan, usage.txCount);
       await createInvoice(subscription.id, amount);
       await advanceBillingPeriod(subscription.id);
 

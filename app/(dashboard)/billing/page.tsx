@@ -40,7 +40,7 @@ export default async function BillingPage() {
               <CardTitle className="text-2xl">{subscription.plan.name}</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-1">
-              <p>KES {subscription.plan.monthlyFee.toLocaleString()}/month + {(subscription.plan.txFeeBps / 100).toFixed(2)}% per transaction</p>
+              <p>KES {subscription.plan.monthlyFee.toLocaleString()}/month · {subscription.plan.includedTransactions.toLocaleString()} transactions included, then KES {subscription.plan.overageFeeKes} per extra transaction</p>
               <p>Renews {subscription.currentPeriodEnd.toLocaleDateString()}</p>
               <p>Status: <span className="capitalize">{subscription.status}</span></p>
             </CardContent>

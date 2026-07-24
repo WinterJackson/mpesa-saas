@@ -20,6 +20,10 @@ vi.mock('@/lib/repositories/billing', () => ({
   recordUsage: vi.fn(),
   createInvoice: vi.fn(),
   advanceBillingPeriod: vi.fn(),
+  // Pure helper — use the real flat-fee computation so the invoice-amount
+  // assertion actually exercises it.
+  computeInvoiceAmount: (plan: { monthlyFee: number; includedTransactions: number; overageFeeKes: number }, txCount: number) =>
+    plan.monthlyFee + Math.max(0, txCount - plan.includedTransactions) * plan.overageFeeKes,
 }));
 
 vi.mock('@/lib/repositories/transactions', () => ({
@@ -60,7 +64,7 @@ describe('GET /api/cron/aggregate-usage', () => {
         id: 'sub-1',
         organizationId: 'org-1',
         currentPeriodEnd: periodEnd,
-        plan: { monthlyFee: 5000, txFeeBps: 100 },
+        plan: { monthlyFee: 2900, includedTransactions: 5, overageFeeKes: 6 },
       },
     ] as never);
     vi.mocked(transactionUsageForPeriod).mockResolvedValueOnce({ txCount: 10, txVolume: 100_000 });
@@ -69,8 +73,8 @@ describe('GET /api/cron/aggregate-usage', () => {
     const data = await response.json();
 
     expect(recordUsage).toHaveBeenCalledWith('sub-1', expect.objectContaining({ txCount: 10, txVolume: 100_000 }));
-    // 5000 (monthlyFee) + 100_000 * 100bps/10000 = 5000 + 1000 = 6000
-    expect(createInvoice).toHaveBeenCalledWith('sub-1', 6000);
+    // Flat overage: 2900 (monthlyFee) + max(0, 10 - 5) * 6 = 2900 + 30 = 2930
+    expect(createInvoice).toHaveBeenCalledWith('sub-1', 2930);
     expect(advanceBillingPeriod).toHaveBeenCalledWith('sub-1');
     expect(data.processed).toBe(1);
   });
