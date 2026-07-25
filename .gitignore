@@ -47,9 +47,14 @@ certs/
 
 # Isolated verification build output
 .next-verify
+
+# Design tooling artifacts
 .ds-sync/
 ds-bundle/
-.design-sync/.cache/
-.design-sync/learnings/
-.design-sync/node_modules
-.design-sync/compiled.css
+.design-sync/
+
+# Agent configuration files (local-only, not needed in repo)
+AGENTS.md
+CLAUDE.md
+DESIGN_SYSTEM.md
+.gemini/
