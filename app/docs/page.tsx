@@ -22,7 +22,7 @@ export default function DocsLandingPage() {
         </header>
       </div>
 
-      <main className="container mx-auto max-w-4xl px-4 py-10 space-y-12">
+      <main className="container mx-auto max-w-7xl px-4 md:px-8 py-10 space-y-12">
         <div className="space-y-3">
           <h1 className="text-3xl font-bold tracking-tight">PaySwift documentation</h1>
           <p className="text-muted-foreground text-lg">

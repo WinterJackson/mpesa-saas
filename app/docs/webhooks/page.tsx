@@ -20,7 +20,7 @@ export default function WebhooksGuidePage() {
         </header>
       </div>
 
-      <main className="container mx-auto max-w-3xl px-4 py-10 space-y-8">
+      <main className="container mx-auto max-w-7xl px-4 md:px-8 py-10 space-y-8">
         <div>
           <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground">← Docs</Link>
           <h1 className="mt-2 text-3xl font-bold tracking-tight">Webhooks</h1>

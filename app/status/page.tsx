@@ -59,7 +59,7 @@ export default async function StatusPage() {
   const days = buildDayRange(HISTORY_DAYS);
 
   return (
-    <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto py-12 px-4 md:px-8">
       <div className="flex items-center gap-3 mb-2">
         <span className={`h-3 w-3 rounded-full ${STATUS_DOT_CLASS[overall]}`} />
         <h1 className="text-3xl font-extrabold text-foreground">PaySwift Status</h1>

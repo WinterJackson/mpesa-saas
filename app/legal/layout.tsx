@@ -16,6 +16,7 @@ export default function LegalLayout({
           <nav className="flex items-center gap-5 text-sm font-medium">
             <Link href="/legal/terms" className="text-muted-foreground transition-colors hover:text-foreground">Terms</Link>
             <Link href="/legal/privacy" className="text-muted-foreground transition-colors hover:text-foreground">Privacy</Link>
+            <Link href="/legal/cookies" className="text-muted-foreground transition-colors hover:text-foreground">Cookies</Link>
           </nav>
         </div>
       </header>

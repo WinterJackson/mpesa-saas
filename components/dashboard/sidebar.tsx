@@ -22,6 +22,14 @@ const navItems: { name: string; href: string; icon: typeof LayoutDashboard; role
   { name: "Settings", href: "/settings", icon: Settings, roles: ["owner", "admin", "developer"] },
 ];
 
+// A nav item is active on its exact route AND on any nested route beneath it
+// (e.g. Settings stays active across /settings/account, /settings/webhooks…).
+// The Dashboard root only matches exactly, so it never lights up for siblings.
+function isNavActive(pathname: string, href: string): boolean {
+  if (href === "/dashboard") return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function Sidebar({ role }: { role?: string }) {
   const pathname = usePathname();
   const items = navItems.filter((item) => !item.roles || (role && item.roles.includes(role as Role)));
@@ -36,7 +44,7 @@ export function Sidebar({ role }: { role?: string }) {
           </div>
           <nav className="flex-1 p-4 flex flex-col gap-2">
             {items.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = isNavActive(pathname, item.href);
               return (
                 <Link
                   key={item.name}
@@ -61,7 +69,7 @@ export function Sidebar({ role }: { role?: string }) {
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 pl-[15px] pr-0 pb-[calc(var(--spacing-floating-header)+env(safe-area-inset-bottom))]">
         <nav className="flex h-20 items-center justify-around rounded-l-[40px] rounded-r-none bg-sidebar text-sidebar-foreground shadow-floating-header px-3">
           {items.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = isNavActive(pathname, item.href);
             return (
               <Link
                 key={item.name}

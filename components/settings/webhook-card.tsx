@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link2, Save, Send, Eye, EyeOff, Copy, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { Explainer } from "@/components/settings/explainer";
 import {
   Dialog,
   DialogContent,
@@ -137,11 +138,24 @@ export function WebhookCard({ initialUrl, initialSecret }: WebhookCardProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl">
           <Link2 className="size-5" />
-          Webhook Configuration
+          Payment notifications (webhooks)
         </CardTitle>
         <CardDescription>
-          Receive real-time HTTPS notifications when payment statuses change.
+          Have PaySwift automatically ping your website the moment a payment succeeds or fails. Optional and
+          technical — most stores don&apos;t need it.
         </CardDescription>
+        <Explainer label="What is a webhook, and do I need one?">
+          <p>
+            A webhook is an <strong className="text-foreground">automatic message</strong> PaySwift sends to
+            your website the instant a payment&apos;s status changes — so your system can, for example, mark
+            an order as paid without anyone refreshing a page.
+          </p>
+          <p>
+            <strong className="text-foreground">You can leave this blank.</strong> Payments still work
+            perfectly without it; you simply track them here in your dashboard instead. It&apos;s only useful
+            if a developer is connecting PaySwift to your own software.
+          </p>
+        </Explainer>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -167,7 +181,15 @@ export function WebhookCard({ initialUrl, initialSecret }: WebhookCardProps) {
         </div>
 
         <div className="space-y-2 mt-4">
-          <Label>Signing Secret</Label>
+          <Label>Signing secret</Label>
+          <Explainer label="What is the signing secret for?">
+            <p>
+              It&apos;s a shared password your developer uses to{" "}
+              <strong className="text-foreground">confirm a notification truly came from PaySwift</strong>{" "}
+              and wasn&apos;t faked by someone else. Your website checks each webhook against this secret
+              before trusting it. Keep it private, like the API key.
+            </p>
+          </Explainer>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Input 

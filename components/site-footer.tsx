@@ -89,6 +89,12 @@ export function SiteFooter() {
                 >
                   Privacy
                 </Link>
+                <Link
+                  href="/legal/cookies"
+                  className="text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors w-fit"
+                >
+                  Cookies
+                </Link>
               </nav>
             </div>
           </div>

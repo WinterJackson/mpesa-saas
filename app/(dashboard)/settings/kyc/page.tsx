@@ -26,8 +26,8 @@ export default async function KycSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">KYC Verification</h1>
-        <p className="text-sm text-muted-foreground">Required before your organization can go live with real M-Pesa payments.</p>
+        <h2 className="text-3xl font-bold tracking-tight">KYC Verification</h2>
+        <p className="text-muted-foreground mt-1">Required before your organization can go live with real M-Pesa payments.</p>
       </div>
 
       <Card>

@@ -39,6 +39,7 @@ model Organization {
   paymentLinks     PaymentLink[]
   deletionRequests DataDeletionRequest[]
   notifications    Notification[]
+  notificationPreference NotificationPreference?
 }
 
 // A shareable, PaySwift-hosted payment link — the no-code way for a merchant to
@@ -526,6 +527,24 @@ model Notification {
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, read])
+}
+
+// Per-organization notification preferences. Controls which CATEGORIES of
+// in-app notifications (the dashboard bell) are generated for the org. Absent a
+// row, sensible defaults apply (see lib/repositories/notification-preferences).
+// Deliberately does NOT gate transactional/critical email — like most SaaS,
+// account-security and receipt emails always send; these toggles cover the
+// optional, informational in-app feed and product updates.
+model NotificationPreference {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  paymentAlerts  Boolean      @default(true)  // payment.* — collection successes/failures
+  payoutAlerts   Boolean      @default(true)  // payout.* / refund.* — money out
+  billingAlerts  Boolean      @default(true)  // invoice.* / subscription.* — PaySwift billing
+  securityAlerts Boolean      @default(true)  // kyc.* / golive.* — account & verification
+  productUpdates Boolean      @default(false) // opt-in product news & tips
+  updatedAt      DateTime     @updatedAt
 }
 
 // Rolling health-check history backing the public self-hosted /status page

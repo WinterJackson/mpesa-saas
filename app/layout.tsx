@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { ClerkProvider } from '@clerk/nextjs';
 import { Fredoka, Karla, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SupportWidget } from "@/components/support-widget";
+import { CookieConsent } from "@/components/cookie-consent";
 import "./globals.css";
 
 // Body: Karla — a humanist sans with quirky details that keep the pairing
@@ -54,6 +56,8 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             {children}
+            <SupportWidget />
+            <CookieConsent />
             <Toaster richColors position="top-right" />
           </ThemeProvider>
         </body>

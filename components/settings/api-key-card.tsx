@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Key, Copy, CheckCircle2, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { Explainer } from "@/components/settings/explainer";
 import {
   Dialog,
   DialogContent,
@@ -78,13 +79,25 @@ export function ApiKeyCard({ initialKeyPrefix, initialScope, currentRole }: ApiK
           API Key
         </CardTitle>
         <CardDescription>
-          This key lets your own website&apos;s backend authenticate with PaySwift. Include
-          it as the x-api-key header on every request to /api/v1/payments/initiate.
-          Never use it in browser or mobile app code where customers could see it — it
-          belongs only on your server.
-          <br /><br />
-          <strong>For security, we only ever show your full API key once, right when it&apos;s created. If you&apos;ve lost it, regenerate a new one.</strong>
+          A private password that lets software your developer builds talk to PaySwift. You only need this
+          if someone is coding a custom checkout on your own website.
         </CardDescription>
+        <Explainer label="What is an API key, and do I need one?">
+          <p>
+            Think of it like a <strong className="text-foreground">staff key to the back office</strong>:
+            it proves a request to PaySwift really came from your business. A developer puts it on your
+            website&apos;s server so your site can start M-Pesa payments automatically.
+          </p>
+          <p>
+            <strong className="text-foreground">You do not need this if</strong> you collect payments with
+            Payment Links or the Shopify app — those already work without any code.
+          </p>
+          <p>
+            Keep it secret. Never paste it into a web page, email or chat where a customer could see it — it
+            belongs only on your server. For safety we show the full key just once, when it&apos;s created;
+            if you lose it, regenerate a new one below.
+          </p>
+        </Explainer>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">

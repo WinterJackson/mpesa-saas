@@ -1,6 +1,5 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { listDeliveries } from '@/lib/repositories/webhook-deliveries';
 import { WebhookInspector } from '@/components/settings/webhook-inspector';
@@ -23,9 +22,8 @@ export default async function WebhookDeliveriesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/settings" className="text-sm text-muted-foreground hover:text-foreground">← Back to settings</Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">Webhook Deliveries</h1>
-        <p className="text-sm text-muted-foreground">
+        <h2 className="text-3xl font-bold tracking-tight">Webhook deliveries</h2>
+        <p className="text-muted-foreground mt-1">
           Every event PaySwift has sent to your endpoint — inspect payloads, HTTP responses, and
           redeliver failed events.
         </p>

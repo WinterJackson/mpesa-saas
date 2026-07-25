@@ -201,3 +201,18 @@ export async function updateMerchantForOrganization(
     data,
   });
 }
+
+/**
+ * Renames the business. The display name is denormalized onto both Organization
+ * and Merchant (the dashboard header reads Merchant first, falling back to
+ * Organization), so both are updated atomically to keep them in sync.
+ */
+export async function updateBusinessName(
+  organizationId: string,
+  businessName: string
+): Promise<void> {
+  await prisma.$transaction([
+    prisma.organization.update({ where: { id: organizationId }, data: { businessName } }),
+    prisma.merchant.update({ where: { organizationId }, data: { businessName } }),
+  ]);
+}

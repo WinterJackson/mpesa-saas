@@ -43,8 +43,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           {adminAuth.admin.role === 'superadmin' && (
             <Link href="/admin/admins" className="text-muted-foreground hover:text-foreground">Admins</Link>
           )}
-          <span className="ml-auto text-xs text-muted-foreground">
-            Signed in as {adminAuth.admin.role}
+          <Link href="/admin/profile" className="ml-auto text-muted-foreground hover:text-foreground">Account</Link>
+          <span className="text-xs text-muted-foreground">
+            {adminAuth.admin.role}
           </span>
         </nav>
       </header>
