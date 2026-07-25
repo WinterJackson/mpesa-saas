@@ -1,9 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { Download } from "lucide-react";
 import { getOrganizationContext } from "@/lib/repositories/organizations";
 import { listTransactionsPage } from "@/lib/repositories/transactions";
 import { getViewEnvironment } from "@/lib/view-env";
 import { TransactionsTable } from "@/components/dashboard/transactions-table";
+import { Button } from "@/components/ui/button";
 
 export const metadata = {
   title: "Transactions - PaySwift",
@@ -25,11 +27,18 @@ export default async function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
-        <p className="text-sm text-muted-foreground">
-          Full history of all payments through your account.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
+          <p className="text-sm text-muted-foreground">
+            Full history of all payments through your account.
+          </p>
+        </div>
+        <a href={`/api/merchant/transactions/export?environment=${viewEnv}`} download>
+          <Button variant="outline" size="sm">
+            <Download className="mr-1.5 size-4" /> Export CSV
+          </Button>
+        </a>
       </div>
       <TransactionsTable
         initialTransactions={transactions}

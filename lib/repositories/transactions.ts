@@ -138,6 +138,29 @@ export async function listTransactionsPage(
   return toPage(rows, limit);
 }
 
+/** Max rows a single CSV export returns, to bound memory/response size. */
+export const EXPORT_ROW_CAP = 10_000;
+
+/**
+ * Org-scoped transactions for a CSV export (newest first), optionally filtered by
+ * environment/status. Capped at EXPORT_ROW_CAP rows.
+ */
+export async function listTransactionsForExport(
+  organizationId: string,
+  opts: { environment?: string; status?: string } = {}
+): Promise<TransactionListItem[]> {
+  return prisma.transaction.findMany({
+    where: {
+      organizationId,
+      ...(opts.environment ? { environment: opts.environment } : {}),
+      ...(opts.status ? { status: opts.status } : {}),
+    },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: EXPORT_ROW_CAP,
+    select: { ...LIST_SELECT, mpesaReceipt: true },
+  });
+}
+
 export async function transactionStatusSummary(
   organizationId: string,
   opts: { environment?: string } = {}
