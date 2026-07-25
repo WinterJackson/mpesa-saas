@@ -12,11 +12,16 @@ export function ImpersonateButton({ organizationId }: { organizationId: string }
     try {
       const response = await fetch(`/api/admin/organizations/${organizationId}/impersonate`, { method: 'POST' });
       const data = await response.json();
-      // A 501 here is expected until Clerk User Impersonation is configured —
-      // the audit log entry is still written server-side either way.
-      toast.info(data.error || 'Impersonation recorded.');
+      if (response.ok && data.ticketUrl) {
+        toast.success('Starting a view-as session…');
+        // Hand off to Clerk's ticket sign-in, establishing a session AS the
+        // merchant owner (with an actor claim identifying you).
+        window.location.href = data.ticketUrl;
+        return;
+      }
+      toast.error(data.error || 'Could not start impersonation.');
     } catch {
-      toast.error('Failed to record impersonation attempt.');
+      toast.error('Failed to start impersonation.');
     } finally {
       setIsLoading(false);
     }
@@ -24,7 +29,7 @@ export function ImpersonateButton({ organizationId }: { organizationId: string }
 
   return (
     <Button type="button" variant="outline" size="sm" onClick={handleClick} disabled={isLoading}>
-      {isLoading ? 'Recording...' : 'Impersonate (support)'}
+      {isLoading ? 'Starting…' : 'View as merchant'}
     </Button>
   );
 }
