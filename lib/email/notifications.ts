@@ -2,7 +2,13 @@ import type { Payout, Refund } from '@prisma/client';
 import { sendEmail, isEmailConfigured } from '@/lib/email/client';
 import { resolveOrgRecipients, resolveStaffRecipients } from '@/lib/email/recipients';
 import * as t from '@/lib/email/templates';
+import { recordNotification } from '@/lib/inapp-notify';
 import { logger } from '@/lib/logger';
+
+/** Small money formatter for in-app notification bodies (no email dependency). */
+function kesText(amount: number): string {
+  return `KES ${Number(amount).toLocaleString('en-KE')}`;
+}
 
 /**
  * High-level notification API — the ONLY thing business code (routes,
@@ -67,10 +73,12 @@ export function notifyKycSubmitted(organizationId: string, documentType: string)
 }
 
 export function notifyKycApproved(organizationId: string): Promise<void> {
+  recordNotification({ organizationId, type: 'kyc.approved', title: 'KYC approved', body: 'Your business is verified. You can now request go-live to accept real payments.', href: '/settings/kyc' });
   return safe('kyc_approved', () => sendToOrg(organizationId, (name) => t.kycApprovedEmail(name), 'kyc_approved'));
 }
 
 export function notifyKycRejected(organizationId: string, reason?: string): Promise<void> {
+  recordNotification({ organizationId, type: 'kyc.rejected', title: 'KYC needs attention', body: reason ? `Your verification was not approved: ${reason}` : 'Your verification was not approved. Please re-upload your documents.', href: '/settings/kyc' });
   return safe('kyc_rejected', () => sendToOrg(organizationId, (name) => t.kycRejectedEmail(name, reason), 'kyc_rejected'));
 }
 
@@ -86,12 +94,22 @@ export function notifyGoLiveRequested(organizationId: string): Promise<void> {
 }
 
 export function notifyGoLiveApproved(organizationId: string): Promise<void> {
+  recordNotification({ organizationId, type: 'golive.approved', title: 'You’re approved to go live', body: 'Your account can now accept real M-Pesa payments. Switch to live mode in Settings.', href: '/settings' });
   return safe('go_live_approved', () => sendToOrg(organizationId, (name) => t.goLiveApprovedEmail(name), 'go_live_approved'));
 }
 
 // ─── Payouts / refunds ───────────────────────────────────────────────────────
 
 export function notifyPayoutConcluded(payout: Payout): Promise<void> {
+  recordNotification({
+    organizationId: payout.organizationId,
+    type: payout.status === 'completed' ? 'payout.completed' : 'payout.failed',
+    title: payout.status === 'completed' ? 'Payout completed' : 'Payout failed',
+    body: payout.status === 'completed'
+      ? `${kesText(payout.amount)} was sent successfully.`
+      : `Your ${kesText(payout.amount)} payout didn’t go through${payout.resultDesc ? `: ${payout.resultDesc}` : '.'}`,
+    href: '/payouts',
+  });
   return safe('payout', () =>
     sendToOrg(
       payout.organizationId,
@@ -105,6 +123,15 @@ export function notifyPayoutConcluded(payout: Payout): Promise<void> {
 }
 
 export function notifyRefundConcluded(refund: Refund): Promise<void> {
+  recordNotification({
+    organizationId: refund.organizationId,
+    type: refund.status === 'completed' ? 'refund.completed' : 'refund.failed',
+    title: refund.status === 'completed' ? 'Refund completed' : 'Refund failed',
+    body: refund.status === 'completed'
+      ? `${kesText(refund.amount)} was refunded to your customer.`
+      : `A ${kesText(refund.amount)} refund didn’t go through${refund.resultDesc ? `: ${refund.resultDesc}` : '.'}`,
+    href: '/payouts',
+  });
   // Only the terminal, successful refund gets a merchant email; a failed refund
   // surfaces via the dashboard/webhook, not a customer-facing "refund done".
   if (refund.status !== 'completed') return Promise.resolve();
@@ -120,15 +147,18 @@ export function notifyInvoiceIssued(organizationId: string, amount: number): Pro
 }
 
 export function notifyInvoicePaid(organizationId: string, amount: number): Promise<void> {
+  recordNotification({ organizationId, type: 'invoice.paid', title: 'Subscription paid', body: `Your ${kesText(amount)} subscription payment was received. Thank you!`, href: '/billing' });
   return safe('invoice_paid', () => sendToOrg(organizationId, (name) => t.invoicePaidEmail({ businessName: name, amount }), 'invoice_paid'));
 }
 
 export function notifyInvoicePaymentFailed(organizationId: string, amount: number, attemptsRemaining: number): Promise<void> {
+  recordNotification({ organizationId, type: 'invoice.failed', title: 'Subscription payment failed', body: `We couldn’t collect your ${kesText(amount)} subscription payment. Pay now from Billing to keep your account active.`, href: '/billing' });
   return safe('invoice_payment_failed', () =>
     sendToOrg(organizationId, (name) => t.invoicePaymentFailedEmail({ businessName: name, amount, attemptsRemaining }), 'invoice_payment_failed'));
 }
 
 export function notifySubscriptionSuspended(organizationId: string, amount: number): Promise<void> {
+  recordNotification({ organizationId, type: 'subscription.suspended', title: 'Subscription paused', body: `Your subscription was paused after an unpaid ${kesText(amount)} invoice. Pay now to restore full access.`, href: '/billing' });
   return safe('subscription_suspended', () =>
     sendToOrg(organizationId, (name) => t.subscriptionSuspendedEmail({ businessName: name, amount }), 'subscription_suspended'));
 }

@@ -6,6 +6,7 @@ import { getSubscriptionStatus } from "@/lib/repositories/billing";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/dashboard/user-menu";
+import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { EnvViewToggle } from "@/components/dashboard/env-view-toggle";
 import { DashboardBillingBanner } from "@/components/billing/dashboard-billing-banner";
 import { getViewEnvironment } from "@/lib/view-env";
@@ -69,6 +70,7 @@ export default async function DashboardLayout({
                 <div className="hidden md:block">
                   <EnvViewToggle initial={viewEnv} />
                 </div>
+                <NotificationBell />
                 <ThemeToggle />
                 <UserMenu />
               </div>

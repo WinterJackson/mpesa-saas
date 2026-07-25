@@ -38,6 +38,7 @@ model Organization {
   darajaCommands   DarajaCommand[]
   paymentLinks     PaymentLink[]
   deletionRequests DataDeletionRequest[]
+  notifications    Notification[]
 }
 
 // A shareable, PaySwift-hosted payment link — the no-code way for a merchant to
@@ -506,6 +507,25 @@ model DataDeletionRequest {
 
   @@index([status, createdAt(sort: Desc)])
   @@index([organizationId])
+}
+
+// In-app notification feed for a merchant organization (the dashboard bell).
+// Distinct from transactional email (lib/email) — these are the persisted,
+// mark-as-read alerts a merchant sees in-product. Org-scoped; never holds a
+// secret. Written fire-and-forget alongside the existing notify* email calls.
+model Notification {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  type           String       // e.g. kyc.approved | payout.completed | invoice.paid
+  title          String
+  body           String
+  href           String?      // in-app deep link (e.g. /payouts, /billing, /settings/kyc)
+  read           Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([organizationId, read])
 }
 
 // Rolling health-check history backing the public self-hosted /status page
