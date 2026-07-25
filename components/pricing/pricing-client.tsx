@@ -81,7 +81,7 @@ function BillingToggle({ annual, onChange }: { annual: boolean; onChange: (v: bo
         >
           Annual
         </button>
-        <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
+        <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary dark:text-white">
           Save {Math.round(ANNUAL_DISCOUNT * 100)}%
         </span>
       </span>
@@ -208,7 +208,7 @@ function CostEstimator() {
           <label htmlFor="tx-estimate" className="text-sm font-medium text-muted-foreground">
             Payments per month
           </label>
-          <span className="font-heading text-2xl font-extrabold text-primary">
+          <span className="font-heading text-2xl font-extrabold text-primary dark:text-white">
             {tx.toLocaleString("en-KE")}
             {tx >= ESTIMATOR_MAX && "+"}
           </span>
