@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmButton } from '@/components/ui/confirm-button';
+import { AlertTriangle } from 'lucide-react';
 import { sendPayoutAction, refundTransactionAction } from '@/lib/actions/payouts';
 import { toast } from 'sonner';
 
@@ -54,11 +55,13 @@ export function PayoutsView({
   refunds,
   refundable,
   environment,
+  lastBalance,
 }: {
   payouts: PayoutRow[];
   refunds: RefundRow[];
   refundable: RefundableTx[];
   environment: string;
+  lastBalance?: { workingBalance: number | null; checkedAt: string } | null;
 }) {
   const router = useRouter();
   const [phone, setPhone] = useState('');
@@ -66,6 +69,14 @@ export function PayoutsView({
   const [remarks, setRemarks] = useState('');
   const [sending, setSending] = useState(false);
   const [busyTxId, setBusyTxId] = useState<string | null>(null);
+
+  // Low-balance heads-up: the last known M-Pesa working balance for this
+  // shortcode. Advisory only — the snapshot can be stale, so it never blocks a
+  // send, it just warns before a payout that would likely fail.
+  const knownBalance = lastBalance?.workingBalance ?? null;
+  const amountNum = Number(amount);
+  const insufficient =
+    knownBalance != null && Number.isFinite(amountNum) && amountNum > 0 && amountNum > knownBalance;
 
   async function doSendPayout() {
     setSending(true);
@@ -137,12 +148,30 @@ export function PayoutsView({
                 disabled={sending || !phone.trim() || !amount.trim()}
                 onConfirm={doSendPayout}
                 title="Send this payout?"
-                description={`${amount ? kes(Number(amount)) : 'This amount'} will be sent to ${phone || 'the phone number'} via M-Pesa. This cannot be undone once confirmed.`}
+                description={`${amount ? kes(Number(amount)) : 'This amount'} will be sent to ${phone || 'the phone number'} via M-Pesa. This cannot be undone once confirmed.${insufficient ? ` Heads up: this is more than your last known balance of ${kes(knownBalance as number)}.` : ''}`}
                 confirmLabel="Send payout"
               >
                 {sending ? 'Sending…' : 'Send payout'}
               </ConfirmButton>
             </div>
+
+            {/* Last known balance + low-balance warning */}
+            {knownBalance != null && (
+              <div className="mt-3 text-xs">
+                {insufficient ? (
+                  <p className="flex items-center gap-1.5 rounded-md border border-[#fab219]/40 bg-[#fab219]/10 px-3 py-2 font-medium text-foreground">
+                    <AlertTriangle className="size-3.5 shrink-0 text-[#fab219]" />
+                    This is more than your last known balance ({kes(knownBalance)}). The payout may fail —
+                    top up your M-Pesa account first.
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">
+                    Last known balance: <span className="font-medium text-foreground">{kes(knownBalance)}</span>
+                    {lastBalance?.checkedAt && ` · as of ${new Date(lastBalance.checkedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}`}
+                  </p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
