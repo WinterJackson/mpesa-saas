@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import {
   ensurePlansSeeded,
   createTrialSubscription,
+  ensureSubscriptionForPlan,
+  isSelfServePlanName,
   listSubscriptionsDueForBilling,
   recordUsage,
   createInvoice,
@@ -17,10 +19,11 @@ import {
 vi.mock('@/lib/db', () => ({
   prisma: {
     plan: { upsert: vi.fn() },
-    subscription: { create: vi.fn(), findMany: vi.fn(), update: vi.fn() },
+    subscription: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     usageRecord: { create: vi.fn() },
     invoice: { create: vi.fn(), update: vi.fn() },
     transaction: { aggregate: vi.fn() },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -54,6 +57,49 @@ describe('billing repository', () => {
     expect(call.data.organizationId).toBe('org-1');
     expect(call.data.status).toBe('active');
     expect((call.data.currentPeriodEnd as Date).getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('isSelfServePlanName accepts Starter/Growth/Scale and rejects Enterprise/Sandbox', () => {
+    expect(isSelfServePlanName('Growth')).toBe(true);
+    expect(isSelfServePlanName('Starter')).toBe(true);
+    expect(isSelfServePlanName('Enterprise')).toBe(false);
+    expect(isSelfServePlanName('Sandbox')).toBe(false);
+  });
+
+  it('ensureSubscriptionForPlan is a no-op when the org already has a subscription', async () => {
+    vi.mocked(prisma.subscription.findUnique).mockResolvedValueOnce({ id: 'sub-1', status: 'active' } as never);
+    const res = await ensureSubscriptionForPlan('org-1', { id: 'plan-growth', monthlyFee: 2900 });
+    expect(res).toEqual({ id: 'sub-1', status: 'active' });
+    expect(prisma.subscription.create).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('ensureSubscriptionForPlan activates a FREE plan immediately (no invoice)', async () => {
+    vi.mocked(prisma.subscription.findUnique).mockResolvedValueOnce(null);
+    vi.mocked(prisma.subscription.create).mockResolvedValueOnce({ id: 'sub-free', status: 'active' } as never);
+    const res = await ensureSubscriptionForPlan('org-1', { id: 'plan-starter', monthlyFee: 0 });
+    expect(res.status).toBe('active');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.invoice.create).not.toHaveBeenCalled();
+  });
+
+  it('ensureSubscriptionForPlan creates a PAID plan as incomplete with a first-period invoice', async () => {
+    vi.mocked(prisma.subscription.findUnique).mockResolvedValueOnce(null);
+    const tx = {
+      subscription: { create: vi.fn().mockResolvedValue({ id: 'sub-paid', status: 'incomplete' }) },
+      invoice: { create: vi.fn().mockResolvedValue({ id: 'inv-1' }) },
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(prisma.$transaction).mockImplementationOnce(((cb: (t: unknown) => unknown) => cb(tx)) as any);
+
+    const res = await ensureSubscriptionForPlan('org-1', { id: 'plan-growth', monthlyFee: 2900 });
+    expect(res).toEqual({ id: 'sub-paid', status: 'incomplete' });
+    expect(tx.subscription.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ planId: 'plan-growth', status: 'incomplete' }) })
+    );
+    expect(tx.invoice.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ subscriptionId: 'sub-paid', amount: 2900, status: 'pending' }) })
+    );
   });
 
   it('listSubscriptionsDueForBilling only returns active/past_due subscriptions past their period end', async () => {

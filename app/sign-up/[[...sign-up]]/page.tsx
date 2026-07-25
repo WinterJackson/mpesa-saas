@@ -5,7 +5,21 @@ import { Logo } from '@/components/logo';
 import Link from 'next/link';
 import Image from 'next/image';
 
-export default function Page() {
+const SELF_SERVE_PLANS = ['Starter', 'Growth', 'Scale'];
+
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string }>;
+}) {
+  // Carry the plan chosen on /pricing through Clerk sign-up into onboarding, so
+  // a paid selection (Growth/Scale) becomes a real subscription + first invoice.
+  const { plan } = await searchParams;
+  const selectedPlan = plan && SELF_SERVE_PLANS.includes(plan) ? plan : null;
+  const onboardingUrl = selectedPlan
+    ? `/onboarding?plan=${encodeURIComponent(selectedPlan)}`
+    : '/onboarding';
+
   return (
     <div className="flex min-h-screen w-full flex-col md:flex-row bg-background relative overflow-hidden">
       {/* Left Half (Primary Green on Medium/Large Screens, Hidden on Small) */}
@@ -56,7 +70,8 @@ export default function Page() {
           <div className="flex md:hidden justify-center mb-8">
              <Logo />
           </div>
-          <SignUp 
+          <SignUp
+            fallbackRedirectUrl={onboardingUrl}
             appearance={{
               variables: {
                 colorWarning: "#132a13",

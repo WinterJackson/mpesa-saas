@@ -76,9 +76,13 @@ export async function POST(request: Request) {
     } else {
       // ── Failure: mark this attempt failed and enter/extend the grace window ──
       await markInvoiceChargeFailed(invoice.id, ResultDesc ?? `ResultCode ${ResultCode}`);
-      // First failure moves the subscription to past_due with a grace period;
-      // subsequent failures keep the existing window (don't push it out).
-      if (subscription.status === 'active' || subscription.gracePeriodEnd === null) {
+      // A never-activated paid plan (`incomplete`, pay-first) STAYS incomplete on
+      // a failed first payment — there is no active access to protect with a grace
+      // window; the outstanding invoice keeps it gated until it's paid. For an
+      // already-active subscription, the first failure moves it to past_due with a
+      // grace period; subsequent failures keep the existing window (don't push it out).
+      if (subscription.status !== 'incomplete' &&
+          (subscription.status === 'active' || subscription.gracePeriodEnd === null)) {
         await setSubscriptionStatus(
           subscription.id,
           'past_due',

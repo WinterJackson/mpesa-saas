@@ -10,7 +10,7 @@ import { POST } from './route';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { seedPooledSandboxCredential } from '@/lib/repositories/daraja-credentials';
-import { ensurePlansSeeded, ensureTrialSubscription } from '@/lib/repositories/billing';
+import { ensurePlansSeeded, ensureSubscriptionForPlan } from '@/lib/repositories/billing';
 
 vi.mock('@clerk/nextjs/server', () => ({
   auth: vi.fn(),
@@ -36,7 +36,8 @@ vi.mock('@/lib/repositories/audit-log', () => ({
 vi.mock('@/lib/repositories/billing', () => ({
   ensurePlansSeeded: vi.fn(),
   getPlanByName: vi.fn().mockResolvedValue({ id: 'plan-starter', name: 'Starter', monthlyFee: 0, includedTransactions: 100, overageFeeKes: 10 }),
-  ensureTrialSubscription: vi.fn(),
+  ensureSubscriptionForPlan: vi.fn().mockResolvedValue({ id: 'sub-1', status: 'active' }),
+  isSelfServePlanName: (name: string) => ['Starter', 'Growth', 'Scale'].includes(name),
 }));
 
 vi.mock('@/lib/crypto', () => ({
@@ -99,7 +100,7 @@ describe('POST /api/merchant/setup', () => {
     expect(createOrganization).not.toHaveBeenCalled();
     // Self-heal: idempotently ensure credentials, subscription, and onboarded flag.
     expect(seedPooledSandboxCredential).toHaveBeenCalledWith('org-1', expect.objectContaining({ consumerKey: 'ck' }));
-    expect(ensureTrialSubscription).toHaveBeenCalledWith('org-1', 'plan-starter');
+    expect(ensureSubscriptionForPlan).toHaveBeenCalledWith('org-1', expect.objectContaining({ id: 'plan-starter' }));
     expect(updateUserMetadata).toHaveBeenCalledWith('user-1', { publicMetadata: { onboarded: true } });
   });
 
@@ -128,7 +129,7 @@ describe('POST /api/merchant/setup', () => {
       expect.objectContaining({ consumerKey: 'ck', shortcode: '174379' })
     );
     expect(ensurePlansSeeded).toHaveBeenCalled();
-    expect(ensureTrialSubscription).toHaveBeenCalledWith('org-1', 'plan-starter');
+    expect(ensureSubscriptionForPlan).toHaveBeenCalledWith('org-1', expect.objectContaining({ id: 'plan-starter' }));
     expect(updateUserMetadata).toHaveBeenCalledWith('user-1', { publicMetadata: { onboarded: true } });
     expect(response.status).toBe(201);
     expect(data.success).toBe(true);

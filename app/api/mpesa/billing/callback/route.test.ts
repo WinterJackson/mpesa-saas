@@ -89,6 +89,29 @@ describe('POST /api/mpesa/billing/callback', () => {
     expect(markInvoicePaidViaMpesa).not.toHaveBeenCalled();
   });
 
+  it('activates an incomplete (pay-first) subscription on ResultCode 0', async () => {
+    vi.mocked(findInvoiceByCheckoutRequestId).mockResolvedValueOnce({
+      ...activeInvoice,
+      subscription: { id: 'sub-2', organizationId: 'org-2', status: 'incomplete', gracePeriodEnd: null },
+    } as never);
+    const res = await POST(callback(stk('ws_CO_3', 0, 'QHJ8ABC')));
+    expect(res.status).toBe(200);
+    expect(markInvoicePaidViaMpesa).toHaveBeenCalledWith('inv-1', 'QHJ8ABC');
+    expect(setSubscriptionStatus).toHaveBeenCalledWith('sub-2', 'active', null);
+  });
+
+  it('keeps an incomplete subscription incomplete on a failed first payment (no past_due/grace)', async () => {
+    vi.mocked(findInvoiceByCheckoutRequestId).mockResolvedValueOnce({
+      ...activeInvoice,
+      subscription: { id: 'sub-2', organizationId: 'org-2', status: 'incomplete', gracePeriodEnd: null },
+    } as never);
+    const res = await POST(callback(stk('ws_CO_4', 1032)));
+    expect(res.status).toBe(200);
+    expect(markInvoiceChargeFailed).toHaveBeenCalled();
+    // Never activated → do NOT move to past_due or open a grace window.
+    expect(setSubscriptionStatus).not.toHaveBeenCalled();
+  });
+
   it('is idempotent: a duplicate callback for an already-paid invoice does nothing', async () => {
     vi.mocked(findInvoiceByCheckoutRequestId).mockResolvedValueOnce({
       ...activeInvoice,

@@ -43,7 +43,7 @@ function StepIndicator({ step }: { step: number }) {
   );
 }
 
-export function OnboardingWizard() {
+export function OnboardingWizard({ selectedPlan = null }: { selectedPlan?: string | null }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
 
@@ -51,6 +51,10 @@ export function OnboardingWizard() {
   const [businessName, setBusinessName] = useState('');
   const [isSubmittingBusiness, setIsSubmittingBusiness] = useState(false);
   const [businessError, setBusinessError] = useState<string | null>(null);
+
+  // Whether the chosen plan needs a first payment before it activates (set from
+  // the setup response, which is authoritative — a paid plan → `incomplete`).
+  const [requiresPayment, setRequiresPayment] = useState(false);
 
   // Step 1: KYC
   const [uploadingType, setUploadingType] = useState<string | null>(null);
@@ -82,11 +86,12 @@ export function OnboardingWizard() {
       const response = await fetch('/api/merchant/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessName: trimmed }),
+        body: JSON.stringify({ businessName: trimmed, plan: selectedPlan ?? undefined }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to set up your account');
 
+      setRequiresPayment(Boolean(data.requiresPayment));
       toast.success('Organization created — sandbox payments are ready to use.');
       setStep(1);
     } catch (err: unknown) {
@@ -166,7 +171,11 @@ export function OnboardingWizard() {
         <Card className="shadow-lg border-border">
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-2xl font-bold tracking-tight">Welcome to PaySwift</CardTitle>
-            <CardDescription>Enter your business details to create your organization.</CardDescription>
+            <CardDescription>
+              {selectedPlan && selectedPlan !== 'Starter'
+                ? `You're signing up for the ${selectedPlan} plan. Enter your business details to get started.`
+                : 'Enter your business details to create your organization.'}
+            </CardDescription>
           </CardHeader>
           <form onSubmit={handleBusinessSubmit}>
             <CardContent className="space-y-4">
@@ -319,16 +328,23 @@ export function OnboardingWizard() {
       {step === 4 && (
         <Card className="shadow-lg border-border">
           <CardHeader>
-            <CardTitle>You&apos;re all set</CardTitle>
+            <CardTitle>{requiresPayment ? 'One last step — activate your plan' : "You're all set"}</CardTitle>
             <CardDescription>
-              Your organization is live in sandbox mode. Going live with real M-Pesa payments requires
-              KYC approval and is completed from Settings once your documents are reviewed.
+              {requiresPayment
+                ? `Your organization is ready in sandbox mode. To unlock your ${selectedPlan ?? 'paid'} plan, add your billing M-Pesa number and complete the first payment on the Billing page — it activates the moment payment is confirmed.`
+                : 'Your organization is live in sandbox mode. Going live with real M-Pesa payments requires KYC approval and is completed from Settings once your documents are reviewed.'}
             </CardDescription>
           </CardHeader>
           <CardFooter>
-            <Button type="button" className="w-full font-semibold" onClick={() => router.push('/dashboard')}>
-              Go to Dashboard
-            </Button>
+            {requiresPayment ? (
+              <Button type="button" className="w-full font-semibold" onClick={() => router.push('/billing')}>
+                Add payment &amp; activate
+              </Button>
+            ) : (
+              <Button type="button" className="w-full font-semibold" onClick={() => router.push('/dashboard')}>
+                Go to Dashboard
+              </Button>
+            )}
           </CardFooter>
         </Card>
       )}

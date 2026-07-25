@@ -1,10 +1,12 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getOrganizationContext } from "@/lib/repositories/organizations";
+import { getSubscriptionStatus } from "@/lib/repositories/billing";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/dashboard/user-menu";
 import { EnvViewToggle } from "@/components/dashboard/env-view-toggle";
+import { DashboardBillingBanner } from "@/components/billing/dashboard-billing-banner";
 import { getViewEnvironment } from "@/lib/view-env";
 
 export default async function DashboardLayout({
@@ -27,6 +29,14 @@ export default async function DashboardLayout({
 
   const businessName = context.merchant?.businessName ?? context.organization.businessName;
   const viewEnv = await getViewEnvironment(context.merchant?.environment);
+
+  // Surface a payment prompt across the dashboard when the subscription needs it
+  // (paid plan awaiting first payment, failed renewal, or soft-locked).
+  const subStatus = await getSubscriptionStatus(context.organization.id);
+  const billingAlert =
+    subStatus && ['incomplete', 'past_due', 'suspended'].includes(subStatus.status)
+      ? { status: subStatus.status as 'incomplete' | 'past_due' | 'suspended', planName: subStatus.plan.name }
+      : null;
 
   return (
     <div className="flex h-screen overflow-hidden bg-dashboard bg-cover bg-center bg-no-repeat relative z-0">
@@ -62,6 +72,9 @@ export default async function DashboardLayout({
         {/* Scrollable Main Area */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="mx-auto max-w-7xl 2xl:max-w-[1600px]">
+            {billingAlert && (
+              <DashboardBillingBanner status={billingAlert.status} planName={billingAlert.planName} />
+            )}
             {children}
           </div>
         </main>

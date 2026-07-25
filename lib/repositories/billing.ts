@@ -27,6 +27,18 @@ const SEED_PLANS = SEEDABLE_TIERS.map((t) => ({
 /** Platform fallback when an org has no subscription/plan or the plan's limit is null. */
 export const DEFAULT_API_RATE_LIMIT_PER_MIN = 60;
 
+/**
+ * Plans a merchant can pick / switch to without talking to sales. Enterprise is
+ * custom ("contact sales") and Sandbox is a free test tier that is NOT a Plan
+ * row — both are deliberately excluded here.
+ */
+export const SELF_SERVE_PLAN_NAMES = ['Starter', 'Growth', 'Scale'] as const;
+export type SelfServePlanName = (typeof SELF_SERVE_PLAN_NAMES)[number];
+
+export function isSelfServePlanName(name: string): name is SelfServePlanName {
+  return (SELF_SERVE_PLAN_NAMES as readonly string[]).includes(name);
+}
+
 const TRIAL_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 
 export async function ensurePlansSeeded(): Promise<void> {
@@ -83,6 +95,75 @@ export async function ensureTrialSubscription(organizationId: string, planId: st
   const existing = await prisma.subscription.findUnique({ where: { organizationId }, select: { id: true } });
   if (existing) return existing;
   return createTrialSubscription(organizationId, planId);
+}
+
+/**
+ * Idempotent subscription bootstrap keyed on the CHOSEN plan (onboarding).
+ * Creates a subscription only if the org has none:
+ *  - FREE plan (monthlyFee 0, e.g. Starter): an immediately-`active` subscription
+ *    — the free tier needs no payment.
+ *  - PAID plan (Growth/Scale): a subscription in `incomplete` status PLUS a
+ *    first-period invoice, so the merchant is directed to pay before the plan
+ *    activates (pay-first). The billing STK callback flips it to `active` on the
+ *    first successful payment.
+ * Returns `{ id, status }` for both the created and pre-existing case, so the
+ * caller can tell whether payment is still required. Safe on retries/self-heal.
+ */
+export async function ensureSubscriptionForPlan(
+  organizationId: string,
+  plan: { id: string; monthlyFee: number }
+): Promise<{ id: string; status: string }> {
+  const existing = await prisma.subscription.findUnique({
+    where: { organizationId },
+    select: { id: true, status: true },
+  });
+  if (existing) return existing;
+
+  if (plan.monthlyFee === 0) {
+    const sub = await createTrialSubscription(organizationId, plan.id);
+    return { id: sub.id, status: sub.status };
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const sub = await tx.subscription.create({
+      data: {
+        organizationId,
+        planId: plan.id,
+        status: 'incomplete',
+        currentPeriodEnd: new Date(Date.now() + TRIAL_PERIOD_MS),
+      },
+    });
+    await tx.invoice.create({
+      data: { subscriptionId: sub.id, amount: plan.monthlyFee, status: 'pending' },
+    });
+    return { id: sub.id, status: sub.status };
+  });
+}
+
+/**
+ * Switches a subscription onto a different plan (self-service plan change).
+ * The caller decides the resulting status (`active` when access continues,
+ * `incomplete` when a paid plan must be paid before it unlocks) and issues any
+ * fresh invoice separately.
+ */
+export async function updateSubscriptionPlan(
+  subscriptionId: string,
+  planId: string,
+  status: 'active' | 'incomplete',
+  gracePeriodEnd: Date | null = null
+) {
+  return prisma.subscription.update({
+    where: { id: subscriptionId },
+    data: { planId, status, gracePeriodEnd },
+  });
+}
+
+/** Lean subscription status + plan name for the dashboard-wide activation banner. */
+export async function getSubscriptionStatus(organizationId: string) {
+  return prisma.subscription.findUnique({
+    where: { organizationId },
+    select: { status: true, plan: { select: { name: true } } },
+  });
 }
 
 export async function getSubscriptionForOrganization(organizationId: string) {

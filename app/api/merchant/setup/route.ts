@@ -7,17 +7,30 @@ import { generateApiKey } from '@/lib/api-keys';
 import { encryptSecret } from '@/lib/crypto';
 import { env } from '@/lib/env';
 import { seedPooledSandboxCredential } from '@/lib/repositories/daraja-credentials';
-import { ensurePlansSeeded, getPlanByName, ensureTrialSubscription } from '@/lib/repositories/billing';
+import {
+  ensurePlansSeeded,
+  getPlanByName,
+  ensureSubscriptionForPlan,
+  isSelfServePlanName,
+} from '@/lib/repositories/billing';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
 
 /**
  * Ensures the post-transaction onboarding steps are complete for an organization:
- * pooled-sandbox Daraja credentials + a Starter trial subscription. Both are
+ * pooled-sandbox Daraja credentials + a subscription on the CHOSEN plan. Both are
  * idempotent, so this both provisions a fresh org and self-heals a partially
  * onboarded one (e.g. a prior attempt that failed after the DB transaction).
+ *
+ * A free plan (Starter) is activated immediately; a paid plan (Growth/Scale) is
+ * created `incomplete` with a first-period invoice and reported via
+ * `requiresPayment` so the client can route the merchant to pay (pay-first).
+ * An unknown/custom plan name falls back to the free Starter tier.
  */
-async function ensureOnboardingProvisioned(organizationId: string) {
+async function ensureOnboardingProvisioned(
+  organizationId: string,
+  planName: string = 'Starter'
+): Promise<{ planName: string; requiresPayment: boolean }> {
   await seedPooledSandboxCredential(organizationId, {
     consumerKey: env.MPESA_CONSUMER_KEY,
     consumerSecret: env.MPESA_CONSUMER_SECRET,
@@ -27,10 +40,12 @@ async function ensureOnboardingProvisioned(organizationId: string) {
   });
 
   await ensurePlansSeeded();
-  const starterPlan = await getPlanByName('Starter');
-  if (starterPlan) {
-    await ensureTrialSubscription(organizationId, starterPlan.id);
-  }
+  const chosen = isSelfServePlanName(planName) ? planName : 'Starter';
+  const plan = await getPlanByName(chosen);
+  if (!plan) return { planName: chosen, requiresPayment: false };
+
+  const subscription = await ensureSubscriptionForPlan(organizationId, plan);
+  return { planName: chosen, requiresPayment: subscription.status === 'incomplete' };
 }
 
 /**
@@ -75,6 +90,10 @@ export async function POST(request: Request) {
       );
     }
 
+    // The plan the merchant picked on /pricing (carried through sign-up). Unknown
+    // or custom values fall back to the free Starter tier inside provisioning.
+    const requestedPlan = typeof body.plan === 'string' ? body.plan : 'Starter';
+
     const client = await clerkClient();
 
     // Idempotency by IDENTITY: clerkUserId is unique on Merchant, so this catches
@@ -87,10 +106,13 @@ export async function POST(request: Request) {
     });
 
     if (existingMerchant?.organizationId) {
-      await ensureOnboardingProvisioned(existingMerchant.organizationId);
+      const provision = await ensureOnboardingProvisioned(existingMerchant.organizationId, requestedPlan);
       await client.users.updateUserMetadata(userId, { publicMetadata: { onboarded: true } });
 
-      const healed = NextResponse.json({ success: true, data: existingMerchant }, { status: 200 });
+      const healed = NextResponse.json(
+        { success: true, data: existingMerchant, ...provision },
+        { status: 200 }
+      );
       healed.cookies.set('payswift_just_onboarded', '1', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -161,9 +183,9 @@ export async function POST(request: Request) {
       };
     });
 
-    // 3. Seed pooled sandbox Daraja credentials + start the Starter trial
-    //    (idempotent; also the self-heal path for a partial retry).
-    await ensureOnboardingProvisioned(created.organization.id);
+    // 3. Seed pooled sandbox Daraja credentials + start the chosen plan's
+    //    subscription (idempotent; also the self-heal path for a partial retry).
+    const provision = await ensureOnboardingProvisioned(created.organization.id, requestedPlan);
 
     const newMerchant = created.merchant;
 
@@ -183,7 +205,7 @@ export async function POST(request: Request) {
     after(() => notifyWelcome(created.organization.id));
 
     const response = NextResponse.json(
-      { success: true, data: newMerchant },
+      { success: true, data: newMerchant, ...provision },
       { status: 201 }
     );
     response.cookies.set('payswift_just_onboarded', '1', {

@@ -1,16 +1,16 @@
 import Link from 'next/link';
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import { ArrowRight, Check, AlertTriangle, Download } from 'lucide-react';
+import { ArrowRight, AlertTriangle, Download } from 'lucide-react';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { getSubscriptionForOrganization, getCurrentPeriodProjection, getBillingDetails } from '@/lib/repositories/billing';
-import { PRICING_TIERS } from '@/lib/pricing';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BillingSettingsForm } from '@/components/billing/billing-settings-form';
 import { PayNowButton } from '@/components/billing/pay-now-button';
+import { PlanChange } from '@/components/billing/plan-change';
 
 export const metadata = {
   title: 'Billing - PaySwift',
@@ -21,12 +21,18 @@ function kes(n: number): string {
   return `KES ${n.toLocaleString('en-KE')}`;
 }
 
-export default async function BillingPage() {
+export default async function BillingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string }>;
+}) {
   const { userId, orgId } = await auth();
   if (!userId) redirect('/sign-in');
 
   const context = await getOrganizationContext(userId, orgId);
   if (!context) redirect('/onboarding');
+
+  const { plan: planParam } = await searchParams;
 
   const subscription = await getSubscriptionForOrganization(context.organization.id);
   const billingDetails = await getBillingDetails(context.organization.id);
@@ -42,6 +48,10 @@ export default async function BillingPage() {
   const hasOutstanding = subscription?.invoices.some((i) => i.status === 'pending' || i.status === 'failed') ?? false;
   const isPastDue = subscription?.status === 'past_due';
   const isSuspended = subscription?.status === 'suspended';
+  // A paid plan awaiting its first payment (pay-first). Directed to pay to unlock.
+  const isIncomplete = subscription?.status === 'incomplete';
+  const needsPayment = isPastDue || isSuspended || isIncomplete;
+  const statusLabel = isIncomplete ? 'pending payment' : (subscription?.status.replace('_', ' ') ?? '');
 
   return (
     <div className="space-y-6">
@@ -54,8 +64,8 @@ export default async function BillingPage() {
         </p>
       </div>
 
-      {/* Failed-payment banner */}
-      {(isPastDue || isSuspended) && (
+      {/* Payment-required banner: activate a new paid plan, or recover a failed/paused one */}
+      {needsPayment && subscription && (
         <div
           className={`flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
             isSuspended ? 'border-destructive/40 bg-destructive/10' : 'border-amber-500/40 bg-amber-500/10'
@@ -65,19 +75,25 @@ export default async function BillingPage() {
             <AlertTriangle className={`mt-0.5 size-5 shrink-0 ${isSuspended ? 'text-destructive' : 'text-amber-600'}`} />
             <div className="text-sm">
               <p className="font-medium text-foreground">
-                {isSuspended ? 'Your subscription is paused' : 'Your last subscription payment didn’t go through'}
+                {isIncomplete
+                  ? `Activate your ${subscription.plan.name} plan`
+                  : isSuspended
+                    ? 'Your subscription is paused'
+                    : 'Your last subscription payment didn’t go through'}
               </p>
               <p className="text-muted-foreground">
-                {isSuspended
-                  ? 'Settle your outstanding invoice to restore full access — reactivation is immediate once payment is confirmed.'
-                  : 'Pay now to keep your account active. We’ll also retry automatically over the next few days.'}
+                {isIncomplete
+                  ? 'Complete your first M-Pesa payment to unlock your plan. Add your billing number below if you haven’t yet — activation is immediate once payment is confirmed.'
+                  : isSuspended
+                    ? 'Settle your outstanding invoice to restore full access — reactivation is immediate once payment is confirmed.'
+                    : 'Pay now to keep your account active. We’ll also retry automatically over the next few days.'}
               </p>
             </div>
           </div>
           {canManageBilling && hasOutstanding && (
             <PayNowButton
-              variant={isSuspended ? 'default' : 'outline'}
-              label={isSuspended ? 'Reactivate' : 'Pay now'}
+              variant={isSuspended || isIncomplete ? 'default' : 'outline'}
+              label={isIncomplete ? 'Pay & activate' : isSuspended ? 'Reactivate' : 'Pay now'}
             />
           )}
         </div>
@@ -94,8 +110,17 @@ export default async function BillingPage() {
                 <CardDescription>Current plan</CardDescription>
                 <CardTitle className="text-2xl">{subscription.plan.name}</CardTitle>
               </div>
-              <Badge variant={subscription.status === 'active' ? 'default' : 'destructive'} className="capitalize">
-                {subscription.status.replace('_', ' ')}
+              <Badge
+                variant={
+                  subscription.status === 'active'
+                    ? 'default'
+                    : isIncomplete
+                      ? 'secondary'
+                      : 'destructive'
+                }
+                className="capitalize"
+              >
+                {statusLabel}
               </Badge>
             </CardHeader>
             <CardContent className="space-y-6 text-sm">
@@ -129,7 +154,7 @@ export default async function BillingPage() {
                   We charge your subscription by M-Pesa STK Push — approve the prompt with your PIN.
                 </CardDescription>
               </div>
-              {canManageBilling && hasOutstanding && !isPastDue && !isSuspended && (
+              {canManageBilling && hasOutstanding && !needsPayment && (
                 <PayNowButton variant="outline" label="Pay now" />
               )}
             </CardHeader>
@@ -153,42 +178,11 @@ export default async function BillingPage() {
               </Link>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {PRICING_TIERS.filter((t) => t.name !== 'Sandbox').map((tier) => {
-                  const isCurrent = tier.name === subscription.plan.name;
-                  return (
-                    <div
-                      key={tier.name}
-                      className={`rounded-xl border p-4 ${isCurrent ? 'border-primary bg-primary/5' : 'border-border'}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium">{tier.name}</p>
-                        {isCurrent && (
-                          <Badge variant="default" className="text-xs">
-                            <Check className="mr-1 size-3" /> Current
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="mt-2 text-lg font-bold">
-                        {tier.monthlyFee === null
-                          ? 'Custom'
-                          : tier.monthlyFee === 0
-                            ? 'Free'
-                            : `${kes(tier.monthlyFee)}/mo`}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {tier.includedTransactions !== null
-                          ? `${tier.includedTransactions.toLocaleString('en-KE')} payments, then ${kes(tier.overageFeeKes ?? 0)} each`
-                          : tier.tagline}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="mt-4 text-xs text-muted-foreground">
-                Changing plans isn&apos;t self-service yet — contact us and we&apos;ll switch you over,
-                effective immediately and prorated.
-              </p>
+              <PlanChange
+                currentPlanName={subscription.plan.name}
+                canManage={canManageBilling}
+                initialPlan={planParam ?? null}
+              />
             </CardContent>
           </Card>
 

@@ -74,7 +74,7 @@ export default async function PricingPage() {
         <section className="w-full pb-24">
           <div className="container px-4 md:px-8 mx-auto max-w-7xl">
             <ScrollReveal>
-              <PricingClient />
+              <PricingClient isSignedIn={Boolean(userId)} />
             </ScrollReveal>
           </div>
         </section>

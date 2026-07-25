@@ -10,8 +10,16 @@ export const metadata = {
   description: 'Complete your business registration to start accepting M-Pesa payments.',
 };
 
-export default async function OnboardingPage() {
+const SELF_SERVE_PLANS = ['Starter', 'Growth', 'Scale'];
+
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string }>;
+}) {
   const { userId, orgId } = await auth();
+  const { plan } = await searchParams;
+  const selectedPlan = plan && SELF_SERVE_PLANS.includes(plan) ? plan : null;
 
   // 1. Must be logged in — redirect unauthenticated users
   if (!userId) {
@@ -41,7 +49,7 @@ export default async function OnboardingPage() {
           </div>
         </div>
 
-        <OnboardingWizard />
+        <OnboardingWizard selectedPlan={selectedPlan} />
 
         <p className="text-center text-sm text-muted-foreground mt-8">
           By completing this setup, you agree to our Terms of Service and Privacy Policy.

@@ -24,21 +24,34 @@ function displayedMonthly(tier: PricingTier, annual: boolean): number | null {
   return annual ? Math.round(tier.monthlyFee * (1 - ANNUAL_DISCOUNT)) : tier.monthlyFee;
 }
 
-function ctaFor(tier: PricingTier): { label: string; href: string } {
+function ctaFor(tier: PricingTier, isSignedIn: boolean): { label: string; href: string } {
   // Short, single-line labels: these buttons live in compact 5-across cards, so
   // the fuller "no code needed" framing stays in the hero and enterprise CTA.
   if (tier.name === "Enterprise") return { label: "Contact sales", href: "#enterprise" };
+
+  const isPaid = tier.monthlyFee !== null && tier.monthlyFee > 0;
+
+  // Signed-in users don't re-sign-up: paid plans route to Billing (where the
+  // plan switcher + M-Pesa payment live); free plans go straight to the app.
+  if (isSignedIn) {
+    if (isPaid) return { label: `Switch to ${tier.name}`, href: `/billing?plan=${tier.name}` };
+    return { label: "Go to dashboard", href: "/dashboard" };
+  }
+
+  // Signed-out: carry the chosen plan through sign-up so it becomes a real
+  // subscription (paid → first invoice + pay-first activation).
   if (tier.name === "Sandbox") return { label: "Start free", href: "/sign-up" };
-  return { label: "Get started free", href: "/sign-up" };
+  if (isPaid) return { label: `Choose ${tier.name}`, href: `/sign-up?plan=${tier.name}` };
+  return { label: "Get started free", href: `/sign-up?plan=${tier.name}` };
 }
 
-export function PricingClient() {
+export function PricingClient({ isSignedIn = false }: { isSignedIn?: boolean }) {
   const [annual, setAnnual] = useState(true);
 
   return (
     <div className="flex flex-col gap-16">
       <BillingToggle annual={annual} onChange={setAnnual} />
-      <PlanGrid annual={annual} />
+      <PlanGrid annual={annual} isSignedIn={isSignedIn} />
       <CostEstimator />
     </div>
   );
@@ -91,7 +104,7 @@ function BillingToggle({ annual, onChange }: { annual: boolean; onChange: (v: bo
   );
 }
 
-function PlanGrid({ annual }: { annual: boolean }) {
+function PlanGrid({ annual, isSignedIn }: { annual: boolean; isSignedIn: boolean }) {
   // Graduated columns so five content-rich cards are never crammed edge-to-edge:
   // 1-up (mobile) → 2-up (sm) → 3-up (lg, balanced 3+2) → 5-up only at xl (1280px+)
   // where max-w-7xl finally gives each card real breathing room. The old
@@ -99,15 +112,15 @@ function PlanGrid({ annual }: { annual: boolean }) {
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 xl:gap-5">
       {PRICING_TIERS.map((tier) => (
-        <PlanCard key={tier.name} tier={tier} annual={annual} />
+        <PlanCard key={tier.name} tier={tier} annual={annual} isSignedIn={isSignedIn} />
       ))}
     </div>
   );
 }
 
-function PlanCard({ tier, annual }: { tier: PricingTier; annual: boolean }) {
+function PlanCard({ tier, annual, isSignedIn }: { tier: PricingTier; annual: boolean; isSignedIn: boolean }) {
   const monthly = displayedMonthly(tier, annual);
-  const cta = ctaFor(tier);
+  const cta = ctaFor(tier, isSignedIn);
   const discounted = annual && tier.monthlyFee !== null && tier.monthlyFee > 0;
 
   return (
