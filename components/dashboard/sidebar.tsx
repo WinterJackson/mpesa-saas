@@ -53,7 +53,7 @@ export function Sidebar() {
       <div className="hidden md:flex h-full shrink-0 py-floating-header pl-0">
         <aside className="flex flex-col w-64 rounded-l-none rounded-r-[40px] bg-sidebar text-sidebar-foreground shadow-floating-header overflow-hidden">
           <div className="p-6 border-b border-sidebar-border flex items-center">
-            <Logo inverted />
+            <Logo inverted href="/dashboard" />
           </div>
           <nav className="flex-1 p-4 flex flex-col gap-2">
             {navItems.map((item) => {
