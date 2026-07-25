@@ -177,6 +177,46 @@ export async function getSubscriptionForOrganization(organizationId: string) {
   });
 }
 
+export interface PlanUsageSummary {
+  planName: string;
+  used: number;
+  included: number | null; // null = unlimited (Enterprise)
+  projectedOverageKes: number;
+}
+
+/**
+ * Current-cycle plan usage for the dashboard: transactions used vs the plan's
+ * included allowance, and the projected end-of-cycle overage cost (extrapolated
+ * from the pace so far). Overage is FLAT-FEE per transaction — never a % of GMV
+ * (guardrail #24). Returns null when the org has no subscription yet.
+ */
+export async function getPlanUsage(organizationId: string): Promise<PlanUsageSummary | null> {
+  const sub = await prisma.subscription.findUnique({
+    where: { organizationId },
+    include: { plan: true },
+  });
+  if (!sub) return null;
+
+  const periodEnd = sub.currentPeriodEnd;
+  const periodStart = billingPeriodStart(periodEnd);
+  const { txCount } = await transactionUsageForPeriod(organizationId, periodStart, periodEnd);
+
+  const included = sub.plan.includedTransactions;
+  const overageFeeKes = sub.plan.overageFeeKes;
+
+  let projectedOverageKes = 0;
+  if (included != null && overageFeeKes != null) {
+    const now = Date.now();
+    const total = periodEnd.getTime() - periodStart.getTime();
+    const elapsed = Math.min(total, Math.max(1, now - periodStart.getTime()));
+    const fraction = elapsed / total;
+    const projectedCount = fraction > 0 ? Math.round(txCount / fraction) : txCount;
+    projectedOverageKes = Math.max(0, projectedCount - included) * overageFeeKes;
+  }
+
+  return { planName: sub.plan.name, used: txCount, included, projectedOverageKes };
+}
+
 export async function listSubscriptionsDueForBilling() {
   return prisma.subscription.findMany({
     where: {

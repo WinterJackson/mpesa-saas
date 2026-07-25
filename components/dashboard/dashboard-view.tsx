@@ -1,32 +1,36 @@
 "use client";
 
-import { useState } from "react";
-import { SummaryCards, SummaryData } from "./summary-cards";
 import { TransactionsTable, Transaction } from "./transactions-table";
+import {
+  AnalyticsSection,
+  type AnalyticsBundle,
+  type PlanUsage,
+  type LinksSummary,
+} from "./analytics-section";
 
 interface DashboardViewProps {
-  initialSummary: SummaryData;
+  analytics: AnalyticsBundle;
+  planUsage: PlanUsage;
+  links: LinksSummary;
   initialTransactions: Transaction[];
 }
 
-export function DashboardView({ initialSummary, initialTransactions }: DashboardViewProps) {
-  const [summary, setSummary] = useState<SummaryData>(initialSummary);
-
+export function DashboardView({ analytics, planUsage, links, initialTransactions }: DashboardViewProps) {
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Overview</h2>
         <p className="text-muted-foreground mt-1">
-          Monitor your M-Pesa collections in real-time.
+          How your M-Pesa collections are performing.
         </p>
       </div>
 
-      <SummaryCards data={summary} />
-      
-      <TransactionsTable 
-        initialTransactions={initialTransactions} 
-        onSummaryUpdate={setSummary} 
-      />
+      <AnalyticsSection initial={analytics} planUsage={planUsage} links={links} />
+
+      <div>
+        <h3 className="text-lg font-semibold tracking-tight mb-3">Recent activity</h3>
+        <TransactionsTable initialTransactions={initialTransactions} />
+      </div>
     </div>
   );
 }
