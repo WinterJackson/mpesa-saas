@@ -185,4 +185,14 @@
   html {
     @apply font-sans;
   }
+  /* Bricolage Grotesque on every heading + title slot, platform-wide, so the
+     heading/body pairing applies everywhere without needing a font-heading class
+     on each element. Body text stays Public Sans (from html above). */
+  h1, h2, h3, h4, h5, h6,
+  [data-slot="card-title"],
+  [data-slot="dialog-title"],
+  [data-slot="alert-dialog-title"],
+  [data-slot="sheet-title"] {
+    @apply font-heading;
+  }
 }
