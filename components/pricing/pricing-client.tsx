@@ -25,9 +25,11 @@ function displayedMonthly(tier: PricingTier, annual: boolean): number | null {
 }
 
 function ctaFor(tier: PricingTier): { label: string; href: string } {
+  // Short, single-line labels: these buttons live in compact 5-across cards, so
+  // the fuller "no code needed" framing stays in the hero and enterprise CTA.
   if (tier.name === "Enterprise") return { label: "Contact sales", href: "#enterprise" };
-  if (tier.name === "Sandbox") return { label: "Start building free", href: "/sign-up" };
-  return { label: "Start free, no code needed", href: "/sign-up" };
+  if (tier.name === "Sandbox") return { label: "Start free", href: "/sign-up" };
+  return { label: "Get started free", href: "/sign-up" };
 }
 
 export function PricingClient() {
@@ -90,8 +92,12 @@ function BillingToggle({ annual, onChange }: { annual: boolean; onChange: (v: bo
 }
 
 function PlanGrid({ annual }: { annual: boolean }) {
+  // Graduated columns so five content-rich cards are never crammed edge-to-edge:
+  // 1-up (mobile) → 2-up (sm) → 3-up (lg, balanced 3+2) → 5-up only at xl (1280px+)
+  // where max-w-7xl finally gives each card real breathing room. The old
+  // lg:grid-cols-5 forced five columns into ~1024px and overlapped the text.
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 xl:gap-5">
       {PRICING_TIERS.map((tier) => (
         <PlanCard key={tier.name} tier={tier} annual={annual} />
       ))}
@@ -107,27 +113,27 @@ function PlanCard({ tier, annual }: { tier: PricingTier; annual: boolean }) {
   return (
     <div
       className={cn(
-        "relative flex flex-col rounded-2xl border p-6",
+        "relative flex h-full flex-col rounded-2xl border p-6 xl:p-5",
         tier.highlighted
           ? "border-primary bg-primary/5 shadow-[0_10px_40px_-15px_rgba(19,42,19,0.35)]"
           : "border-border bg-background"
       )}
     >
       {tier.highlighted && (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
           Most popular
         </span>
       )}
 
       <h3 className="font-heading text-xl font-bold">{tier.name}</h3>
-      <p className="mt-2 min-h-[2.5rem] text-sm text-muted-foreground">{tier.tagline}</p>
+      <p className="mt-2 min-h-[3rem] text-sm text-muted-foreground">{tier.tagline}</p>
 
       <div className="mt-6">
         {monthly === null ? (
           <p className="text-3xl font-extrabold font-heading">Custom</p>
         ) : (
-          <div className="flex items-end gap-1">
-            <span className="text-3xl font-extrabold font-heading">
+          <div className="flex flex-wrap items-end gap-x-1">
+            <span className="text-3xl font-extrabold font-heading tracking-tight">
               {monthly === 0 ? "Free" : kes(monthly)}
             </span>
             {monthly > 0 && <span className="pb-1 text-sm text-muted-foreground">/mo</span>}
@@ -172,7 +178,7 @@ function PlanCard({ tier, annual }: { tier: PricingTier; annual: boolean }) {
         <Link href={cta.href}>
           <Button
             variant={tier.highlighted ? "default" : "outline"}
-            className="w-full rounded-full"
+            className="w-full whitespace-nowrap rounded-full"
           >
             {cta.label}
           </Button>
