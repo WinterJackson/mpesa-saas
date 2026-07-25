@@ -1,4 +1,4 @@
-import { SignUp } from '@clerk/nextjs';
+import { ThemedSignUp } from '@/components/auth/themed-sign-up';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ParticlesBackground } from '@/components/particles-background';
 import { Logo } from '@/components/logo';
@@ -54,7 +54,7 @@ export default async function Page({
 
         <div className="flex-none text-primary-foreground space-y-4 max-w-lg">
           <h1 className="text-4xl lg:text-5xl font-bold tracking-tight">Create your account</h1>
-          <p className="text-lg opacity-80">Join thousands of businesses scaling their revenue collection with PaySwift.</p>
+          <p className="text-lg opacity-80">The complete payment platform to seamlessly collect, manage, and scale your revenue.</p>
         </div>
       </div>
 
@@ -77,30 +77,7 @@ export default async function Page({
           <div className="flex md:hidden justify-center mb-8">
              <Logo />
           </div>
-          <SignUp
-            fallbackRedirectUrl={onboardingUrl}
-            appearance={{
-              variables: {
-                colorWarning: "#132a13",
-              },
-              elements: {
-                rootBox: "w-full mx-auto",
-                cardBox: "w-full shadow-floating-header",
-                card: "bg-background dark:bg-card border border-border shadow-sm w-full",
-                headerTitle: "text-foreground",
-                headerSubtitle: "text-muted-foreground",
-                socialButtonsBlockButton: "border-border text-foreground hover:bg-muted/50",
-                socialButtonsBlockButtonText: "text-foreground font-medium",
-                dividerLine: "bg-border",
-                dividerText: "text-muted-foreground",
-                formFieldLabel: "text-foreground",
-                formFieldInput: "bg-background border-border text-foreground focus:ring-primary",
-                formButtonPrimary: "bg-primary text-primary-foreground hover:bg-primary/90",
-                footerActionText: "text-muted-foreground",
-                footerActionLink: "text-primary hover:text-primary/90",
-              }
-            }}
-          />
+          <ThemedSignUp fallbackRedirectUrl={onboardingUrl} />
         </div>
       </div>
     </div>

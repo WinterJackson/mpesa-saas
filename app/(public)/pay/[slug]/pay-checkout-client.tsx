@@ -112,22 +112,20 @@ export function PayCheckoutClient({
   const displayAmount = isFixed ? amount! : Number(customAmount) || 0;
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <div className="sticky top-0 z-50 w-full pt-floating-header px-floating-header pb-4">
-        <header className="w-full rounded-floating-header bg-background/80 backdrop-blur-md shadow-floating-header">
-          <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
-            <Logo />
-            <ThemeToggle />
-          </div>
-        </header>
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center relative p-4 md:p-8">
+      {/* Theme Toggle at Top Right */}
+      <div className="absolute top-4 right-4 md:top-6 md:right-6 z-50">
+        <ThemeToggle />
       </div>
 
-      <main className="flex-1 flex items-start justify-center px-4 py-8">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardDescription>{businessName}</CardDescription>
-            <CardTitle className="text-xl">{title}</CardTitle>
-            {description && <CardDescription>{description}</CardDescription>}
+      <main className="w-full max-w-md flex flex-col items-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <Logo />
+
+        <Card className="w-full shadow-xl border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader className="text-center">
+            <CardDescription className="font-medium text-primary tracking-wide uppercase text-xs">{businessName}</CardDescription>
+            <CardTitle className="text-2xl font-bold font-heading tracking-tight mt-1">{title}</CardTitle>
+            {description && <CardDescription className="text-sm mt-2">{description}</CardDescription>}
           </CardHeader>
           <CardContent>
             {state === 'idle' || state === 'initiating' ? (

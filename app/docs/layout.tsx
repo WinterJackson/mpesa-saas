@@ -2,7 +2,7 @@ import React from 'react';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 
-export default function LegalLayout({
+export default function DocsLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -10,12 +10,8 @@ export default function LegalLayout({
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground">
       <SiteHeader />
-      <main className="flex-1 w-full">
-        <section className="w-full pt-32 pb-24 md:pt-40 md:pb-32 lg:pt-48 lg:pb-40 relative bg-background">
-          <div className="container px-4 md:px-8 mx-auto max-w-7xl">
-            {children}
-          </div>
-        </section>
+      <main className="flex-1 w-full pt-32 pb-24 md:pt-40 md:pb-32 lg:pt-48 lg:pb-40 relative bg-background">
+        {children}
       </main>
       <SiteFooter />
     </div>

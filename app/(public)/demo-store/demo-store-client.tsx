@@ -203,11 +203,11 @@ export default function DemoStoreClient({ isSignedIn, businessName }: { isSigned
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-16">
       {/* Floating Header Wrapper */}
-      <div className="sticky top-0 z-50 w-full pt-floating-header px-floating-header pb-4 bg-background/95 backdrop-blur-sm">
-        <header className="w-full rounded-floating-header bg-background/80 backdrop-blur-md shadow-floating-header">
-          <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
+      <div className="sticky top-0 z-50 w-full pt-floating-header pl-[15px] md:pl-[30px] pr-0 pb-6">
+        <header className="w-full rounded-l-[40px] rounded-r-none bg-background text-foreground backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(19,42,19,0.25)] dark:shadow-[0_10px_40px_-10px_rgba(19,42,19,0.6)]">
+          <div className="flex h-20 w-full items-center justify-between px-4 md:px-6">
             <div className="flex items-center gap-2">
-              <ShoppingBag className="size-6 text-primary" />
+              <ShoppingBag className="size-6 text-primary dark:text-white" />
               <span className="text-xl font-bold tracking-tight">DemoTech Store</span>
             </div>
             <nav className="flex items-center gap-4">
@@ -223,7 +223,7 @@ export default function DemoStoreClient({ isSignedIn, businessName }: { isSigned
       </div>
 
       {/* Banner */}
-      <div className="bg-primary/10 border-b border-foreground/20 text-primary px-4 py-3 text-center text-sm font-medium flex items-center justify-center gap-2">
+      <div className="bg-primary/10 border-b border-foreground/20 text-primary dark:text-white px-4 py-3 text-center text-sm font-medium flex items-center justify-center gap-2">
         <Info className="size-4" />
         This demonstrates the API integration a real Shopify or custom store would use.
       </div>

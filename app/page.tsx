@@ -2,9 +2,8 @@ import Link from "next/link";
 import { ArrowRight, Link2, LayoutDashboard, ShoppingBag, ShieldCheck, Smartphone, Rocket, Check } from "lucide-react";
 import { auth } from "@clerk/nextjs/server";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { CodeSnippet } from "@/components/code-snippet";
-import { Logo } from "@/components/logo";
+import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ParticlesBackground } from "@/components/particles-background";
 import { ScrollReveal } from "@/components/scroll-reveal";
@@ -15,33 +14,7 @@ export default async function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground">
       {/* Floating Header Wrapper */}
-      <div className="fixed top-0 z-50 w-full pt-floating-header pl-[15px] md:pl-[30px] pr-0">
-        <header className="w-full rounded-l-[40px] rounded-r-none bg-background text-foreground backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(19,42,19,0.25)] dark:shadow-[0_10px_40px_-10px_rgba(19,42,19,0.6)]">
-          <div className="flex h-20 w-full items-center justify-between px-4 md:px-6">
-          <Logo href="/" />
-          <nav className="flex items-center gap-4">
-            <Link href="/pricing" className="text-sm font-medium hover:text-primary transition-colors hidden sm:block">Pricing</Link>
-            <Link href="/docs" className="text-sm font-medium hover:text-primary transition-colors hidden sm:block">Docs</Link>
-            <ThemeToggle />
-            {userId ? (
-              <Link href="/dashboard">
-                <Button variant="outline" size="sm">
-                  Dashboard
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Link href="/sign-in">
-                  <Button size="sm" className="font-medium">
-                    Sign In
-                  </Button>
-                </Link>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
-      </div>
+      <SiteHeader />
 
       <main className="flex-1">
         {/* Hero Section */}
@@ -186,7 +159,7 @@ export default async function Home() {
                       1
                     </div>
                     <div className="p-3 sm:p-4 bg-muted/50 rounded-2xl transition-colors duration-300 group-hover:bg-primary/10">
-                      <Rocket className="size-6 sm:size-8 text-primary transition-transform duration-300 group-hover:scale-110" />
+                      <Rocket className="size-6 sm:size-8 text-primary dark:text-white transition-transform duration-300 group-hover:scale-110" />
                     </div>
                   </div>
                   <h3 className="text-lg sm:text-xl md:text-2xl font-bold font-heading tracking-tight mt-1 sm:mt-2">Set up in minutes</h3>
@@ -199,7 +172,7 @@ export default async function Home() {
                       2
                     </div>
                     <div className="p-3 sm:p-4 bg-muted/50 rounded-2xl transition-colors duration-300 group-hover:bg-primary/10">
-                      <Smartphone className="size-6 sm:size-8 text-primary transition-transform duration-300 group-hover:scale-110" />
+                      <Smartphone className="size-6 sm:size-8 text-primary dark:text-white transition-transform duration-300 group-hover:scale-110" />
                     </div>
                   </div>
                   <h3 className="text-lg sm:text-xl md:text-2xl font-bold font-heading tracking-tight mt-1 sm:mt-2">Your customer pays</h3>
@@ -212,7 +185,7 @@ export default async function Home() {
                       3
                     </div>
                     <div className="p-3 sm:p-4 bg-muted/50 rounded-2xl transition-colors duration-300 group-hover:bg-primary/10">
-                      <LayoutDashboard className="size-6 sm:size-8 text-primary transition-transform duration-300 group-hover:scale-110" />
+                      <LayoutDashboard className="size-6 sm:size-8 text-primary dark:text-white transition-transform duration-300 group-hover:scale-110" />
                     </div>
                   </div>
                   <h3 className="text-lg sm:text-xl md:text-2xl font-bold font-heading tracking-tight mt-1 sm:mt-2">Track everything</h3>

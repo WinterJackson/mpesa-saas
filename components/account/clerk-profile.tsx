@@ -2,6 +2,7 @@
 
 import { UserProfile } from "@clerk/nextjs";
 import { useTheme } from "@wrksz/themes/client";
+import { clerkThemeVariables } from "@/lib/clerk-appearance";
 
 /**
  * Clerk's embedded account manager, themed to match PaySwift. This is the ONE
@@ -25,18 +26,7 @@ export function ClerkProfile() {
     <UserProfile
       routing="hash"
       appearance={{
-        variables: {
-          colorPrimary: "#132a13",
-          colorPrimaryForeground: "oklch(0.985 0 0)",
-          // Match the app's --card / --background / --foreground tokens (globals.css)
-          // so Clerk's surfaces are card-black in dark mode, white in light mode.
-          colorBackground: isDark ? "oklch(0.205 0 0)" : "oklch(1 0 0)",
-          colorForeground: isDark ? "oklch(0.985 0 0)" : "oklch(0.145 0 0)",
-          colorMutedForeground: isDark ? "oklch(0.708 0 0)" : "oklch(0.556 0 0)",
-          colorInput: isDark ? "oklch(0.145 0 0)" : "oklch(1 0 0)",
-          colorInputForeground: isDark ? "oklch(0.985 0 0)" : "oklch(0.145 0 0)",
-          borderRadius: "0.625rem",
-        },
+        variables: clerkThemeVariables(isDark),
         elements: {
           // Force full width so it lines up exactly with the sibling cards.
           rootBox: "!w-full",

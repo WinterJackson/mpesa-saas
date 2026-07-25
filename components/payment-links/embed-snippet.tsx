@@ -22,15 +22,15 @@ function SnippetBlock({ code }: { code: string }) {
   }
 
   return (
-    <div className="relative">
-      <pre className="overflow-x-auto rounded-lg border border-border bg-muted p-3 text-xs leading-relaxed">
+    <div className="relative w-full max-w-full overflow-hidden">
+      <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-border bg-muted p-4 pr-20 text-xs leading-relaxed">
         <code>{code}</code>
       </pre>
       <Button
         type="button"
         size="xs"
         variant="outline"
-        className="absolute right-2 top-2"
+        className="absolute right-2 top-2 bg-background/80 backdrop-blur-sm"
         onClick={copy}
       >
         {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}

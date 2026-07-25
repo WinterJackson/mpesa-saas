@@ -64,7 +64,7 @@ export function SupportWidget() {
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted"
             >
-              <span className="flex size-9 items-center justify-center rounded-full bg-[#25D366]/15 text-[#128C7E] dark:text-[#25D366]">
+              <span className="flex size-9 items-center justify-center rounded-full bg-[#25D366]/15 text-[#128C7E] dark:text-white">
                 <MessageCircle className="size-5" />
               </span>
               <span className="flex flex-col">
@@ -78,7 +78,7 @@ export function SupportWidget() {
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted"
             >
-              <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary dark:text-white">
                 <Mail className="size-5" />
               </span>
               <span className="flex flex-col">
@@ -92,7 +92,7 @@ export function SupportWidget() {
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted"
             >
-              <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary dark:text-white">
                 <BookOpen className="size-5" />
               </span>
               <span className="flex flex-col">
@@ -106,7 +106,7 @@ export function SupportWidget() {
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted"
             >
-              <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary dark:text-white">
                 <Activity className="size-5" />
               </span>
               <span className="flex flex-col">

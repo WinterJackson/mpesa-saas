@@ -61,9 +61,7 @@ export function SiteFooter() {
                   <GitBranch className="size-3.5 shrink-0" /> GitHub
                 </Link>
                 <Link
-                  href="https://github.com/WinterJackson/mpesa-saas/blob/main/README.md"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/docs"
                   className="text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors flex items-center gap-2 w-fit"
                 >
                   <BookOpen className="size-3.5 shrink-0" /> Docs

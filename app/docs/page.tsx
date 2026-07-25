@@ -1,6 +1,4 @@
 import Link from 'next/link';
-import { Logo } from '@/components/logo';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link2, Plug, Code2, ArrowRight } from 'lucide-react';
@@ -12,17 +10,8 @@ export const metadata = {
 
 export default function DocsLandingPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="sticky top-0 z-50 w-full pt-floating-header px-floating-header pb-4">
-        <header className="w-full rounded-floating-header bg-background/80 backdrop-blur-md shadow-floating-header">
-          <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
-            <Link href="/"><Logo /></Link>
-            <ThemeToggle />
-          </div>
-        </header>
-      </div>
-
-      <main className="container mx-auto max-w-7xl px-4 md:px-8 py-10 space-y-12">
+    <div className="w-full">
+      <div className="container mx-auto max-w-7xl px-4 md:px-8 space-y-12">
         <div className="space-y-3">
           <h1 className="text-3xl font-bold tracking-tight">PaySwift documentation</h1>
           <p className="text-muted-foreground text-lg">
@@ -134,7 +123,7 @@ export default function DocsLandingPage() {
             </Link>
           </div>
         </section>
-      </main>
+      </div>
     </div>
   );
 }

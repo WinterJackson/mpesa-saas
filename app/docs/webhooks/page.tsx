@@ -1,6 +1,4 @@
 import Link from 'next/link';
-import { Logo } from '@/components/logo';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { ALL_WEBHOOK_EVENTS } from '@/lib/webhook-events';
 
 export const metadata = {
@@ -10,17 +8,8 @@ export const metadata = {
 
 export default function WebhooksGuidePage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="sticky top-0 z-50 w-full pt-floating-header px-floating-header pb-4">
-        <header className="w-full rounded-floating-header bg-background/80 backdrop-blur-md shadow-floating-header">
-          <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
-            <Link href="/docs"><Logo /></Link>
-            <ThemeToggle />
-          </div>
-        </header>
-      </div>
-
-      <main className="container mx-auto max-w-7xl px-4 md:px-8 py-10 space-y-8">
+    <div className="w-full">
+      <div className="container mx-auto max-w-7xl px-4 md:px-8 space-y-8">
         <div>
           <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground">← Docs</Link>
           <h1 className="mt-2 text-3xl font-bold tracking-tight">Webhooks</h1>
@@ -90,7 +79,7 @@ function verify(rawBody, signature, secret) {
             event to check your endpoint end-to-end.
           </p>
         </section>
-      </main>
+      </div>
     </div>
   );
 }

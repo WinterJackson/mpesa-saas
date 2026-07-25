@@ -216,7 +216,7 @@ function CostEstimator() {
     <div className="rounded-2xl border border-border bg-sidebar/40 p-6 md:p-10">
       <div className="mx-auto max-w-2xl text-center">
         <h3 className="font-heading text-2xl font-bold">What will I actually pay?</h3>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-black dark:text-muted-foreground">
           Drag to your expected monthly M-Pesa payments. We&apos;ll show the flat cost on each plan and
           pick the cheapest — no percentage of your sales, ever.
         </p>
@@ -224,7 +224,7 @@ function CostEstimator() {
 
       <div className="mx-auto mt-8 max-w-2xl">
         <div className="flex items-baseline justify-between">
-          <label htmlFor="tx-estimate" className="text-sm font-medium text-muted-foreground">
+          <label htmlFor="tx-estimate" className="text-sm font-medium text-black dark:text-muted-foreground">
             Payments per month
           </label>
           <span className="font-heading text-2xl font-extrabold text-primary dark:text-white">
@@ -256,9 +256,9 @@ function CostEstimator() {
                 isBest ? "border-primary bg-primary/10" : "border-border bg-background"
               )}
             >
-              <p className="text-sm font-medium text-muted-foreground">{tier.name}</p>
+              <p className="text-sm font-medium text-black dark:text-muted-foreground">{tier.name}</p>
               <p className="mt-1 font-heading text-xl font-bold">{kes(cost)}</p>
-              <p className="mt-1 text-xs text-muted-foreground">/mo</p>
+              <p className="mt-1 text-xs text-black dark:text-muted-foreground">/mo</p>
               {isBest && (
                 <span className="mt-2 inline-block rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
                   Best value
@@ -269,7 +269,7 @@ function CostEstimator() {
         })}
       </div>
 
-      <p className="mx-auto mt-6 max-w-2xl text-center text-xs text-muted-foreground">
+      <p className="mx-auto mt-6 max-w-2xl text-center text-xs text-black dark:text-muted-foreground">
         Estimates use monthly (undiscounted) pricing. Annual billing saves a further{" "}
         {Math.round(ANNUAL_DISCOUNT * 100)}% on Growth and Scale.
       </p>

@@ -20,7 +20,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 
 export default function PrivacyPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+    <div className="w-full">
       <p className="text-sm font-medium text-primary">Legal</p>
       <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">Privacy Policy</h1>
       <p className="mt-3 text-sm text-muted-foreground">

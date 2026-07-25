@@ -111,7 +111,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, data: link }, { status: 201 });
   } catch (error: unknown) {
-    logger.error('[Payment Link Create Error]:', error instanceof Error ? error.message : 'Unknown error');
+    logger.error('[Payment Link Create Error]:', error);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

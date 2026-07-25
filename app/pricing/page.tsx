@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { ArrowRight, BookOpen, Check, Minus } from "lucide-react";
 import { auth } from "@clerk/nextjs/server";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Logo } from "@/components/logo";
+
+import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { PricingClient } from "@/components/pricing/pricing-client";
@@ -22,30 +22,7 @@ export default async function PricingPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground">
-      {/* Floating Header */}
-      <div className="fixed top-0 z-50 w-full pt-floating-header pl-[15px] md:pl-[30px] pr-0">
-        <header className="w-full rounded-l-[40px] rounded-r-none bg-background text-foreground backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(19,42,19,0.25)] dark:shadow-[0_10px_40px_-10px_rgba(19,42,19,0.6)]">
-          <div className="flex h-20 w-full items-center justify-between px-4 md:px-6">
-            <Logo href="/" />
-            <nav className="flex items-center gap-4">
-              <ThemeToggle />
-              {userId ? (
-                <Link href="/dashboard">
-                  <Button variant="outline" size="sm">
-                    Dashboard
-                  </Button>
-                </Link>
-              ) : (
-                <Link href="/sign-in">
-                  <Button size="sm" className="font-medium">
-                    Sign In
-                  </Button>
-                </Link>
-              )}
-            </nav>
-          </div>
-        </header>
-      </div>
+      <SiteHeader />
 
       <main className="flex-1">
         {/* Hero */}
@@ -113,7 +90,7 @@ export default async function PricingPage() {
                           return (
                             <td key={name} className="p-4 text-center text-sidebar-foreground/80">
                               {v === true ? (
-                                <Check className="mx-auto size-4 text-primary" />
+                                <Check className="mx-auto size-4 text-sidebar-primary" />
                               ) : v === false ? (
                                 <Minus className="mx-auto size-4 text-sidebar-foreground/30" />
                               ) : (
@@ -190,7 +167,7 @@ export default async function PricingPage() {
                   Enterprise enquiries:{" "}
                   <a
                     href="mailto:sales@payswift.co.ke"
-                    className="font-medium text-primary underline underline-offset-4"
+                    className="font-medium text-primary dark:text-white underline underline-offset-4"
                   >
                     sales@payswift.co.ke
                   </a>
