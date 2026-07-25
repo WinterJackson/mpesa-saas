@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmButton } from '@/components/ui/confirm-button';
 import { toast } from 'sonner';
 
 interface Member {
@@ -18,6 +19,15 @@ interface Member {
 }
 
 const ASSIGNABLE_ROLES = ['admin', 'developer', 'finance'] as const;
+
+// Plain-language explanation of what each role can do — shown so a non-technical
+// owner knows exactly what access they're granting.
+const ROLE_DESCRIPTIONS: Record<string, string> = {
+  owner: 'Full access, including billing and closing the account.',
+  admin: 'Manage the team, settings, payment links and payments — everything except closing the account.',
+  developer: 'Access API keys, webhooks and payment links to build the integration. No billing access.',
+  finance: 'View payments and manage billing and payouts. Cannot change technical settings.',
+};
 
 export function TeamManagement({ members, currentRole }: { members: Member[]; currentRole: string }) {
   const router = useRouter();
@@ -111,9 +121,29 @@ export function TeamManagement({ members, currentRole }: { members: Member[]; cu
               </div>
               <Button type="submit" disabled={isInviting}>{isInviting ? 'Sending...' : 'Send invite'}</Button>
             </form>
+            <p className="mt-3 text-xs text-muted-foreground">
+              <span className="font-medium capitalize text-foreground">{inviteRole}:</span>{' '}
+              {ROLE_DESCRIPTIONS[inviteRole]}
+            </p>
           </CardContent>
         </Card>
       )}
+
+      {/* What each role can do — plain-language legend for non-technical owners. */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">What each role can do</CardTitle>
+          <CardDescription>Give people only the access they need.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          {(['owner', 'admin', 'finance', 'developer'] as const).map((role) => (
+            <div key={role} className="rounded-lg border border-border p-3">
+              <p className="text-sm font-medium capitalize">{role}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{ROLE_DESCRIPTIONS[role]}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       <Table>
         <TableHeader>
@@ -150,15 +180,17 @@ export function TeamManagement({ members, currentRole }: { members: Member[]; cu
                           Make {role}
                         </Button>
                       ))}
-                      <Button
-                        type="button"
+                      <ConfirmButton
                         size="xs"
                         variant="destructive"
                         disabled={busyUserId === member.clerkUserId}
-                        onClick={() => handleRemove(member.clerkUserId)}
+                        onConfirm={() => handleRemove(member.clerkUserId)}
+                        title="Remove this teammate?"
+                        description={`${member.email} will immediately lose access to this account. You can invite them again later.`}
+                        confirmLabel="Remove teammate"
                       >
                         Remove
-                      </Button>
+                      </ConfirmButton>
                     </div>
                   )}
                 </TableCell>

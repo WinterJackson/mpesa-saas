@@ -34,8 +34,8 @@ export const PRICING_TIERS: PricingTier[] = [
     monthlyFee: 0,
     includedTransactions: null,
     overageFeeKes: null,
-    tagline: 'Unlimited test transactions, free forever',
-    audience: 'Anyone evaluating or building before go-live',
+    tagline: 'Unlimited test payments, free forever',
+    audience: 'Anyone trying PaySwift out before going live',
     billable: false,
   },
   {
@@ -55,7 +55,7 @@ export const PRICING_TIERS: PricingTier[] = [
     overageFeeKes: 6,
     apiRateLimitPerMin: 300,
     tagline: 'For established small businesses and Shopify sellers',
-    audience: 'Growing SMEs that need branding, team seats and Shopify',
+    audience: 'Growing businesses that want branding, team members and Shopify',
     billable: true,
     highlighted: true,
   },
@@ -65,8 +65,8 @@ export const PRICING_TIERS: PricingTier[] = [
     includedTransactions: 10000,
     overageFeeKes: 3,
     apiRateLimitPerMin: 1200,
-    tagline: 'For higher-volume, API- and webhook-heavy merchants',
-    audience: 'High-volume merchants and serious integrations',
+    tagline: 'For high-volume shops and bigger online stores',
+    audience: 'Busy shops taking lots of payments every day',
     billable: true,
   },
   {
@@ -74,8 +74,8 @@ export const PRICING_TIERS: PricingTier[] = [
     monthlyFee: null,
     includedTransactions: null,
     overageFeeKes: null,
-    tagline: 'Custom volume, white-label, and a contractual SLA',
-    audience: 'Multi-branch/franchise, marketplaces, large integrators',
+    tagline: 'Custom volume, your own branding, and a guaranteed service level',
+    audience: 'Multi-branch businesses, marketplaces and large teams',
     billable: true,
   },
 ];
@@ -121,21 +121,21 @@ export interface FeatureRow {
 
 // Feature matrix from the strategy doc §3. Strings render as-is; booleans as ✓/—.
 export const FEATURE_MATRIX: FeatureRow[] = [
-  { label: 'Payment Links, hosted checkout & QR', values: { Sandbox: true, Starter: true, Growth: true, Scale: true, Enterprise: true } },
+  { label: 'Payment links, checkout page & QR codes', values: { Sandbox: true, Starter: true, Growth: true, Scale: true, Enterprise: true } },
   { label: '"Pay with M-Pesa" button', values: { Sandbox: true, Starter: true, Growth: true, Scale: true, Enterprise: true } },
-  { label: 'Checkout branding', values: { Sandbox: 'PaySwift', Starter: 'PaySwift', Growth: 'Custom logo/color', Scale: 'Custom logo/color', Enterprise: 'Full white-label' } },
-  { label: 'Team seats', values: { Sandbox: '1', Starter: '1', Growth: '3', Scale: 'Unlimited', Enterprise: 'Unlimited' } },
-  { label: 'Shopify integration', values: { Sandbox: true, Starter: false, Growth: true, Scale: true, Enterprise: true } },
-  { label: 'API access', values: { Sandbox: 'Sandbox only', Starter: 'Read-only', Growth: 'Full', Scale: 'Full, higher limit', Enterprise: 'Full, custom limit' } },
-  { label: 'Webhook inspector', values: { Sandbox: true, Starter: 'View only', Growth: 'Redeliver & test', Scale: 'Redeliver & test', Enterprise: 'Custom retry policy' } },
-  { label: 'B2C payouts & refunds', values: { Sandbox: 'Sandbox only', Starter: false, Growth: false, Scale: true, Enterprise: true } },
-  { label: 'Support', values: { Sandbox: 'Community/docs', Starter: 'Email', Growth: 'Priority email', Scale: 'Phone/WhatsApp', Enterprise: 'Dedicated manager' } },
-  { label: 'SLA', values: { Sandbox: false, Starter: false, Growth: false, Scale: 'Published target', Enterprise: 'Contractual' } },
+  { label: 'Your logo & colours on checkout', values: { Sandbox: 'PaySwift', Starter: 'PaySwift', Growth: 'Your branding', Scale: 'Your branding', Enterprise: 'Fully your own' } },
+  { label: 'Team members', values: { Sandbox: '1', Starter: '1', Growth: '3', Scale: 'Unlimited', Enterprise: 'Unlimited' } },
+  { label: 'Connect your Shopify store', values: { Sandbox: true, Starter: false, Growth: true, Scale: true, Enterprise: true } },
+  { label: 'Instant payment alerts', values: { Sandbox: true, Starter: 'View', Growth: 'Resend & test', Scale: 'Resend & test', Enterprise: 'Custom' } },
+  { label: 'Send refunds & payouts', values: { Sandbox: 'Test only', Starter: false, Growth: false, Scale: true, Enterprise: true } },
+  { label: 'Developer API', values: { Sandbox: 'Test only', Starter: 'View only', Growth: 'Full', Scale: 'Full (higher limit)', Enterprise: 'Full (custom limit)' } },
+  { label: 'Support', values: { Sandbox: 'Help centre', Starter: 'Email', Growth: 'Priority email', Scale: 'Phone / WhatsApp', Enterprise: 'Dedicated manager' } },
+  { label: 'Guaranteed uptime', values: { Sandbox: false, Starter: false, Growth: false, Scale: 'Published target', Enterprise: 'In your contract' } },
 ];
 
 export const PRICING_FAQ: { q: string; a: string }[] = [
   { q: 'Does this cost my customers anything?', a: "No. Your customers pay exactly what they'd pay into any M-Pesa Till — PaySwift never adds a fee to their side of the transaction." },
-  { q: 'Why not just use a Till number for free?', a: "For the very simplest case, a bare Till is cheaper — and we'll say so. What you pay PaySwift for is the dashboard, no-code payment links and QR, Shopify integration, reconciliation and webhooks — not a lower per-transaction rate. We don't take a cut of your sales at all." },
+  { q: 'Why not just use a Till number for free?', a: "For the very simplest case, a plain Till is cheaper — and we'll say so. What you pay PaySwift for is the dashboard, no-code payment links and QR codes, Shopify, automatic record-keeping and instant alerts for every sale — not a lower rate per payment. We don't take a cut of your sales at all." },
   { q: "What happens if I go over my plan's transaction limit?", a: 'Nothing is suspended. You simply pay a small flat fee per extra transaction (KES 10 on Starter, KES 6 on Growth, KES 3 on Scale) — never a percentage of the sale, and never a surprise cutoff.' },
   { q: 'Can I change plans anytime?', a: "Yes. Upgrades and downgrades take effect immediately and are prorated — you're only charged the difference for the remainder of the current cycle." },
   { q: 'How do I pay?', a: 'By M-Pesa. On renewal we send an STK Push prompt to your billing number; you approve it with your PIN, exactly like any other M-Pesa payment. No card required.' },

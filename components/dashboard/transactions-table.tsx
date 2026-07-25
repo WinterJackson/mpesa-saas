@@ -223,7 +223,7 @@ export function TransactionsTable({ initialTransactions, initialNextCursor = nul
       )}
 
       <CardContent>
-        {filteredTransactions.length === 0 ? (
+        {transactions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="size-12 rounded-full bg-muted flex items-center justify-center mb-4">
               <ShoppingCart className="size-6 text-muted-foreground" />
@@ -236,6 +236,22 @@ export function TransactionsTable({ initialTransactions, initialNextCursor = nul
               <Database className="size-4 mr-2" />
               {isSeeding ? "Loading..." : "Load Sample Data"}
             </Button>
+          </div>
+        ) : filteredTransactions.length === 0 ? (
+          // There ARE transactions, just none matching the active filter in what's
+          // loaded so far — don't show the "no transactions at all" empty state.
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <h3 className="text-base font-medium">No {filter.toLowerCase()} payments in view</h3>
+            <p className="text-sm text-muted-foreground max-w-sm mt-1 mb-4">
+              {nextCursor
+                ? "Load more to search further back, or switch the filter above."
+                : "Try a different filter above."}
+            </p>
+            {nextCursor && (
+              <Button variant="outline" onClick={handleLoadMore} disabled={isLoadingMore}>
+                {isLoadingMore ? "Loading..." : "Load more"}
+              </Button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -285,7 +301,7 @@ export function TransactionsTable({ initialTransactions, initialNextCursor = nul
                 ))}
               </TableBody>
             </Table>
-            {nextCursor && filter === "All" && (
+            {nextCursor && (
               <div className="flex justify-center pt-4">
                 <Button variant="outline" onClick={handleLoadMore} disabled={isLoadingMore}>
                   {isLoadingMore ? "Loading..." : "Load more"}

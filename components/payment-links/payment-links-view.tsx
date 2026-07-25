@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ConfirmButton } from '@/components/ui/confirm-button';
 import { Copy, ExternalLink, Link2, QrCode, Code2 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { toast } from 'sonner';
@@ -301,15 +302,17 @@ export function PaymentLinksView({
                           </Button>
                         </a>
                         {canManage && link.active && (
-                          <Button
-                            type="button"
+                          <ConfirmButton
                             size="xs"
                             variant="destructive"
                             disabled={busyId === link.id}
-                            onClick={() => handleDeactivate(link.id)}
+                            onConfirm={() => handleDeactivate(link.id)}
+                            title="Turn off this payment link?"
+                            description={`"${link.title}" will stop accepting payments and its link and QR code will no longer work. This can't be undone — you'd need to create a new link.`}
+                            confirmLabel="Turn off link"
                           >
                             Deactivate
-                          </Button>
+                          </ConfirmButton>
                         )}
                       </div>
                     </TableCell>

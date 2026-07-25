@@ -164,11 +164,11 @@ export default async function PricingPage() {
             <ScrollReveal>
               <div className="rounded-3xl border border-primary/20 bg-primary/5 p-8 md:p-12 text-center">
                 <h2 className="text-2xl md:text-3xl font-bold font-heading tracking-tight">
-                  Need custom volume, white-label, or a contractual SLA?
+                  Big business? Let&apos;s build a plan around you
                 </h2>
                 <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-                  Enterprise plans cover multi-branch and franchise operations, marketplaces, and large
-                  integrations, with negotiated pricing and a dedicated account manager.
+                  For multi-branch shops, marketplaces and large teams, we offer custom pricing, your own
+                  branding throughout, a guaranteed service level, and a dedicated account manager.
                 </p>
                 <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
                   <Link href="/sign-up" className="w-full sm:w-auto">
