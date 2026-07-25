@@ -26,7 +26,7 @@ export default async function PricingPage() {
       <div className="fixed top-0 z-50 w-full pt-floating-header pl-[15px] md:pl-[30px] pr-0">
         <header className="w-full rounded-l-[40px] rounded-r-none bg-background text-foreground backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(19,42,19,0.25)] dark:shadow-[0_10px_40px_-10px_rgba(19,42,19,0.6)]">
           <div className="flex h-20 w-full items-center justify-between px-4 md:px-6">
-            <Logo />
+            <Logo href="/" />
             <nav className="flex items-center gap-4">
               <ThemeToggle />
               {userId ? (
