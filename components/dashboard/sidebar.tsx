@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Settings, Receipt, Users, CreditCard, Link2, Blocks } from "lucide-react";
+import { LayoutDashboard, Settings, Receipt, Users, CreditCard, Link2, Blocks, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
 
@@ -15,6 +15,7 @@ const navItems: { name: string; href: string; icon: typeof LayoutDashboard; role
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Transactions", href: "/transactions", icon: Receipt },
   { name: "Payment Links", href: "/payment-links", icon: Link2, roles: ["owner", "admin", "developer"] },
+  { name: "Payouts", href: "/payouts", icon: Send, roles: ["owner", "admin", "finance"] },
   { name: "Integrations", href: "/integrations", icon: Blocks, roles: ["owner", "admin", "developer"] },
   { name: "Team", href: "/team", icon: Users, roles: ["owner", "admin"] },
   { name: "Billing", href: "/billing", icon: CreditCard, roles: ["owner", "admin", "finance"] },
