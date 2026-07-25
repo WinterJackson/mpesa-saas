@@ -32,6 +32,7 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
 export function TeamManagement({ members, currentRole }: { members: Member[]; currentRole: string }) {
   const router = useRouter();
   const canManage = currentRole === 'owner' || currentRole === 'admin';
+  const isOwner = currentRole === 'owner';
 
   const [email, setEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<(typeof ASSIGNABLE_ROLES)[number]>('developer');
@@ -77,6 +78,26 @@ export function TeamManagement({ members, currentRole }: { members: Member[]; cu
       router.refresh();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to update role');
+    } finally {
+      setBusyUserId(null);
+    }
+  }
+
+  async function handleTransferOwnership(clerkUserId: string) {
+    setBusyUserId(clerkUserId);
+    try {
+      const response = await fetch('/api/merchant/team/transfer-ownership', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clerkUserId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to transfer ownership');
+
+      toast.success('Ownership transferred. You are now an admin.');
+      router.refresh();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to transfer ownership');
     } finally {
       setBusyUserId(null);
     }
@@ -180,6 +201,19 @@ export function TeamManagement({ members, currentRole }: { members: Member[]; cu
                           Make {role}
                         </Button>
                       ))}
+                      {isOwner && (
+                        <ConfirmButton
+                          size="xs"
+                          variant="outline"
+                          disabled={busyUserId === member.clerkUserId}
+                          onConfirm={() => handleTransferOwnership(member.clerkUserId)}
+                          title={`Make ${member.email} the owner?`}
+                          description="They will get full ownership of this account, including billing and the ability to close it. You will be demoted to admin. This can only be undone by the new owner."
+                          confirmLabel="Transfer ownership"
+                        >
+                          Make owner
+                        </ConfirmButton>
+                      )}
                       <ConfirmButton
                         size="xs"
                         variant="destructive"

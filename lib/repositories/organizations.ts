@@ -157,6 +157,28 @@ export async function updateMembershipRole(
   });
 }
 
+/**
+ * Atomically transfers org ownership: the current owner is demoted to `admin`
+ * and the target member is promoted to `owner`, so there is always exactly one
+ * owner. Both updates commit together or not at all.
+ */
+export async function transferOwnership(
+  organizationId: string,
+  currentOwnerClerkUserId: string,
+  newOwnerClerkUserId: string
+): Promise<void> {
+  await prisma.$transaction([
+    prisma.membership.update({
+      where: { organizationId_clerkUserId: { organizationId, clerkUserId: currentOwnerClerkUserId } },
+      data: { role: 'admin' },
+    }),
+    prisma.membership.update({
+      where: { organizationId_clerkUserId: { organizationId, clerkUserId: newOwnerClerkUserId } },
+      data: { role: 'owner' },
+    }),
+  ]);
+}
+
 export interface MerchantSettingsUpdate {
   environment?: string;
   webhookUrl?: string | null;

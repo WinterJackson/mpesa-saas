@@ -26,7 +26,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ success: false, error: 'Merchant not found' }, { status: 404 });
     }
 
-    const rbac = await requireRole(context.organization.id, userId, ['owner', 'admin']);
+    // Redelivering a webhook is integration-management, consistent with the rest
+    // of the webhook/API surface (owner/admin/developer), not billing/finance.
+    const rbac = await requireRole(context.organization.id, userId, ['owner', 'admin', 'developer']);
     if (!rbac.allowed) {
       return NextResponse.json({ success: false, error: rbac.error }, { status: rbac.status });
     }

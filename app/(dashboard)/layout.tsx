@@ -52,7 +52,7 @@ export default async function DashboardLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-dashboard bg-cover bg-center bg-no-repeat relative z-0">
       {/* Sidebar (Desktop) / Bottom Nav (Mobile) */}
-      <Sidebar />
+      <Sidebar role={context.membership.role} />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 md:pb-0">

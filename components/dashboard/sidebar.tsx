@@ -6,46 +6,24 @@ import { LayoutDashboard, Settings, Receipt, Users, CreditCard, Link2, Blocks } 
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
 
-const navItems = [
-  {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    name: "Transactions",
-    href: "/transactions",
-    icon: Receipt,
-  },
-  {
-    name: "Payment Links",
-    href: "/payment-links",
-    icon: Link2,
-  },
-  {
-    name: "Integrations",
-    href: "/integrations",
-    icon: Blocks,
-  },
-  {
-    name: "Team",
-    href: "/team",
-    icon: Users,
-  },
-  {
-    name: "Billing",
-    href: "/billing",
-    icon: CreditCard,
-  },
-  {
-    name: "Settings",
-    href: "/settings",
-    icon: Settings,
-  },
+type Role = "owner" | "admin" | "developer" | "finance";
+
+// `roles` omitted = visible to everyone. Otherwise the item is only shown to the
+// listed roles, so a member never sees a section they can't act in (e.g. finance
+// doesn't see Integrations/Team/Settings; developer doesn't see Billing/Team).
+const navItems: { name: string; href: string; icon: typeof LayoutDashboard; roles?: Role[] }[] = [
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Transactions", href: "/transactions", icon: Receipt },
+  { name: "Payment Links", href: "/payment-links", icon: Link2, roles: ["owner", "admin", "developer"] },
+  { name: "Integrations", href: "/integrations", icon: Blocks, roles: ["owner", "admin", "developer"] },
+  { name: "Team", href: "/team", icon: Users, roles: ["owner", "admin"] },
+  { name: "Billing", href: "/billing", icon: CreditCard, roles: ["owner", "admin", "finance"] },
+  { name: "Settings", href: "/settings", icon: Settings, roles: ["owner", "admin", "developer"] },
 ];
 
-export function Sidebar() {
+export function Sidebar({ role }: { role?: string }) {
   const pathname = usePathname();
+  const items = navItems.filter((item) => !item.roles || (role && item.roles.includes(role as Role)));
 
   return (
     <>
@@ -56,7 +34,7 @@ export function Sidebar() {
             <Logo inverted href="/dashboard" />
           </div>
           <nav className="flex-1 p-4 flex flex-col gap-2">
-            {navItems.map((item) => {
+            {items.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
@@ -81,7 +59,7 @@ export function Sidebar() {
       {/* Mobile Bottom Nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 pl-[15px] pr-0 pb-[calc(var(--spacing-floating-header)+env(safe-area-inset-bottom))]">
         <nav className="flex h-20 items-center justify-around rounded-l-[40px] rounded-r-none bg-sidebar text-sidebar-foreground shadow-floating-header px-3">
-          {navItems.map((item) => {
+          {items.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
