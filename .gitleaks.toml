@@ -1,0 +1,19 @@
+# Gitleaks configuration — exclude third-party skill documentation and
+# example/placeholder credentials that are NOT real secrets.
+
+title = "PaySwift gitleaks config"
+
+[allowlist]
+  description = "Global allowlist for false positives"
+
+  # Third-party agent skill docs contain example curl/API-key placeholders.
+  # These are documentation files, not application code, and contain zero
+  # real credentials.
+  paths = [
+    '''\.agents/skills/.*''',
+    '''README\.md''',
+  ]
+
+  # Individual false-positive fingerprints from README example curl commands
+  # and other documentation placeholders.
+  commits = []
