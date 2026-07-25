@@ -20,6 +20,8 @@ export default async function Home() {
           <div className="flex h-20 w-full items-center justify-between px-4 md:px-6">
           <Logo />
           <nav className="flex items-center gap-4">
+            <Link href="/pricing" className="text-sm font-medium hover:text-primary transition-colors hidden sm:block">Pricing</Link>
+            <Link href="/docs" className="text-sm font-medium hover:text-primary transition-colors hidden sm:block">Docs</Link>
             <ThemeToggle />
             {userId ? (
               <Link href="/dashboard">
