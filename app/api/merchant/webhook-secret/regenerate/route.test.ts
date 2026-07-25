@@ -9,6 +9,7 @@ vi.mock('next/server', async (importOriginal) => ({
 import { POST } from './route';
 import { auth } from '@clerk/nextjs/server';
 import { getOrganizationContext, updateMerchantForOrganization } from '@/lib/repositories/organizations';
+import { requireRole } from '@/lib/rbac';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 
 vi.mock('@clerk/nextjs/server', () => ({ auth: vi.fn() }));
@@ -19,6 +20,7 @@ vi.mock('@/lib/repositories/organizations', () => ({
   getOrganizationContext: vi.fn(),
   updateMerchantForOrganization: vi.fn(),
 }));
+vi.mock('@/lib/rbac', () => ({ requireRole: vi.fn() }));
 vi.mock('@/lib/repositories/audit-log', () => ({
   writeAuditLog: vi.fn(),
 }));
@@ -32,12 +34,20 @@ describe('POST /api/merchant/webhook-secret/regenerate', () => {
       membership: {},
       merchant: { id: 'merchant-1' },
     } as never);
+    vi.mocked(requireRole).mockResolvedValue({ allowed: true, membership: { role: 'owner' } } as never);
   });
 
   it('returns 401 when unauthenticated', async () => {
     vi.mocked(auth).mockResolvedValueOnce({ userId: null, orgId: null } as never);
     const response = await POST();
     expect(response.status).toBe(401);
+  });
+
+  it('rejects a finance member (rotation is owner/admin/developer only)', async () => {
+    vi.mocked(requireRole).mockResolvedValueOnce({ allowed: false, error: 'Insufficient permissions for this action', status: 403 } as never);
+    const response = await POST();
+    expect(response.status).toBe(403);
+    expect(updateMerchantForOrganization).not.toHaveBeenCalled();
   });
 
   it('returns 404 when the organization/merchant cannot be resolved', async () => {

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PATCH } from './route';
 import { auth } from '@clerk/nextjs/server';
 import { getOrganizationContext, updateMerchantForOrganization } from '@/lib/repositories/organizations';
+import { requireRole } from '@/lib/rbac';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 
 vi.mock('@clerk/nextjs/server', () => ({ auth: vi.fn() }));
@@ -13,6 +14,7 @@ vi.mock('@/lib/repositories/organizations', () => ({
   getOrganizationContext: vi.fn(),
   updateMerchantForOrganization: vi.fn(),
 }));
+vi.mock('@/lib/rbac', () => ({ requireRole: vi.fn() }));
 vi.mock('@/lib/repositories/audit-log', () => ({
   writeAuditLog: vi.fn(),
 }));
@@ -30,6 +32,26 @@ describe('PATCH /api/merchant/settings', () => {
       membership: {},
       merchant: { id: 'merchant-1' },
     } as never);
+    vi.mocked(requireRole).mockResolvedValue({ allowed: true, membership: { role: 'owner' } } as never);
+  });
+
+  it('rejects a finance member (settings are owner/admin/developer only)', async () => {
+    vi.mocked(requireRole).mockResolvedValueOnce({ allowed: false, error: 'Insufficient permissions for this action', status: 403 } as never);
+    const response = await PATCH(makeRequest({ webhookUrl: 'https://example.com/hook' }));
+    expect(response.status).toBe(403);
+    expect(updateMerchantForOrganization).not.toHaveBeenCalled();
+  });
+
+  it('forbids a developer from switching the environment (owner/admin only)', async () => {
+    vi.mocked(requireRole).mockResolvedValueOnce({ allowed: true, membership: { role: 'developer' } } as never);
+    vi.mocked(getOrganizationContext).mockResolvedValueOnce({
+      organization: { id: 'org-1', liveApprovedAt: new Date() },
+      membership: {},
+      merchant: { id: 'merchant-1' },
+    } as never);
+    const response = await PATCH(makeRequest({ environment: 'live' }));
+    expect(response.status).toBe(403);
+    expect(updateMerchantForOrganization).not.toHaveBeenCalled();
   });
 
   it('returns 401 when unauthenticated', async () => {

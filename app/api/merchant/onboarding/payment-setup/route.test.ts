@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
 import { auth } from '@clerk/nextjs/server';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
+import { requireRole } from '@/lib/rbac';
 import { setSandboxCredential, setLiveCredential } from '@/lib/repositories/daraja-credentials';
 import { getAccessToken } from '@/lib/daraja';
 
@@ -12,6 +13,8 @@ vi.mock('@clerk/nextjs/server', () => ({
 vi.mock('@/lib/repositories/organizations', () => ({
   getOrganizationContext: vi.fn(),
 }));
+
+vi.mock('@/lib/rbac', () => ({ requireRole: vi.fn() }));
 
 vi.mock('@/lib/repositories/daraja-credentials', () => ({
   setSandboxCredential: vi.fn(),
@@ -51,6 +54,14 @@ describe('POST /api/merchant/onboarding/payment-setup', () => {
       membership: {},
       merchant: null,
     } as never);
+    vi.mocked(requireRole).mockResolvedValue({ allowed: true, membership: { role: 'owner' } } as never);
+  });
+
+  it('forbids a developer from setting LIVE credentials (owner/admin only)', async () => {
+    vi.mocked(requireRole).mockResolvedValueOnce({ allowed: false, error: 'Insufficient permissions for this action', status: 403 } as never);
+    const response = await POST(makeRequest(VALID_CREDS));
+    expect(response.status).toBe(403);
+    expect(setLiveCredential).not.toHaveBeenCalled();
   });
 
   it('returns 400 for an invalid mode', async () => {

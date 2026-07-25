@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import crypto from 'node:crypto';
 import { encryptSecret } from '@/lib/crypto';
 import { getOrganizationContext, updateMerchantForOrganization } from '@/lib/repositories/organizations';
+import { requireRole } from '@/lib/rbac';
 import { notifyWebhookSecretRotated } from '@/lib/email/notifications';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
@@ -22,6 +23,14 @@ export async function POST() {
     }
 
     const { organization } = context;
+
+    // Rotating the webhook signing secret breaks the merchant's current
+    // signature verification until they update it — an owner/admin/developer
+    // (integration-managing) action, never finance.
+    const rbac = await requireRole(organization.id, userId, ['owner', 'admin', 'developer']);
+    if (!rbac.allowed) {
+      return NextResponse.json({ success: false, error: rbac.error }, { status: rbac.status });
+    }
     const newSecret = `whsec_${crypto.randomBytes(24).toString('hex')}`;
 
     await updateMerchantForOrganization(organization.id, { webhookSecret: encryptSecret(newSecret) });

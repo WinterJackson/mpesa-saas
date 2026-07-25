@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
+import { requireRole } from '@/lib/rbac';
 import { setSandboxCredential, setLiveCredential, type DarajaCredentialSet } from '@/lib/repositories/daraja-credentials';
 import { getAccessToken } from '@/lib/daraja';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
@@ -38,6 +39,14 @@ export async function POST(request: Request) {
 
     if (mode !== 'sandbox' && mode !== 'live') {
       return NextResponse.json({ success: false, error: 'mode must be "sandbox" or "live"' }, { status: 400 });
+    }
+
+    // Setting Daraja credentials is money-movement configuration. Sandbox creds
+    // may be set by owner/admin/developer; LIVE credentials are owner/admin only.
+    const allowedRoles = mode === 'live' ? (['owner', 'admin'] as const) : (['owner', 'admin', 'developer'] as const);
+    const rbac = await requireRole(context.organization.id, userId, [...allowedRoles]);
+    if (!rbac.allowed) {
+      return NextResponse.json({ success: false, error: rbac.error }, { status: rbac.status });
     }
 
     for (const [field, value] of Object.entries({ consumerKey, consumerSecret, shortcode, passkey, callbackUrl })) {

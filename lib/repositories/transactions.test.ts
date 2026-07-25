@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { prisma } from '@/lib/db';
-import { findTransactionById, listTransactions, transactionStatusSummary, summarizeStats } from './transactions';
+import { findTransactionById, listTransactions, transactionStatusSummary, summarizeStats, seedDemoTransactions } from './transactions';
 
 vi.mock('@/lib/db', () => ({
   prisma: {
@@ -8,6 +8,8 @@ vi.mock('@/lib/db', () => ({
       findFirst: vi.fn(),
       findMany: vi.fn(),
       groupBy: vi.fn(),
+      count: vi.fn(),
+      createMany: vi.fn(),
     },
   },
 }));
@@ -23,6 +25,25 @@ describe('transactions repository', () => {
     expect(prisma.transaction.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'tx-1', organizationId: 'org-1' } })
     );
+  });
+
+  it('seedDemoTransactions refuses when the merchant already has >=5 transactions', async () => {
+    vi.mocked(prisma.transaction.count).mockResolvedValueOnce(5 as never);
+    const result = await seedDemoTransactions({ organizationId: 'org-1', merchantId: 'm-1', environment: 'sandbox' });
+    expect(result).toEqual({ alreadySeeded: true });
+    expect(prisma.transaction.createMany).not.toHaveBeenCalled();
+  });
+
+  it('seedDemoTransactions is org-scoped and creates demo rows tagged source=demo', async () => {
+    vi.mocked(prisma.transaction.count).mockResolvedValueOnce(0 as never);
+    vi.mocked(prisma.transaction.createMany).mockResolvedValueOnce({ count: 5 } as never);
+
+    const result = await seedDemoTransactions({ organizationId: 'org-1', merchantId: 'm-1', environment: 'sandbox' });
+    expect(result).toEqual({ seeded: 5 });
+    expect(prisma.transaction.count).toHaveBeenCalledWith({ where: { organizationId: 'org-1', merchantId: 'm-1' } });
+    const call = vi.mocked(prisma.transaction.createMany).mock.calls[0][0] as { data: Array<Record<string, unknown>> };
+    expect(call.data).toHaveLength(5);
+    expect(call.data.every((r) => r.organizationId === 'org-1' && r.merchantId === 'm-1' && r.source === 'demo')).toBe(true);
   });
 
   it('listTransactions always filters by organizationId', async () => {

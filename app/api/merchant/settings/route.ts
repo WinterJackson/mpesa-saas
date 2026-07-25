@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { encryptSecret, decryptSecret } from '@/lib/crypto';
 import { getOrganizationContext, updateMerchantForOrganization, type MerchantSettingsUpdate } from '@/lib/repositories/organizations';
+import { requireRole } from '@/lib/rbac';
 import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { isBlockedWebhookHostname } from '@/lib/url-safety';
 import { logger } from '@/lib/logger';
@@ -21,6 +22,15 @@ export async function PATCH(request: Request) {
     }
 
     const { organization } = context;
+
+    // Config/integration changes are owner/admin/developer (finance is billing-only
+    // and must never touch webhook/Shopify/environment settings). The environment
+    // switch is narrowed further to owner/admin below.
+    const rbac = await requireRole(organization.id, userId, ['owner', 'admin', 'developer']);
+    if (!rbac.allowed) {
+      return NextResponse.json({ success: false, error: rbac.error }, { status: rbac.status });
+    }
+
     const body = await request.json();
 
     const updateData: MerchantSettingsUpdate = {};
@@ -28,6 +38,11 @@ export async function PATCH(request: Request) {
     if (body.environment !== undefined) {
       if (body.environment !== 'sandbox' && body.environment !== 'live') {
         return NextResponse.json({ success: false, error: 'Invalid environment value' }, { status: 400 });
+      }
+      // Switching the operational environment is an owner/admin decision, not a
+      // developer one (it changes real payment routing).
+      if (rbac.membership.role === 'developer') {
+        return NextResponse.json({ success: false, error: 'Only an owner or admin can change the environment' }, { status: 403 });
       }
       // Going live is admin-gated: the org must have been approved for go-live
       // (liveApprovedAt set) before a merchant can toggle themselves to live.
