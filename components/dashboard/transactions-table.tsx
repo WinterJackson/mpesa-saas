@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { RefreshCw, ShoppingCart, ShoppingBag, Database } from "lucide-react";
 import { SummaryData } from "./summary-cards";
+import { TransactionDetailDrawer } from "./transaction-detail-drawer";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -36,9 +37,19 @@ interface TransactionsTableProps {
   showFilters?: boolean;
   limit?: number;
   environment?: string;
+  /** Merchant role of the viewer — enables note editing + refund in the drawer. */
+  currentRole?: string;
 }
 
-export function TransactionsTable({ initialTransactions, initialNextCursor = null, onSummaryUpdate, showFilters = false, limit = 50, environment }: TransactionsTableProps) {
+export function TransactionsTable({ initialTransactions, initialNextCursor = null, onSummaryUpdate, showFilters = false, limit = 50, environment, currentRole }: TransactionsTableProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const canManage = ["owner", "admin", "finance"].includes(currentRole ?? "");
+
+  function openDetail(id: string) {
+    setSelectedId(id);
+    setDrawerOpen(true);
+  }
   const envQuery = environment ? `&environment=${environment}` : "";
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
@@ -268,7 +279,12 @@ export function TransactionsTable({ initialTransactions, initialNextCursor = nul
               </TableHeader>
               <TableBody>
                 {filteredTransactions.map((t) => (
-                  <TableRow key={t.id}>
+                  <TableRow
+                    key={t.id}
+                    onClick={() => openDetail(t.id)}
+                    className="cursor-pointer hover:bg-muted/50"
+                    title="View details"
+                  >
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {t.id.split('_').pop()?.substring(0, 8) || t.id.substring(0, 8)}
                     </TableCell>
@@ -311,6 +327,13 @@ export function TransactionsTable({ initialTransactions, initialNextCursor = nul
           </div>
         )}
       </CardContent>
+
+      <TransactionDetailDrawer
+        transactionId={selectedId}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        canManage={canManage}
+      />
     </Card>
   );
 }

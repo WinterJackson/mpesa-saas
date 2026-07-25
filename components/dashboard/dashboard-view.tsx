@@ -13,9 +13,10 @@ interface DashboardViewProps {
   planUsage: PlanUsage;
   links: LinksSummary;
   initialTransactions: Transaction[];
+  currentRole?: string;
 }
 
-export function DashboardView({ analytics, planUsage, links, initialTransactions }: DashboardViewProps) {
+export function DashboardView({ analytics, planUsage, links, initialTransactions, currentRole }: DashboardViewProps) {
   return (
     <div className="space-y-6">
       <div>
@@ -29,7 +30,7 @@ export function DashboardView({ analytics, planUsage, links, initialTransactions
 
       <div>
         <h3 className="text-lg font-semibold tracking-tight mb-3">Recent activity</h3>
-        <TransactionsTable initialTransactions={initialTransactions} />
+        <TransactionsTable initialTransactions={initialTransactions} currentRole={currentRole} />
       </div>
     </div>
   );

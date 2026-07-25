@@ -73,6 +73,7 @@ export default async function DashboardPage() {
       planUsage={planUsage}
       links={linksSummary}
       initialTransactions={transactions}
+      currentRole={context.membership.role}
     />
   );
 }

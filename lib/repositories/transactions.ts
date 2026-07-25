@@ -20,6 +20,9 @@ export interface TransactionDetail extends TransactionRow {
   mpesaReceipt: string | null;
   resultCode: number | null;
   resultDesc: string | null;
+  internalNote: string | null;
+  paymentLinkId: string | null;
+  paymentLink: { title: string; slug: string } | null;
 }
 
 export interface TransactionStatusSummary {
@@ -91,8 +94,28 @@ export async function findTransactionById(
       mpesaReceipt: true,
       resultCode: true,
       resultDesc: true,
+      internalNote: true,
+      paymentLinkId: true,
+      paymentLink: { select: { title: true, slug: true } },
     },
   });
+}
+
+/**
+ * Sets the merchant-only internal note on a transaction (org-scoped so a member
+ * can never annotate another org's payment). Returns the update count (0 = the
+ * id doesn't belong to this org). Never customer-facing.
+ */
+export async function updateTransactionNote(
+  organizationId: string,
+  id: string,
+  note: string | null
+): Promise<number> {
+  const res = await prisma.transaction.updateMany({
+    where: { id, organizationId },
+    data: { internalNote: note },
+  });
+  return res.count;
 }
 
 export async function listTransactions(

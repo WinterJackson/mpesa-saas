@@ -90,6 +90,9 @@ describe('GET /api/v1/payments/status/[id]', () => {
       mpesaReceipt: 'ABC123',
       resultCode: 0,
       resultDesc: 'Success',
+      internalNote: null,
+      paymentLinkId: null,
+      paymentLink: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

@@ -29,9 +29,9 @@ export default async function TransactionsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
-          <p className="text-sm text-muted-foreground">
-            Full history of all payments through your account.
+          <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
+          <p className="text-muted-foreground mt-1">
+            Full history of all payments through your account. Tap any row for details.
           </p>
         </div>
         <a href={`/api/merchant/transactions/export?environment=${viewEnv}`} download>
@@ -46,6 +46,7 @@ export default async function TransactionsPage() {
         showFilters={true}
         limit={50}
         environment={viewEnv}
+        currentRole={context.membership.role}
       />
     </div>
   );

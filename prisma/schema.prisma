@@ -63,6 +63,10 @@ model PaymentLink {
   active         Boolean       @default(true)
   environment    String        @default("sandbox")
   expiresAt      DateTime?
+  viewCount      Int           @default(0)  // hosted-checkout opens, for conversion rate (views → payments)
+  redirectUrl    String?                    // where to send the customer after a successful payment
+  successMessage String?                    // custom thank-you shown on the hosted success screen
+  collectContact Boolean       @default(false) // opt-in: ask the customer for name/email at checkout
   createdAt      DateTime      @default(now())
   transactions   Transaction[]
 
@@ -349,6 +353,7 @@ model Transaction {
   mpesaReceipt      String?
   resultCode        Int?
   resultDesc        String?
+  internalNote      String?           // merchant-only annotation (support/bookkeeping); never customer-facing
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   environment       String            @default("sandbox")
