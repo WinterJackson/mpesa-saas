@@ -53,13 +53,13 @@ export default async function PricingPage() {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0" />
           <div className="container px-4 md:px-8 relative z-10 mx-auto max-w-4xl text-center">
             <ScrollReveal className="flex flex-col items-center gap-6">
-              <span className="rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
+              <span className="rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary dark:text-white">
                 We never take a cut of your sales
               </span>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold font-heading tracking-tight text-balance leading-[1.1]">
                 Simple, flat pricing.
                 <br />
-                <span className="text-primary">Keep 100% of every payment.</span>
+                <span className="text-primary dark:text-white">Keep 100% of every payment.</span>
               </h1>
               <p className="max-w-2xl text-base md:text-lg text-muted-foreground leading-relaxed">
                 A predictable monthly plan plus a small flat fee for payments beyond your included
