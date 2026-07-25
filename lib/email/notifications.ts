@@ -159,3 +159,22 @@ export function notifyReconciliationMismatches(count: number): Promise<void> {
   if (count <= 0) return Promise.resolve();
   return safe('reconciliation', () => sendToStaff(t.staffReconciliationEmail({ count }), 'staff_reconciliation', 'recon:resolve'));
 }
+
+// ─── Platform admin invites ───────────────────────────────────────────────────
+// These target a single explicit recipient (the invited email), not org/staff
+// resolution. This is an internal STAFF-ACCESS notification, not a Clerk
+// identity/auth email — the actual account sign-in stays entirely with Clerk.
+
+async function sendToEmail(recipient: string, email: t.RenderedEmail, tag: string): Promise<void> {
+  await sendEmail({ to: recipient, subject: email.subject, html: email.html, text: email.text, tags: [{ name: 'type', value: tag }] });
+}
+
+/** New person (no PaySwift account yet): invite them to sign up and gain admin access. */
+export function notifyAdminInvited(recipient: string, role: string, acceptUrl: string): Promise<void> {
+  return safe('admin_invite', () => sendToEmail(recipient, t.adminInviteEmail({ role, acceptUrl }), 'admin_invite'));
+}
+
+/** Existing PaySwift user just granted admin access — no sign-up needed. */
+export function notifyAdminAccessGranted(recipient: string, role: string, adminUrl: string): Promise<void> {
+  return safe('admin_access_granted', () => sendToEmail(recipient, t.adminAccessGrantedEmail({ role, adminUrl }), 'admin_access_granted'));
+}

@@ -58,6 +58,76 @@ export async function removeAdminUser(id: string): Promise<void> {
   await prisma.adminUser.delete({ where: { id } });
 }
 
+// ─── Admin invites (email-based admin onboarding, Phase 4.5 Stage B) ──────────
+//
+// A superadmin invites platform staff BY EMAIL + role. If the person already has
+// a Clerk account we bind an AdminUser immediately; otherwise we store a pending
+// AdminInvite here and bind it on their first authenticated /admin request
+// (lib/admin-invite-sync.ts). Emails are normalized lowercase so lookups match
+// regardless of how they were typed.
+
+export interface AdminInvite {
+  id: string;
+  email: string;
+  role: string;
+  token: string;
+  invitedBy: string;
+  acceptedAt: Date | null;
+  acceptedBy: string | null;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+/**
+ * Creates (or refreshes) a pending invite for an email. Idempotent per email:
+ * an existing UN-accepted invite is updated in place (new role/token/expiry)
+ * rather than duplicated, so re-inviting simply extends the window.
+ */
+export async function upsertAdminInvite(params: {
+  email: string;
+  role: string;
+  token: string;
+  invitedBy: string;
+  expiresAt: Date;
+}): Promise<AdminInvite> {
+  const email = normalizeEmail(params.email);
+  const existing = await prisma.adminInvite.findFirst({ where: { email, acceptedAt: null } });
+  if (existing) {
+    return prisma.adminInvite.update({
+      where: { id: existing.id },
+      data: { role: params.role, token: params.token, invitedBy: params.invitedBy, expiresAt: params.expiresAt },
+    });
+  }
+  return prisma.adminInvite.create({
+    data: { email, role: params.role, token: params.token, invitedBy: params.invitedBy, expiresAt: params.expiresAt },
+  });
+}
+
+/** The newest still-valid (un-accepted, un-expired) invite for an email, or null. */
+export async function findPendingInviteByEmail(email: string): Promise<AdminInvite | null> {
+  return prisma.adminInvite.findFirst({
+    where: { email: normalizeEmail(email), acceptedAt: null, expiresAt: { gt: new Date() } },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+/** All un-accepted invites (for the console list), newest first. */
+export async function listPendingAdminInvites(): Promise<AdminInvite[]> {
+  return prisma.adminInvite.findMany({ where: { acceptedAt: null }, orderBy: { createdAt: 'desc' } });
+}
+
+export async function markAdminInviteAccepted(id: string, acceptedBy: string): Promise<AdminInvite> {
+  return prisma.adminInvite.update({ where: { id }, data: { acceptedAt: new Date(), acceptedBy } });
+}
+
+export async function deleteAdminInvite(id: string): Promise<void> {
+  await prisma.adminInvite.delete({ where: { id } });
+}
+
 // ─── Platform-wide queries (admin console only — deliberately NOT tenant-scoped) ──
 
 export interface OrganizationSummary {

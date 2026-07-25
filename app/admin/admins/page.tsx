@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/admin-auth';
-import { listAdminUsers } from '@/lib/repositories/admin';
+import { listAdminUsers, listPendingAdminInvites } from '@/lib/repositories/admin';
 import { AdminManagement } from '@/components/admin/admin-management';
 
 export const metadata = {
@@ -20,16 +20,32 @@ export default async function AdminAdminsPage() {
     redirect('/admin');
   }
 
-  const admins = await listAdminUsers();
+  const [admins, invites] = await Promise.all([listAdminUsers(), listPendingAdminInvites()]);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Admin Users</h1>
-        <p className="text-sm text-muted-foreground">Superadmin only — grant or revoke platform admin access.</p>
+        <p className="text-sm text-muted-foreground">
+          Superadmin only — invite platform staff by email and manage admin access.
+        </p>
       </div>
       <AdminManagement
-        initialAdmins={admins.map((a) => ({ ...a, createdAt: a.createdAt.toISOString() }))}
+        initialAdmins={admins.map((a) => ({
+          id: a.id,
+          clerkUserId: a.clerkUserId,
+          role: a.role,
+          email: a.email ?? null,
+          status: a.status,
+          createdAt: a.createdAt.toISOString(),
+        }))}
+        initialInvites={invites.map((i) => ({
+          id: i.id,
+          email: i.email,
+          role: i.role,
+          expiresAt: i.expiresAt.toISOString(),
+          createdAt: i.createdAt.toISOString(),
+        }))}
       />
     </div>
   );

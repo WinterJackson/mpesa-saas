@@ -1,7 +1,8 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { requireAdmin } from '@/lib/admin-auth';
+import { reconcileAdminFromInvite } from '@/lib/admin-invite-sync';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { userId } = await auth();
@@ -9,7 +10,22 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect('/sign-in');
   }
 
-  const adminAuth = await requireAdmin(userId);
+  let adminAuth = await requireAdmin(userId);
+
+  // Invited-by-email admin whose account exists but isn't bound yet: match their
+  // Clerk-verified email against a pending invite and promote them on this first
+  // /admin visit, before falling back to the dashboard.
+  if (!adminAuth.allowed) {
+    const user = await currentUser();
+    const email =
+      user?.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)?.emailAddress ??
+      user?.emailAddresses[0]?.emailAddress ??
+      null;
+    if (await reconcileAdminFromInvite(userId, email)) {
+      adminAuth = await requireAdmin(userId);
+    }
+  }
+
   if (!adminAuth.allowed) {
     redirect('/dashboard');
   }

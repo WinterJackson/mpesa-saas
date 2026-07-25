@@ -10,15 +10,22 @@ const SELF_SERVE_PLANS = ['Starter', 'Growth', 'Scale'];
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ plan?: string }>;
+  searchParams: Promise<{ plan?: string; redirect_url?: string }>;
 }) {
   // Carry the plan chosen on /pricing through Clerk sign-up into onboarding, so
   // a paid selection (Growth/Scale) becomes a real subscription + first invoice.
-  const { plan } = await searchParams;
+  const { plan, redirect_url } = await searchParams;
   const selectedPlan = plan && SELF_SERVE_PLANS.includes(plan) ? plan : null;
-  const onboardingUrl = selectedPlan
-    ? `/onboarding?plan=${encodeURIComponent(selectedPlan)}`
-    : '/onboarding';
+
+  // A safe internal redirect target (e.g. an admin invite links to /admin) takes
+  // precedence over onboarding — must be a same-site relative path, never an
+  // absolute/external URL (open-redirect guard).
+  const safeRedirect =
+    redirect_url && redirect_url.startsWith('/') && !redirect_url.startsWith('//') ? redirect_url : null;
+
+  const onboardingUrl =
+    safeRedirect ??
+    (selectedPlan ? `/onboarding?plan=${encodeURIComponent(selectedPlan)}` : '/onboarding');
 
   return (
     <div className="flex min-h-screen w-full flex-col md:flex-row bg-background relative overflow-hidden">

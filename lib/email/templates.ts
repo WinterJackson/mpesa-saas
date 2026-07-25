@@ -356,3 +356,52 @@ export function staffReconciliationEmail(p: { count: number }): RenderedEmail {
     text: `Reconciliation surfaced ${p.count} mismatch(es) for review (nothing auto-failed): ${appBaseUrl()}/admin/reconciliation`,
   };
 }
+
+// ─── Platform admin invites (Phase 4.5 Stage B) ───────────────────────────────
+
+/** Human label for an admin role, for email copy. */
+function adminRoleLabel(role: string): string {
+  const labels: Record<string, string> = {
+    support: 'Support',
+    kyc_reviewer: 'KYC Reviewer',
+    finance: 'Finance',
+    ops: 'Operations',
+    superadmin: 'Superadmin',
+  };
+  return labels[role] ?? role;
+}
+
+/** Sent to someone with no PaySwift account yet — invites them to sign up, then reach /admin. */
+export function adminInviteEmail(p: { role: string; acceptUrl: string }): RenderedEmail {
+  const label = adminRoleLabel(p.role);
+  return {
+    subject: 'You’ve been invited to the PaySwift admin console',
+    html: renderEmail({
+      preview: `You've been invited as a ${label} on the PaySwift admin team.`,
+      heading: 'You’re invited to the PaySwift admin team',
+      bodyHtml:
+        paragraph(`You’ve been invited to join the PaySwift platform admin console as <strong>${esc(label)}</strong>.`) +
+        paragraph('Create your PaySwift account with this email address, and your admin access will be ready the moment you sign in.') +
+        paragraph(button('Accept invite & sign up', p.acceptUrl)) +
+        paragraph('This invite expires in 7 days. If you weren’t expecting it, you can ignore this email.'),
+    }),
+    text: `You've been invited to the PaySwift admin console as ${label}.\n\nSign up with this email address to activate your access: ${p.acceptUrl}\n\nThis invite expires in 7 days.`,
+  };
+}
+
+/** Sent to an EXISTING PaySwift user who was just granted admin access — no sign-up needed. */
+export function adminAccessGrantedEmail(p: { role: string; adminUrl: string }): RenderedEmail {
+  const label = adminRoleLabel(p.role);
+  return {
+    subject: 'Your PaySwift admin access is ready',
+    html: renderEmail({
+      preview: `You now have ${label} access to the PaySwift admin console.`,
+      heading: 'Your admin access is ready',
+      bodyHtml:
+        paragraph(`You’ve been granted <strong>${esc(label)}</strong> access to the PaySwift platform admin console.`) +
+        paragraph('Sign in with your existing PaySwift account to get started.') +
+        paragraph(button('Open the admin console', p.adminUrl)),
+    }),
+    text: `You now have ${label} access to the PaySwift admin console: ${p.adminUrl}`,
+  };
+}
