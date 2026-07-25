@@ -1,24 +1,27 @@
 import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
 import { ClerkProvider } from '@clerk/nextjs';
-import { Bricolage_Grotesque, Public_Sans, JetBrains_Mono } from "next/font/google";
+import { Fredoka, Karla, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
-// Body: Public Sans — built by the US government for civic accessibility; calm
-// and steady at small sizes, which matters for dashboards full of tables and
-// receipts read on budget Android phones.
-const publicSans = Public_Sans({
-  variable: "--font-public-sans",
+// Body: Karla — a humanist sans with quirky details that keep the pairing
+// coherent (not a generic corporate body under a rounded heading), and reads
+// cleanly at small sizes for tables and receipts on budget Android phones.
+const karla = Karla({
+  variable: "--font-karla",
   subsets: ["latin"],
 });
 
-// Headings: Bricolage Grotesque — springy, slightly irregular letterforms that
-// read approachable without tipping into childish. "Friendly, but serious about
-// your money."
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
+// Headings: Fredoka — genuinely rounded with big open counters for warmth.
+// DELIBERATELY capped at 400–600 (Regular/Medium/SemiBold): we avoid the
+// chunkiest 700/800 cuts so it stays credible for a payments product rather
+// than reading as a kids' app. globals.css disables synthetic bolding so
+// font-bold headings render as real SemiBold, never a faux-heavy weight.
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -41,7 +44,7 @@ export default async function RootLayout({
       <html
         lang="en"
         suppressHydrationWarning
-        className={`${publicSans.variable} ${bricolage.variable} ${jetbrainsMono.variable} h-full antialiased`}
+        className={`${karla.variable} ${fredoka.variable} ${jetbrainsMono.variable} h-full antialiased`}
       >
         <body className="min-h-full flex flex-col">
           <ThemeProvider

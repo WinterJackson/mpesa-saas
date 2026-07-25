@@ -5,8 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: var(--font-public-sans, ui-sans-serif, system-ui, sans-serif);
-  --font-heading: var(--font-bricolage, ui-sans-serif, system-ui, sans-serif);
+  --font-sans: var(--font-karla, ui-sans-serif, system-ui, sans-serif);
+  --font-heading: var(--font-fredoka, ui-sans-serif, system-ui, sans-serif);
   --font-mono: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
 }
 
@@ -185,14 +185,17 @@
   html {
     @apply font-sans;
   }
-  /* Bricolage Grotesque on every heading + title slot, platform-wide, so the
-     heading/body pairing applies everywhere without needing a font-heading class
-     on each element. Body text stays Public Sans (from html above). */
+  /* Fredoka on every heading + title slot, platform-wide, so the heading/body
+     pairing applies everywhere without needing a font-heading class on each
+     element. Body text stays Karla (from html above). Fredoka is loaded only up
+     to SemiBold (600); font-synthesis-weight:none stops the browser faux-bolding
+     font-bold/extrabold headings past that, keeping the credible Medium look. */
   h1, h2, h3, h4, h5, h6,
   [data-slot="card-title"],
   [data-slot="dialog-title"],
   [data-slot="alert-dialog-title"],
   [data-slot="sheet-title"] {
     @apply font-heading;
+    font-synthesis-weight: none;
   }
 }
