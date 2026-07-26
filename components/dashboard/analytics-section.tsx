@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Wallet, Activity, CheckCircle2, Clock, Coins, Users, Link2, Gauge } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/charts/kpi-card";
@@ -10,6 +10,7 @@ import { MiniFunnel } from "@/components/charts/mini-funnel";
 import { FailureList } from "@/components/charts/failure-list";
 import { sourceLabel } from "@/lib/charts/palette";
 import { cn } from "@/lib/utils";
+import { useVisibleInterval } from "@/hooks/use-visible-interval";
 import type {
   KpiComparison,
   TrendPoint,
@@ -74,6 +75,24 @@ export function AnalyticsSection({
       setLoading(false);
     }
   }
+
+  const rangeRef = useRef(range);
+  useEffect(() => {
+    rangeRef.current = range;
+  }, [range]);
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/merchant/analytics?range=${rangeRef.current}`);
+      const json = await res.json();
+      if (json.success) setBundle(json.data);
+    } catch {
+      /* keep prior data on a failed background refresh — same fail-quiet
+         behavior as changeRange already has */
+    }
+  }, []);
+
+  useVisibleInterval(refresh, 20_000);
 
   const { current } = bundle.kpis;
   const usagePct =

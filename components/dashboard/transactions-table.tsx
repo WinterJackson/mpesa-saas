@@ -17,6 +17,7 @@ import { TransactionDetailDrawer } from "./transaction-detail-drawer";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useVisibleInterval } from "@/hooks/use-visible-interval";
 
 export interface Transaction {
   id: string;
@@ -63,53 +64,42 @@ export function TransactionsTable({ initialTransactions, initialNextCursor = nul
     ? transactions 
     : transactions.filter(t => t.status.toLowerCase() === filter.toLowerCase());
 
-  useEffect(() => {
-    const controller = new AbortController();
-    let timeoutId: NodeJS.Timeout;
+  const pollAbortRef = React.useRef<AbortController | null>(null);
 
-    const poll = async () => {
-      try {
-        setIsRefreshing(true);
-        const res = await fetch(`/api/merchant/transactions?limit=${limit}${envQuery}`, {
-          signal: controller.signal
-        });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.data) {
-            // Don't clobber additional pages the user has loaded; the live
-            // refresh only keeps the first page fresh.
-            if (!hasLoadedMore) {
-              setTransactions(json.data.transactions);
-              setNextCursor(json.data.nextCursor ?? null);
-            }
-            if (onSummaryUpdate && json.data.summary) {
-              const currentSummaryStr = JSON.stringify(json.data.summary);
-              if (previousSummaryRef.current !== currentSummaryStr) {
-                onSummaryUpdate(json.data.summary);
-                previousSummaryRef.current = currentSummaryStr;
-              }
+  const poll = React.useCallback(async () => {
+    const controller = new AbortController();
+    pollAbortRef.current = controller;
+    try {
+      setIsRefreshing(true);
+      const res = await fetch(`/api/merchant/transactions?limit=${limit}${envQuery}`, { signal: controller.signal });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          if (!hasLoadedMore) {
+            setTransactions(json.data.transactions);
+            setNextCursor(json.data.nextCursor ?? null);
+          }
+          if (onSummaryUpdate && json.data.summary) {
+            const currentSummaryStr = JSON.stringify(json.data.summary);
+            if (previousSummaryRef.current !== currentSummaryStr) {
+              onSummaryUpdate(json.data.summary);
+              previousSummaryRef.current = currentSummaryStr;
             }
           }
         }
-      } catch (error: unknown) {
-        if (error instanceof Error && error.name !== 'AbortError') {
-          console.error("Failed to poll transactions:", error);
-        }
-      } finally {
-        setIsRefreshing(false);
-        // Schedule next poll only after current request completes
-        timeoutId = setTimeout(poll, 5000);
       }
-    };
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error("Failed to poll transactions:", error);
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [limit, envQuery, hasLoadedMore, onSummaryUpdate]);
 
-    // Initial poll schedule
-    timeoutId = setTimeout(poll, 5000);
+  useVisibleInterval(poll, 5000);
 
-    return () => {
-      controller.abort();
-      clearTimeout(timeoutId);
-    };
-  }, [onSummaryUpdate, limit, hasLoadedMore, envQuery]);
+  useEffect(() => () => pollAbortRef.current?.abort(), []);
 
   const handleManualRefresh = async () => {
     try {
