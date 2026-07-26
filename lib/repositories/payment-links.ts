@@ -15,6 +15,7 @@ export interface PaymentLinkRow {
   active: boolean;
   environment: string;
   expiresAt: Date | null;
+  viewCount: number;
   createdAt: Date;
 }
 
@@ -33,6 +34,7 @@ const LIST_SELECT = {
   active: true,
   environment: true,
   expiresAt: true,
+  viewCount: true,
   createdAt: true,
 } as const;
 
@@ -50,6 +52,9 @@ export async function createPaymentLink(params: {
   amount?: number | null;
   environment: string;
   expiresAt?: Date | null;
+  redirectUrl?: string | null;
+  successMessage?: string | null;
+  collectContact?: boolean;
 }): Promise<PaymentLinkRow> {
   // Slug collisions are astronomically unlikely; retry a couple of times to be safe.
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -65,6 +70,9 @@ export async function createPaymentLink(params: {
           amount: params.amountType === 'fixed' ? params.amount ?? null : null,
           environment: params.environment,
           expiresAt: params.expiresAt ?? null,
+          redirectUrl: params.redirectUrl ?? null,
+          successMessage: params.successMessage ?? null,
+          collectContact: params.collectContact ?? false,
         },
         select: LIST_SELECT,
       });
@@ -131,6 +139,113 @@ export async function deactivatePaymentLink(
     data: { active: false },
     select: LIST_SELECT,
   });
+}
+
+export interface PaymentLinkEditableFields {
+  title?: string;
+  description?: string | null;
+  amountType?: 'fixed' | 'customer_set';
+  amount?: number | null;
+  expiresAt?: Date | null;
+  active?: boolean;
+  redirectUrl?: string | null;
+  successMessage?: string | null;
+  collectContact?: boolean;
+}
+
+/**
+ * Org-scoped edit. Returns the updated row, or null when the id isn't in this
+ * org. When amountType flips to customer_set, amount is forced null so a stale
+ * fixed price can't linger.
+ */
+export async function updatePaymentLink(
+  organizationId: string,
+  id: string,
+  fields: PaymentLinkEditableFields
+): Promise<PaymentLinkRow | null> {
+  const data: PaymentLinkEditableFields = { ...fields };
+  if (data.amountType === 'customer_set') data.amount = null;
+
+  const res = await prisma.paymentLink.updateMany({ where: { id, organizationId }, data });
+  if (res.count === 0) return null;
+  return findPaymentLinkById(organizationId, id);
+}
+
+/** Clones an existing link into a fresh active link (new slug). Org-scoped. */
+export async function duplicatePaymentLink(
+  organizationId: string,
+  id: string
+): Promise<PaymentLinkRow | null> {
+  const src = await prisma.paymentLink.findFirst({
+    where: { id, organizationId },
+    select: {
+      ...LIST_SELECT,
+      merchantId: true,
+      redirectUrl: true,
+      successMessage: true,
+      collectContact: true,
+    },
+  });
+  if (!src) return null;
+
+  return createPaymentLink({
+    organizationId,
+    merchantId: src.merchantId,
+    title: `${src.title} (copy)`,
+    description: src.description,
+    amountType: src.amountType as 'fixed' | 'customer_set',
+    amount: src.amount,
+    environment: src.environment,
+    expiresAt: src.expiresAt,
+  });
+}
+
+/**
+ * Increments a link's hosted-checkout view counter. Deliberately UN-scoped by
+ * slug (same rationale as findActiveLinkBySlug — the slug is the capability),
+ * called from the public /pay/[slug] page to power the conversion rate. Best
+ * effort: a miss is a no-op.
+ */
+export async function incrementLinkViewBySlug(slug: string): Promise<void> {
+  await prisma.paymentLink.updateMany({ where: { slug }, data: { viewCount: { increment: 1 } } });
+}
+
+export interface PaymentLinkDetail extends PaymentLinkWithStats {
+  redirectUrl: string | null;
+  successMessage: string | null;
+  collectContact: boolean;
+  recentTransactions: { id: string; amount: number; phone: string; status: string; createdAt: Date }[];
+}
+
+/** Full per-link detail for the inspector drawer: stats + recent activity. */
+export async function getPaymentLinkDetail(
+  organizationId: string,
+  id: string
+): Promise<PaymentLinkDetail | null> {
+  const link = await prisma.paymentLink.findFirst({
+    where: { id, organizationId },
+    select: {
+      ...LIST_SELECT,
+      redirectUrl: true,
+      successMessage: true,
+      collectContact: true,
+      transactions: {
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+        select: { id: true, amount: true, phone: true, status: true, createdAt: true },
+      },
+    },
+  });
+  if (!link) return null;
+
+  const { transactions, ...rest } = link;
+  const completed = transactions.filter((t) => t.status === 'completed');
+  return {
+    ...rest,
+    paymentsCount: completed.length,
+    paymentsVolume: completed.reduce((sum, t) => sum + t.amount, 0),
+    recentTransactions: transactions.slice(0, 10),
+  };
 }
 
 export interface ActivePaymentLink extends PaymentLinkRow {

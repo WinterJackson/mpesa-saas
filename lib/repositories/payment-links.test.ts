@@ -6,6 +6,9 @@ import {
   findPaymentLinkById,
   deactivatePaymentLink,
   findActiveLinkBySlug,
+  updatePaymentLink,
+  getPaymentLinkDetail,
+  incrementLinkViewBySlug,
 } from './payment-links';
 
 vi.mock('@/lib/db', () => ({
@@ -15,6 +18,7 @@ vi.mock('@/lib/db', () => ({
       findMany: vi.fn(),
       findFirst: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
   },
 }));
@@ -127,5 +131,50 @@ describe('payment-links repository', () => {
   it('findActiveLinkBySlug returns null for a missing/expired/inactive link', async () => {
     vi.mocked(prisma.paymentLink.findFirst).mockResolvedValueOnce(null as never);
     expect(await findActiveLinkBySlug('gone')).toBeNull();
+  });
+
+  it('updatePaymentLink forces amount null when switching to customer_set (org-scoped)', async () => {
+    vi.mocked(prisma.paymentLink.updateMany).mockResolvedValueOnce({ count: 1 } as never);
+    vi.mocked(prisma.paymentLink.findFirst).mockResolvedValueOnce({ id: 'pl-1' } as never);
+    await updatePaymentLink('org-1', 'pl-1', { amountType: 'customer_set', amount: 500 });
+    expect(prisma.paymentLink.updateMany).toHaveBeenCalledWith({
+      where: { id: 'pl-1', organizationId: 'org-1' },
+      data: expect.objectContaining({ amountType: 'customer_set', amount: null }),
+    });
+  });
+
+  it('updatePaymentLink returns null (no lookup) when the id is not in the org', async () => {
+    vi.mocked(prisma.paymentLink.updateMany).mockResolvedValueOnce({ count: 0 } as never);
+    const res = await updatePaymentLink('org-1', 'missing', { title: 'X' });
+    expect(res).toBeNull();
+    expect(prisma.paymentLink.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('incrementLinkViewBySlug bumps the counter for the slug', async () => {
+    vi.mocked(prisma.paymentLink.updateMany).mockResolvedValueOnce({ count: 1 } as never);
+    await incrementLinkViewBySlug('abc123');
+    expect(prisma.paymentLink.updateMany).toHaveBeenCalledWith({
+      where: { slug: 'abc123' },
+      data: { viewCount: { increment: 1 } },
+    });
+  });
+
+  it('getPaymentLinkDetail derives completed stats and trims recent activity to 10', async () => {
+    const txns = Array.from({ length: 12 }, (_, i) => ({
+      id: `t${i}`, amount: 100, phone: '254712345678', status: i < 4 ? 'completed' : 'failed', createdAt: new Date(),
+    }));
+    vi.mocked(prisma.paymentLink.findFirst).mockResolvedValueOnce({
+      id: 'pl-1', slug: 's', title: 'T', description: null, amountType: 'fixed', amount: 100,
+      active: true, environment: 'sandbox', expiresAt: null, viewCount: 40, createdAt: new Date(),
+      redirectUrl: null, successMessage: null, collectContact: false, transactions: txns,
+    } as never);
+
+    const detail = await getPaymentLinkDetail('org-1', 'pl-1');
+    expect(detail?.paymentsCount).toBe(4);
+    expect(detail?.paymentsVolume).toBe(400);
+    expect(detail?.recentTransactions).toHaveLength(10);
+    expect(prisma.paymentLink.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'pl-1', organizationId: 'org-1' } })
+    );
   });
 });

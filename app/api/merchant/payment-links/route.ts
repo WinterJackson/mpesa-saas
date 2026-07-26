@@ -87,6 +87,21 @@ export async function POST(request: Request) {
       expiresAt = parsed;
     }
 
+    // Optional hosted-checkout customization.
+    let redirectUrl: string | null = null;
+    if (typeof body.redirectUrl === 'string' && body.redirectUrl.trim()) {
+      try {
+        const u = new URL(body.redirectUrl.trim());
+        if (u.protocol !== 'https:') throw new Error('not https');
+        redirectUrl = body.redirectUrl.trim();
+      } catch {
+        return NextResponse.json({ success: false, error: 'Redirect URL must be a valid https:// link' }, { status: 400 });
+      }
+    }
+    const successMessage =
+      typeof body.successMessage === 'string' && body.successMessage.trim() ? body.successMessage.trim().slice(0, 300) : null;
+    const collectContact = Boolean(body.collectContact);
+
     // The link inherits the merchant's current operational environment. A 'live'
     // environment is only ever reached via the admin-gated go-live flow
     // (approveGoLive sets both org.liveApprovedAt and merchant.environment), so a
@@ -100,6 +115,9 @@ export async function POST(request: Request) {
       amount,
       environment: merchant.environment,
       expiresAt,
+      redirectUrl,
+      successMessage,
+      collectContact,
     });
 
     await writeAuditLog({

@@ -19,16 +19,17 @@ export default async function PaymentLinksPage() {
 
   const viewEnv = await getViewEnvironment(context.merchant?.environment);
   const links = await listPaymentLinks(context.organization.id, { environment: viewEnv });
+  const businessName = context.merchant?.businessName ?? context.organization.businessName;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Payment Links</h1>
-        <p className="text-sm text-muted-foreground">
-          Create a shareable link or QR code and start collecting M-Pesa payments — no code required.
-        </p>
-      </div>
-      <PaymentLinksView initialLinks={links} currentRole={context.membership.role} />
-    </div>
+    <PaymentLinksView
+      initialLinks={links.map((l) => ({
+        ...l,
+        expiresAt: l.expiresAt ? l.expiresAt.toISOString() : null,
+        createdAt: l.createdAt.toISOString(),
+      }))}
+      currentRole={context.membership.role}
+      businessName={businessName}
+    />
   );
 }

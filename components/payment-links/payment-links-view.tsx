@@ -1,19 +1,18 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ConfirmButton } from '@/components/ui/confirm-button';
-import { Copy, ExternalLink, Link2, QrCode, Code2 } from 'lucide-react';
-import QRCode from 'qrcode';
-import { toast } from 'sonner';
-import { EmbedSnippet } from '@/components/payment-links/embed-snippet';
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { KpiCard } from "@/components/charts/kpi-card";
+import { PaymentLinkFormDialog, type LinkFormValues } from "./payment-link-form-dialog";
+import { PaymentLinkDetailDrawer } from "./payment-link-detail-drawer";
+import { Plus, Link2, Copy, Wallet, Activity, Gauge, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export interface PaymentLinkItem {
   id: string;
@@ -25,297 +24,203 @@ export interface PaymentLinkItem {
   active: boolean;
   environment: string;
   expiresAt: string | Date | null;
+  viewCount: number;
   createdAt: string | Date;
   paymentsCount: number;
   paymentsVolume: number;
 }
 
-const CAN_MANAGE_ROLES = ['owner', 'admin', 'developer'];
+const CAN_MANAGE_ROLES = ["owner", "admin", "developer"];
+type StatusFilter = "all" | "active" | "inactive" | "expired";
+type SortKey = "newest" | "revenue" | "payments";
 
+function kes(n: number): string {
+  return `KES ${n.toLocaleString("en-KE")}`;
+}
 function publicUrl(slug: string): string {
-  if (typeof window === 'undefined') return `/pay/${slug}`;
+  if (typeof window === "undefined") return `/pay/${slug}`;
   return `${window.location.origin}/pay/${slug}`;
 }
-
-function isExpired(link: PaymentLinkItem): boolean {
-  return link.expiresAt != null && new Date(link.expiresAt).getTime() <= Date.now();
+function isExpired(l: PaymentLinkItem): boolean {
+  return l.expiresAt != null && new Date(l.expiresAt).getTime() <= Date.now();
 }
 
 export function PaymentLinksView({
   initialLinks,
   currentRole,
+  businessName,
 }: {
   initialLinks: PaymentLinkItem[];
   currentRole: string;
+  businessName: string;
 }) {
   const router = useRouter();
   const canManage = CAN_MANAGE_ROLES.includes(currentRole);
 
-  const [links, setLinks] = useState<PaymentLinkItem[]>(initialLinks);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [amountType, setAmountType] = useState<'fixed' | 'customer_set'>('fixed');
-  const [amount, setAmount] = useState('');
-  const [expiresAt, setExpiresAt] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [qrLink, setQrLink] = useState<PaymentLinkItem | null>(null);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [embedLink, setEmbedLink] = useState<PaymentLinkItem | null>(null);
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<StatusFilter>("all");
+  const [sort, setSort] = useState<SortKey>("newest");
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!title.trim()) return;
+  const [formOpen, setFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<"create" | "edit">("create");
+  const [editState, setEditState] = useState<{ id: string; values: Partial<LinkFormValues> } | null>(null);
 
-    setIsCreating(true);
-    try {
-      const response = await fetch('/api/merchant/payment-links', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || undefined,
-          amountType,
-          amount: amountType === 'fixed' ? Number(amount) : undefined,
-          expiresAt: expiresAt || undefined,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || 'Failed to create payment link');
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
-      setLinks((prev) => [{ ...data.data, paymentsCount: 0, paymentsVolume: 0 }, ...prev]);
-      toast.success('Payment link created.');
-      setTitle('');
-      setDescription('');
-      setAmount('');
-      setExpiresAt('');
-      setAmountType('fixed');
-      router.refresh();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create payment link');
-    } finally {
-      setIsCreating(false);
-    }
+  // ── Overview KPIs (across all links) ──
+  const kpis = useMemo(() => {
+    const collected = initialLinks.reduce((s, l) => s + l.paymentsVolume, 0);
+    const payments = initialLinks.reduce((s, l) => s + l.paymentsCount, 0);
+    const views = initialLinks.reduce((s, l) => s + l.viewCount, 0);
+    const active = initialLinks.filter((l) => l.active && !isExpired(l)).length;
+    const conversion = views > 0 ? Math.round((payments / views) * 100) : null;
+    return { collected, payments, views, active, conversion };
+  }, [initialLinks]);
+
+  // ── Filtered + sorted list ──
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let out = initialLinks.filter((l) => {
+      if (q && !l.title.toLowerCase().includes(q) && !l.slug.toLowerCase().includes(q)) return false;
+      if (status === "active") return l.active && !isExpired(l);
+      if (status === "inactive") return !l.active;
+      if (status === "expired") return l.active && isExpired(l);
+      return true;
+    });
+    out = [...out].sort((a, b) => {
+      if (sort === "revenue") return b.paymentsVolume - a.paymentsVolume;
+      if (sort === "payments") return b.paymentsCount - a.paymentsCount;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+    return out;
+  }, [initialLinks, query, status, sort]);
+
+  function openCreate() {
+    setFormMode("create");
+    setEditState(null);
+    setFormOpen(true);
   }
-
-  async function handleCopy(slug: string) {
+  function openEdit(id: string, values: Partial<LinkFormValues>) {
+    setDetailOpen(false);
+    setFormMode("edit");
+    setEditState({ id, values });
+    setFormOpen(true);
+  }
+  function openDetail(id: string) {
+    setDetailId(id);
+    setDetailOpen(true);
+  }
+  async function copyLink(slug: string, e: React.MouseEvent) {
+    e.stopPropagation();
     try {
       await navigator.clipboard.writeText(publicUrl(slug));
-      toast.success('Link copied to clipboard.');
+      toast.success("Link copied.");
     } catch {
-      toast.error('Could not copy — copy it manually.');
-    }
-  }
-
-  async function handleShowQr(link: PaymentLinkItem) {
-    setQrLink(link);
-    setQrDataUrl(null);
-    try {
-      const url = await QRCode.toDataURL(publicUrl(link.slug), { width: 320, margin: 2 });
-      setQrDataUrl(url);
-    } catch {
-      toast.error('Could not generate QR code.');
-      setQrLink(null);
-    }
-  }
-
-  async function handleDeactivate(id: string) {
-    setBusyId(id);
-    try {
-      const response = await fetch(`/api/merchant/payment-links/${id}`, { method: 'DELETE' });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || 'Failed to deactivate');
-
-      setLinks((prev) => prev.map((l) => (l.id === id ? { ...l, active: false } : l)));
-      toast.success('Payment link deactivated.');
-      router.refresh();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to deactivate');
-    } finally {
-      setBusyId(null);
+      toast.error("Could not copy — copy it manually.");
     }
   }
 
   return (
     <div className="space-y-6">
-      {canManage && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Create a payment link</CardTitle>
-            <CardDescription>
-              Share the link or its QR code with a customer — they pay with M-Pesa on a PaySwift-hosted
-              page. No website or code needed.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-1">
-                <Label htmlFor="pl-title">Title</Label>
-                <Input
-                  id="pl-title"
-                  placeholder="e.g. Blue T-Shirt, or Invoice #1024"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
-              </div>
+      {/* Header + create */}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Payment Links</h1>
+          <p className="text-muted-foreground mt-1">Shareable M-Pesa payment pages — no code required.</p>
+        </div>
+        {canManage && (
+          <Button onClick={openCreate}>
+            <Plus className="size-4" /> New payment link
+          </Button>
+        )}
+      </div>
 
-              <div className="space-y-1">
-                <Label>Amount</Label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={amountType === 'fixed' ? 'default' : 'outline'}
-                    onClick={() => setAmountType('fixed')}
-                  >
-                    Fixed price
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={amountType === 'customer_set' ? 'default' : 'outline'}
-                    onClick={() => setAmountType('customer_set')}
-                  >
-                    Customer enters amount
-                  </Button>
-                </div>
-              </div>
+      {/* Overview KPIs */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <KpiCard label="Collected via links" value={kes(kpis.collected)} icon={Wallet} />
+        <KpiCard label="Payments" value={kpis.payments.toLocaleString("en-KE")} icon={Activity} />
+        <KpiCard label="Active links" value={kpis.active.toLocaleString("en-KE")} icon={Link2} />
+        <KpiCard label="Conversion" value={kpis.conversion !== null ? `${kpis.conversion}%` : "—"} icon={Gauge} hint={`${kpis.views} views`} />
+      </div>
 
-              {amountType === 'fixed' && (
-                <div className="space-y-1">
-                  <Label htmlFor="pl-amount">Amount (KES)</Label>
-                  <Input
-                    id="pl-amount"
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    placeholder="2500"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    required
-                  />
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <Label htmlFor="pl-description">Description (optional)</Label>
-                <Input
-                  id="pl-description"
-                  placeholder="Shown to the customer at checkout"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="pl-expiry">Expires (optional)</Label>
-                <Input
-                  id="pl-expiry"
-                  type="datetime-local"
-                  value={expiresAt}
-                  onChange={(e) => setExpiresAt(e.target.value)}
-                />
-              </div>
-
-              <Button type="submit" disabled={isCreating}>
-                {isCreating ? 'Creating...' : 'Create payment link'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+      {/* Toolbar */}
+      {initialLinks.length > 0 && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Input placeholder="Search by title or link…" value={query} onChange={(e) => setQuery(e.target.value)} className="sm:max-w-xs" />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-lg border border-border p-0.5">
+              {(["all", "active", "inactive", "expired"] as StatusFilter[]).map((s) => (
+                <button key={s} type="button" onClick={() => setStatus(s)} className={cn("rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors", s === status ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground">
+              <option value="newest">Newest</option>
+              <option value="revenue">Most revenue</option>
+              <option value="payments">Most payments</option>
+            </select>
+          </div>
+        </div>
       )}
 
-      {links.length === 0 ? (
+      {/* List */}
+      {initialLinks.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+          <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
             <Link2 className="size-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No payment links yet.{canManage ? ' Create one above to get started.' : ''}
-            </p>
+            <p className="text-sm text-muted-foreground">No payment links yet.</p>
+            {canManage && (
+              <Button onClick={openCreate}><Plus className="size-4" /> Create your first link</Button>
+            )}
           </CardContent>
         </Card>
+      ) : rows.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">No links match your filters.</CardContent>
+        </Card>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border border-border">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Link</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Payments</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right">Payments</TableHead>
+                <TableHead className="text-right">Conversion</TableHead>
+                <TableHead className="w-24 text-right">Share</TableHead>
+                <TableHead className="w-8" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {links.map((link) => {
-                const expired = isExpired(link);
+              {rows.map((l) => {
+                const expired = isExpired(l);
+                const conv = l.viewCount > 0 ? Math.round((l.paymentsCount / l.viewCount) * 100) : null;
                 return (
-                  <TableRow key={link.id}>
+                  <TableRow key={l.id} onClick={() => openDetail(l.id)} className="cursor-pointer hover:bg-muted/50" title="View details">
                     <TableCell>
-                      <div className="font-medium">{link.title}</div>
-                      <div className="font-mono text-xs text-muted-foreground break-all">/pay/{link.slug}</div>
+                      <div className="font-medium">{l.title}</div>
+                      <div className="font-mono text-xs text-muted-foreground break-all">/pay/{l.slug}</div>
                     </TableCell>
+                    <TableCell>{l.amountType === "fixed" && l.amount != null ? kes(l.amount) : "Customer enters"}</TableCell>
                     <TableCell>
-                      {link.amountType === 'fixed' && link.amount != null
-                        ? `KES ${link.amount.toLocaleString()}`
-                        : 'Customer enters'}
+                      {!l.active ? <Badge variant="outline">Inactive</Badge> : expired ? <Badge variant="outline">Expired</Badge> : <Badge>Active</Badge>}
+                      {l.environment === "live" && <Badge variant="outline" className="ml-1">Live</Badge>}
                     </TableCell>
-                    <TableCell>
-                      {!link.active ? (
-                        <Badge variant="outline">Inactive</Badge>
-                      ) : expired ? (
-                        <Badge variant="outline">Expired</Badge>
-                      ) : (
-                        <Badge>Active</Badge>
-                      )}
-                      {link.environment === 'live' && (
-                        <Badge variant="outline" className="ml-1">Live</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {link.paymentsCount > 0 ? (
-                        <span>
-                          {link.paymentsCount}{' '}
-                          <span className="text-muted-foreground">
-                            (KES {link.paymentsVolume.toLocaleString()})
-                          </span>
-                        </span>
+                    <TableCell className="text-right tabular-nums">
+                      {l.paymentsCount > 0 ? (
+                        <span>{l.paymentsCount} <span className="text-muted-foreground">· {kes(l.paymentsVolume)}</span></span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <Button type="button" size="xs" variant="outline" onClick={() => handleCopy(link.slug)}>
-                          <Copy className="size-3.5" /> Copy
-                        </Button>
-                        <Button type="button" size="xs" variant="outline" onClick={() => handleShowQr(link)}>
-                          <QrCode className="size-3.5" /> QR
-                        </Button>
-                        <Button type="button" size="xs" variant="outline" onClick={() => setEmbedLink(link)}>
-                          <Code2 className="size-3.5" /> Embed
-                        </Button>
-                        <a href={publicUrl(link.slug)} target="_blank" rel="noopener noreferrer">
-                          <Button type="button" size="xs" variant="outline">
-                            <ExternalLink className="size-3.5" /> Open
-                          </Button>
-                        </a>
-                        {canManage && link.active && (
-                          <ConfirmButton
-                            size="xs"
-                            variant="destructive"
-                            disabled={busyId === link.id}
-                            onConfirm={() => handleDeactivate(link.id)}
-                            title="Turn off this payment link?"
-                            description={`"${link.title}" will stop accepting payments and its link and QR code will no longer work. This can't be undone — you'd need to create a new link.`}
-                            confirmLabel="Turn off link"
-                          >
-                            Deactivate
-                          </ConfirmButton>
-                        )}
-                      </div>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">{conv !== null ? `${conv}%` : "—"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button size="xs" variant="outline" onClick={(e) => copyLink(l.slug, e)}><Copy className="size-3.5" /> Copy</Button>
                     </TableCell>
+                    <TableCell className="text-right text-muted-foreground"><ChevronRight className="size-4" /></TableCell>
                   </TableRow>
                 );
               })}
@@ -324,57 +229,27 @@ export function PaymentLinksView({
         </div>
       )}
 
-      <Dialog open={embedLink !== null} onOpenChange={(open) => !open && setEmbedLink(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Embed &ldquo;{embedLink?.title}&rdquo;</DialogTitle>
-            <DialogDescription>
-              Add a &ldquo;Pay with M-Pesa&rdquo; button to any website or email.
-            </DialogDescription>
-          </DialogHeader>
-          {embedLink && (
-            <EmbedSnippet
-              payUrl={publicUrl(embedLink.slug)}
-              scriptUrl={typeof window !== 'undefined' ? `${window.location.origin}/pay-button.js` : '/pay-button.js'}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Create / edit dialog */}
+      <PaymentLinkFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        mode={formMode}
+        linkId={editState?.id}
+        initial={editState?.values}
+        businessName={businessName}
+        onSaved={() => router.refresh()}
+      />
 
-      <Dialog open={qrLink !== null} onOpenChange={(open) => !open && setQrLink(null)}>
-        <DialogContent className="sm:max-w-xs">
-          <DialogHeader>
-            <DialogTitle>{qrLink?.title}</DialogTitle>
-            <DialogDescription>
-              Customers can scan this QR code to open the payment page and pay with M-Pesa.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center gap-4 py-2">
-            {qrDataUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={qrDataUrl} alt="Payment link QR code" className="rounded-lg border border-border" width={256} height={256} />
-            ) : (
-              <div className="h-64 w-64 animate-pulse rounded-lg bg-muted" />
-            )}
-            {qrLink && (
-              <div className="flex w-full flex-col gap-2">
-                <a
-                  href={qrDataUrl ?? '#'}
-                  download={`payment-link-${qrLink.slug}.png`}
-                  className={qrDataUrl ? '' : 'pointer-events-none opacity-50'}
-                >
-                  <Button type="button" variant="outline" className="w-full" disabled={!qrDataUrl}>
-                    Download PNG
-                  </Button>
-                </a>
-                <Button type="button" variant="outline" className="w-full" onClick={() => handleCopy(qrLink.slug)}>
-                  <Copy className="size-3.5" /> Copy link
-                </Button>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Detail drawer */}
+      <PaymentLinkDetailDrawer
+        linkId={detailId}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        businessName={businessName}
+        canManage={canManage}
+        onChanged={() => router.refresh()}
+        onEdit={openEdit}
+      />
     </div>
   );
 }
