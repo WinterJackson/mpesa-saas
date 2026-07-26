@@ -1,5 +1,6 @@
 import { platformOverviewStats } from '@/lib/repositories/admin';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AdminOverview } from '@/components/admin/admin-overview';
 
 export const metadata = {
   title: 'Admin Overview - PaySwift',
@@ -36,6 +37,10 @@ export default async function AdminOverviewPage() {
           </CardHeader>
           <CardContent />
         </Card>
+      </div>
+
+      <div className="pt-4 border-t">
+        <AdminOverview />
       </div>
     </div>
   );
