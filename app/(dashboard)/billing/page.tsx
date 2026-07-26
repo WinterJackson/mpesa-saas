@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { ArrowRight, AlertTriangle, Download } from 'lucide-react';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { getSubscriptionForOrganization, getCurrentPeriodProjection, getBillingDetails } from '@/lib/repositories/billing';
+import { estimateComparisonCost } from '@/lib/pricing';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -133,14 +134,23 @@ export default async function BillingPage({
               </div>
 
               {projection && (
-                <UsageMeter
-                  used={projection.txCount}
-                  included={subscription.plan.includedTransactions}
-                  overageCount={projection.overageCount}
-                  overageFeeKes={subscription.plan.overageFeeKes}
-                  projectedAmount={projection.projectedAmount}
-                  monthlyFee={subscription.plan.monthlyFee}
-                />
+                <div className="space-y-4">
+                  <UsageMeter
+                    used={projection.txCount}
+                    included={subscription.plan.includedTransactions}
+                    overageCount={projection.overageCount}
+                    overageFeeKes={subscription.plan.overageFeeKes}
+                    projectedAmount={projection.projectedAmount}
+                    monthlyFee={subscription.plan.monthlyFee}
+                  />
+                  {projection.txVolume > 0 && (
+                    <div className="rounded-xl border border-blue-500/20 bg-blue-50/50 p-4 text-sm text-blue-900 dark:border-blue-500/30 dark:bg-blue-950/20 dark:text-blue-200">
+                      <p>
+                        This period, PaySwift charged you <strong>{kes(projection.projectedAmount)}</strong>. At a typical percentage-based provider (~3% per transaction), the same <strong>{kes(projection.txVolume)}</strong> in payments would have cost approximately <strong>{kes(estimateComparisonCost(projection.txVolume))}</strong>.
+                      </p>
+                    </div>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>

@@ -30,6 +30,20 @@ export const ANNUAL_DISCOUNT = 0.15; // 15% off for annual, upfront billing (Gro
 export const DEFAULT_PAYOUT_APPROVAL_THRESHOLD_KES = 10000;
 export const DEFAULT_LOW_BALANCE_THRESHOLD_KES = 1000;
 
+/**
+ * Representative of percentage-based M-Pesa aggregators such as
+ * Pesapal/Flutterwave/DPO, not a specific competitor's exact published rate.
+ */
+export const DEFAULT_PERCENTAGE_PROVIDER_RATE = 0.03;
+
+/**
+ * Estimates what a merchant would have paid to a percentage-based competitor
+ * for a given transaction volume.
+ */
+export function estimateComparisonCost(totalVolumeKes: number, benchmarkRate: number = DEFAULT_PERCENTAGE_PROVIDER_RATE): number {
+  return Math.round(totalVolumeKes * benchmarkRate);
+}
+
 export const PRICING_TIERS: PricingTier[] = [
   {
     name: 'Sandbox',
