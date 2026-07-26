@@ -26,8 +26,8 @@ export const payoutCreateDataSchema = z
   .object({
     payoutId: z.string(),
     status: z.string(),
-    conversationId: z.string().nullable(),
-    originatorConversationId: z.string().nullable(),
+    conversationId: z.string().nullable().optional(),
+    originatorConversationId: z.string().nullable().optional(),
   });
 
 export const payoutCreateResponseSchema = successResponse(payoutCreateDataSchema);

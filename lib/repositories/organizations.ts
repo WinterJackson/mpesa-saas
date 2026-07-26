@@ -12,6 +12,10 @@ export interface Organization {
   liveApprovedAt: Date | null;
   liveApprovedBy: string | null;
   environment: string;
+  kraPin: string | null;
+  billingContactEmail: string | null;
+  billingMpesaPhone: string | null;
+  payoutApprovalThresholdKes: number | null;
   createdAt: Date;
 }
 
@@ -86,6 +90,16 @@ export async function getOrganizationContext(
 
 export async function findOrganizationById(organizationId: string): Promise<Organization | null> {
   return prisma.organization.findUnique({ where: { id: organizationId } });
+}
+
+export async function updatePayoutApprovalThreshold(
+  organizationId: string,
+  thresholdKes: number | null
+) {
+  return prisma.organization.update({
+    where: { id: organizationId },
+    data: { payoutApprovalThresholdKes: thresholdKes },
+  });
 }
 
 /** Merchant requested go-live; marks the org for the admin review queue. */

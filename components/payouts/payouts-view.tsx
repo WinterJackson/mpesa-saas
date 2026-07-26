@@ -17,7 +17,10 @@ function kes(n: number): string {
   return `KES ${n.toLocaleString('en-KE')}`;
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, approvalStatus }: { status: string; approvalStatus?: string }) {
+  if (approvalStatus === 'pending') {
+    return <Badge className="capitalize bg-[#fab219] hover:bg-[#fab219]/90 text-primary-foreground border-transparent">Pending Approval</Badge>;
+  }
   const variant = status === 'completed' ? 'default' : status === 'failed' ? 'destructive' : 'secondary';
   return <Badge variant={variant} className="capitalize">{status}</Badge>;
 }
@@ -30,6 +33,11 @@ export interface PayoutRow {
   remarks: string | null;
   mpesaReceipt: string | null;
   createdAt: string;
+  approvalStatus: string;
+  initiatedByUserId: string | null;
+  approvedByUserId: string | null;
+  rejectedByUserId: string | null;
+  rejectionReason: string | null;
 }
 
 export interface RefundRow {
@@ -56,12 +64,16 @@ export function PayoutsView({
   refundable,
   environment,
   lastBalance,
+  currentUserId,
+  currentUserRole,
 }: {
   payouts: PayoutRow[];
   refunds: RefundRow[];
   refundable: RefundableTx[];
   environment: string;
   lastBalance?: { workingBalance: number | null; checkedAt: string } | null;
+  currentUserId: string;
+  currentUserRole: string;
 }) {
   const router = useRouter();
   const [phone, setPhone] = useState('');
@@ -69,6 +81,7 @@ export function PayoutsView({
   const [remarks, setRemarks] = useState('');
   const [sending, setSending] = useState(false);
   const [busyTxId, setBusyTxId] = useState<string | null>(null);
+  const [busyPayoutId, setBusyPayoutId] = useState<string | null>(null);
 
   // Low-balance heads-up: the last known M-Pesa working balance for this
   // shortcode. Advisory only — the snapshot can be stale, so it never blocks a
@@ -108,6 +121,42 @@ export function PayoutsView({
       }
     } finally {
       setBusyTxId(null);
+    }
+  }
+
+  async function handleApprovePayout(payoutId: string) {
+    setBusyPayoutId(payoutId);
+    try {
+      const res = await fetch(`/api/merchant/payouts/${payoutId}/approve`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Payout approved and sent.');
+        router.refresh();
+      } else {
+        toast.error(data.error || 'Failed to approve payout');
+      }
+    } finally {
+      setBusyPayoutId(null);
+    }
+  }
+
+  async function handleRejectPayout(payoutId: string) {
+    setBusyPayoutId(payoutId);
+    try {
+      const res = await fetch(`/api/merchant/payouts/${payoutId}/reject`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'Rejected by operator' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Payout rejected.');
+        router.refresh();
+      } else {
+        toast.error(data.error || 'Failed to reject payout');
+      }
+    } finally {
+      setBusyPayoutId(null);
     }
   }
 
@@ -191,6 +240,7 @@ export function PayoutsView({
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead>Note</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -200,7 +250,35 @@ export function PayoutsView({
                       <TableCell>{p.phone}</TableCell>
                       <TableCell className="text-right">{kes(p.amount)}</TableCell>
                       <TableCell className="max-w-40 truncate text-muted-foreground">{p.remarks ?? '—'}</TableCell>
-                      <TableCell><StatusBadge status={p.status} /></TableCell>
+                      <TableCell><StatusBadge status={p.status} approvalStatus={p.approvalStatus} /></TableCell>
+                      <TableCell className="text-right space-x-2">
+                        {p.approvalStatus === 'pending' && currentUserId !== p.initiatedByUserId && ['owner', 'admin', 'finance'].includes(currentUserRole) && (
+                          <>
+                            <ConfirmButton
+                              size="xs"
+                              variant="outline"
+                              disabled={busyPayoutId === p.id}
+                              onConfirm={() => handleRejectPayout(p.id)}
+                              title="Reject this payout?"
+                              description="This payout will be marked as failed and no money will be sent."
+                              confirmLabel="Reject"
+                            >
+                              {busyPayoutId === p.id ? '...' : 'Reject'}
+                            </ConfirmButton>
+                            <ConfirmButton
+                              size="xs"
+                              variant="default"
+                              disabled={busyPayoutId === p.id}
+                              onConfirm={() => handleApprovePayout(p.id)}
+                              title="Approve and send payout?"
+                              description={`${kes(p.amount)} will be sent to ${p.phone} via M-Pesa. This cannot be undone once confirmed.`}
+                              confirmLabel="Approve"
+                            >
+                              {busyPayoutId === p.id ? '...' : 'Approve'}
+                            </ConfirmButton>
+                          </>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

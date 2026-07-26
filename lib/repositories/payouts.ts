@@ -24,6 +24,9 @@ export async function createPayout(
     remarks?: string | null;
     occasion?: string | null;
     environment: string;
+    initiatedByUserId?: string | null;
+    requiresApproval?: boolean;
+    approvalStatus?: string;
   }
 ) {
   return prisma.payout.create({
@@ -37,6 +40,9 @@ export async function createPayout(
       occasion: data.occasion ?? null,
       environment: data.environment,
       status: 'pending',
+      initiatedByUserId: data.initiatedByUserId ?? null,
+      requiresApproval: data.requiresApproval ?? false,
+      approvalStatus: data.approvalStatus ?? 'not_required',
     },
   });
 }
@@ -65,6 +71,25 @@ export async function setPayoutInitiation(
   return prisma.payout.updateMany({
     where: { id, organizationId },
     data: { conversationId: data.conversationId, originatorConversationId: data.originatorConversationId },
+  });
+}
+
+export async function updatePayoutApprovalStatus(
+  organizationId: string,
+  payoutId: string,
+  data: {
+    approvalStatus: string;
+    status?: string;
+    approvedByUserId?: string;
+    approvedAt?: Date;
+    rejectedByUserId?: string;
+    rejectedAt?: Date;
+    rejectionReason?: string;
+  }
+) {
+  return prisma.payout.updateMany({
+    where: { id: payoutId, organizationId },
+    data,
   });
 }
 

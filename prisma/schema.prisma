@@ -22,6 +22,7 @@ model Organization {
   kraPin              String? // KRA PIN — required on a valid Kenyan (eTIMS) tax invoice
   billingContactEmail String? // invoice/dunning recipient; may differ from the owner's login email
   billingMpesaPhone   String? // M-Pesa number billed for the PaySwift subscription
+  payoutApprovalThresholdKes Int? // null = use the platform default
   createdAt       DateTime @default(now())
 
   merchant         Merchant?
@@ -394,6 +395,17 @@ model Payout {
   resultCode               Int?
   resultDesc               String?
   environment              String       @default("sandbox")
+
+  // Dual-approval workflow fields
+  initiatedByUserId        String?      // clerkUserId of the initiator
+  requiresApproval         Boolean      @default(false)
+  approvalStatus           String       @default("not_required") // not_required | pending | approved | rejected
+  approvedByUserId         String?
+  approvedAt               DateTime?
+  rejectedByUserId         String?
+  rejectedAt               DateTime?
+  rejectionReason          String?
+
   createdAt                DateTime     @default(now())
   updatedAt                DateTime     @updatedAt
   webhookDeliveries        WebhookDelivery[]

@@ -54,6 +54,8 @@ export default async function PayoutsPage() {
       <PayoutsView
         environment={viewEnv ?? context.merchant?.environment ?? 'sandbox'}
         lastBalance={lastBalance}
+        currentUserId={userId}
+        currentUserRole={context.membership.role}
         payouts={payouts.map((p) => ({
           id: p.id,
           amount: p.amount,
@@ -62,6 +64,11 @@ export default async function PayoutsPage() {
           remarks: p.remarks,
           mpesaReceipt: p.mpesaReceipt,
           createdAt: p.createdAt.toISOString(),
+          approvalStatus: p.approvalStatus,
+          initiatedByUserId: p.initiatedByUserId,
+          approvedByUserId: p.approvedByUserId,
+          rejectedByUserId: p.rejectedByUserId,
+          rejectionReason: p.rejectionReason,
         }))}
         refunds={refunds.map((r) => ({
           id: r.id,

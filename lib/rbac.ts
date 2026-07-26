@@ -9,6 +9,9 @@ export type RbacResult =
 
 export type Role = 'owner' | 'admin' | 'developer' | 'finance';
 
+/** Roles allowed to move money out (send payouts / issue refunds). */
+export const PAYOUT_ROLES: Role[] = ['owner', 'admin', 'finance'];
+
 /**
  * Enforces that the given Clerk user is a member of the given organization
  * with one of the allowed roles. Membership.role is our own source of truth

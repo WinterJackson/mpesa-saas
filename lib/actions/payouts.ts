@@ -3,7 +3,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { revalidatePath } from 'next/cache';
 import { getOrganizationContext } from '@/lib/repositories/organizations';
-import { requireRole } from '@/lib/rbac';
+import { requireRole, PAYOUT_ROLES } from '@/lib/rbac';
 import { findTransactionById } from '@/lib/repositories/transactions';
 import { createAndInitiatePayout, createAndInitiateRefund } from '@/lib/payouts';
 import { validatePhone, validateAmount } from '@/lib/validation';
@@ -11,9 +11,6 @@ import { writeAuditLog } from '@/lib/repositories/audit-log';
 import { logger } from '@/lib/logger';
 
 export type PayoutActionResult = { success: boolean; message: string };
-
-/** Roles allowed to move money out (send payouts / issue refunds). */
-const PAYOUT_ROLES = ['owner', 'admin', 'finance'] as const;
 
 /**
  * Sends money to a phone (B2C payout) from the dashboard. Reuses the same
@@ -49,6 +46,7 @@ export async function sendPayoutAction(input: {
     amount: amountCheck.sanitized!,
     phone: phoneCheck.sanitized!,
     remarks,
+    initiatedByUserId: userId,
   });
 
   if (!result.success) {
@@ -64,6 +62,11 @@ export async function sendPayoutAction(input: {
   });
 
   revalidatePath('/payouts');
+  
+  if ('requiresApproval' in result && result.requiresApproval) {
+    return { success: true, message: 'Payout held for approval — it needs a second owner/admin/finance teammate to approve it before it is sent.' };
+  }
+
   return { success: true, message: 'Payout sent — it will show as completed once M-Pesa confirms.' };
 }
 

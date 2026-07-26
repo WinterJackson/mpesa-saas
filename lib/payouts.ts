@@ -12,11 +12,17 @@ import {
 
 export type InitiatePayoutResult =
   | { success: true; payoutId: string; conversationId: string; originatorConversationId: string }
+  | { success: true; payoutId: string; requiresApproval: true }
   | { success: false; error: string; payoutId?: string };
 
 export type InitiateRefundResult =
   | { success: true; refundId: string; conversationId: string; originatorConversationId: string }
   | { success: false; error: string; refundId?: string };
+
+import { findOrganizationById } from '@/lib/repositories/organizations';
+import { DEFAULT_PAYOUT_APPROVAL_THRESHOLD_KES } from '@/lib/pricing';
+import { updatePayoutApprovalStatus, findPayoutById } from '@/lib/repositories/payouts';
+import { requireRole, PAYOUT_ROLES } from '@/lib/rbac';
 
 /**
  * Creates a pending Payout, fires the B2C request, and persists Daraja's
@@ -32,8 +38,13 @@ export async function createAndInitiatePayout(params: {
   commandId?: B2CCommandID;
   remarks?: string | null;
   occasion?: string | null;
+  initiatedByUserId?: string | null;
 }): Promise<InitiatePayoutResult> {
-  const { organizationId, merchantId, environment, amount, phone, commandId, remarks, occasion } = params;
+  const { organizationId, merchantId, environment, amount, phone, commandId, remarks, occasion, initiatedByUserId } = params;
+
+  const org = await findOrganizationById(organizationId);
+  const threshold = org?.payoutApprovalThresholdKes ?? DEFAULT_PAYOUT_APPROVAL_THRESHOLD_KES;
+  const requiresApproval = amount >= threshold;
 
   const payout = await createPayout(organizationId, {
     merchantId,
@@ -43,25 +54,133 @@ export async function createAndInitiatePayout(params: {
     remarks,
     occasion,
     environment,
+    initiatedByUserId: initiatedByUserId ?? null,
+    requiresApproval,
+    approvalStatus: requiresApproval ? 'pending' : 'not_required',
   });
 
+  if (requiresApproval) {
+    return {
+      success: true,
+      payoutId: payout.id,
+      requiresApproval: true,
+    };
+  }
+
+  return _initiateAndPersistPayoutB2C(organizationId, payout.id, {
+    environment,
+    amount,
+    phone,
+    commandId,
+    remarks: remarks ?? undefined,
+    occasion: occasion ?? undefined,
+  });
+}
+
+/**
+ * Shared helper for the actual B2C daraja call, used by initial creation (if below threshold)
+ * and by approval.
+ */
+async function _initiateAndPersistPayoutB2C(
+  organizationId: string,
+  payoutId: string,
+  opts: {
+    environment: 'sandbox' | 'live';
+    amount: number;
+    phone: string;
+    commandId?: B2CCommandID;
+    remarks?: string;
+    occasion?: string;
+  }
+): Promise<InitiatePayoutResult> {
   try {
-    const res = await initiateB2C({ organizationId, environment, amount, phone, commandId, remarks: remarks ?? undefined, occasion: occasion ?? undefined });
-    await setPayoutInitiation(organizationId, payout.id, {
+    const res = await initiateB2C({ 
+      organizationId, 
+      environment: opts.environment, 
+      amount: opts.amount, 
+      phone: opts.phone, 
+      commandId: opts.commandId, 
+      remarks: opts.remarks, 
+      occasion: opts.occasion 
+    });
+    await setPayoutInitiation(organizationId, payoutId, {
       conversationId: res.ConversationID,
       originatorConversationId: res.OriginatorConversationID,
     });
     return {
       success: true,
-      payoutId: payout.id,
+      payoutId,
       conversationId: res.ConversationID,
       originatorConversationId: res.OriginatorConversationID,
     };
   } catch (err: unknown) {
     const error = err instanceof Error ? err.message : 'Payout gateway failed';
-    await markPayoutFailedOnInitiation(organizationId, payout.id, error);
-    return { success: false, error, payoutId: payout.id };
+    await markPayoutFailedOnInitiation(organizationId, payoutId, error);
+    return { success: false, error, payoutId };
   }
+}
+
+export async function approvePayout(
+  organizationId: string,
+  payoutId: string,
+  approvingUserId: string
+): Promise<InitiatePayoutResult> {
+  const rbac = await requireRole(organizationId, approvingUserId, PAYOUT_ROLES);
+  if (!rbac.allowed) return { success: false, error: rbac.error, payoutId };
+
+  const payout = await findPayoutById(organizationId, payoutId);
+  if (!payout) return { success: false, error: 'Payout not found', payoutId };
+
+  if (payout.approvalStatus !== 'pending') {
+    return { success: false, error: 'Payout is not pending approval', payoutId };
+  }
+
+  // Enforce self-approval block
+  if (payout.initiatedByUserId != null && payout.initiatedByUserId === approvingUserId) {
+    return { success: false, error: 'You cannot approve a payout you initiated', payoutId };
+  }
+
+  await updatePayoutApprovalStatus(organizationId, payoutId, {
+    approvalStatus: 'approved',
+    approvedByUserId: approvingUserId,
+    approvedAt: new Date(),
+  });
+
+  return _initiateAndPersistPayoutB2C(organizationId, payoutId, {
+    environment: payout.environment as 'sandbox' | 'live',
+    amount: payout.amount,
+    phone: payout.phone,
+    commandId: (payout.commandId as B2CCommandID) || undefined,
+    remarks: payout.remarks || undefined,
+    occasion: payout.occasion || undefined,
+  });
+}
+
+export async function rejectPayout(
+  organizationId: string,
+  payoutId: string,
+  rejectingUserId: string,
+  reason?: string
+): Promise<{ success: boolean; error?: string }> {
+  const rbac = await requireRole(organizationId, rejectingUserId, PAYOUT_ROLES);
+  if (!rbac.allowed) return { success: false, error: rbac.error };
+
+  const payout = await findPayoutById(organizationId, payoutId);
+  if (!payout) return { success: false, error: 'Payout not found' };
+
+  if (payout.approvalStatus !== 'pending') {
+    return { success: false, error: 'Payout is not pending approval' };
+  }
+
+  await updatePayoutApprovalStatus(organizationId, payoutId, {
+    approvalStatus: 'rejected',
+    status: 'failed',
+    rejectedByUserId: rejectingUserId,
+    rejectedAt: new Date(),
+    rejectionReason: reason || undefined,
+  });
+
+  return { success: true };
 }
 
 /**

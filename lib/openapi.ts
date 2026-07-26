@@ -169,6 +169,7 @@ export function buildOpenApiDocument() {
           requestBody: jsonBody('PayoutCreateRequest'),
           responses: {
             '201': jsonResponse('PayoutCreateData', 'Payout accepted; pending confirmation'),
+            '202': jsonResponse('PayoutCreateData', 'Payout created and held for dual-approval'),
             ...commonErrors,
             '502': errorResponse('Payment gateway (Daraja) error'),
           },

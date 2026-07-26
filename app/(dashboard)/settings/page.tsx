@@ -9,6 +9,7 @@ import { ApiKeyCard } from "@/components/settings/api-key-card";
 import { WebhookCard } from "@/components/settings/webhook-card";
 import { EnvironmentCard } from "@/components/settings/environment-card";
 import { DarajaCredentialsCard } from "@/components/settings/daraja-credentials-card";
+import { PayoutApprovalCard } from "@/components/settings/payout-approval-card";
 import { CollapsibleSection } from "@/components/settings/collapsible-section";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -137,6 +138,28 @@ export default async function SettingsPage() {
             </StepLabel>
             <EnvironmentCard initialEnvironment={merchant.environment as "sandbox" | "live"} />
           </div>
+        </div>
+      </section>
+
+      {/* ── Security & Controls ──────────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <div className="flex items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <ShieldCheck className="size-5" />
+          </span>
+          <div>
+            <h3 className="text-lg font-semibold tracking-tight">Security &amp; Controls</h3>
+            <p className="text-sm text-muted-foreground">
+              Protect your funds with team approval policies.
+            </p>
+          </div>
+        </div>
+        
+        <div className="grid gap-6">
+          <PayoutApprovalCard 
+            initialThresholdKes={context.organization.payoutApprovalThresholdKes}
+            currentRole={currentRole}
+          />
         </div>
       </section>
 

@@ -78,6 +78,18 @@ export async function POST(request: Request) {
       metadata: { payoutId: result.payoutId, amount: parsed.data.amount },
     });
 
+    if ('requiresApproval' in result) {
+      const responseData = {
+        success: true,
+        data: {
+          payoutId: result.payoutId,
+          status: 'pending',
+        },
+      };
+      if (idempotencyKey) await cacheIdempotentResponse(idempotencyKey, authResult.organizationId, responseData, 202);
+      return NextResponse.json(responseData, { status: 202, headers: rateLimitHeaders(rl) });
+    }
+
     const responseData = {
       success: true,
       data: {
