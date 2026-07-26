@@ -357,6 +357,34 @@ export function staffReconciliationEmail(p: { count: number }): RenderedEmail {
   };
 }
 
+export function lowBalanceAlertEmail(p: { businessName: string; balanceKes: number; thresholdKes: number }): RenderedEmail {
+  return {
+    subject: `Your M-Pesa shortcode balance is low`,
+    html: renderEmail({
+      preview: `Your working balance is ${money(p.balanceKes)}, below your ${money(p.thresholdKes)} alert threshold.`,
+      heading: 'Low shortcode balance',
+      bodyHtml:
+        paragraph(`Hi ${esc(p.businessName)}, your M-Pesa shortcode's working balance is <strong>${money(p.balanceKes)}</strong>, below your configured alert threshold of ${money(p.thresholdKes)}. Payouts and refunds may fail until this is topped up.`) +
+        paragraph(button('View payouts', `${appBaseUrl()}/payouts`)),
+    }),
+    text: `Your M-Pesa shortcode balance is ${money(p.balanceKes)}, below your ${money(p.thresholdKes)} threshold. Payouts/refunds may fail until topped up: ${appBaseUrl()}/payouts`,
+  };
+}
+
+export function staffLowBalanceAlertEmail(p: { businessName: string; balanceKes: number }): RenderedEmail {
+  return {
+    subject: `[Ops] ${p.businessName} — low shortcode balance`,
+    html: renderEmail({
+      preview: `${p.businessName}'s working balance dropped below its alert threshold.`,
+      heading: 'Merchant shortcode balance low',
+      bodyHtml:
+        paragraph(`<strong>${esc(p.businessName)}</strong>'s working balance is now ${money(p.balanceKes)}, below its configured alert threshold.`) +
+        paragraph(button('Open balances', `${appBaseUrl()}/admin/balances`)),
+    }),
+    text: `${p.businessName}'s balance is ${money(p.balanceKes)}, below its alert threshold: ${appBaseUrl()}/admin/balances`,
+  };
+}
+
 // ─── Platform admin invites (Phase 4.5 Stage B) ───────────────────────────────
 
 /** Human label for an admin role, for email copy. */

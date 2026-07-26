@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { DEFAULT_LOW_BALANCE_THRESHOLD_KES } from '@/lib/pricing';
 
 // Locally defined to avoid importing model types from @prisma/client, which
 // are not reliably exported in Prisma 7 with the Neon adapter (see lib/auth.ts).
@@ -16,6 +17,7 @@ export interface Organization {
   billingContactEmail: string | null;
   billingMpesaPhone: string | null;
   payoutApprovalThresholdKes: number | null;
+  lowBalanceThresholdKes: number | null;
   createdAt: Date;
 }
 
@@ -99,6 +101,20 @@ export async function updatePayoutApprovalThreshold(
   return prisma.organization.update({
     where: { id: organizationId },
     data: { payoutApprovalThresholdKes: thresholdKes },
+  });
+}
+
+export function resolveLowBalanceThreshold(org: { lowBalanceThresholdKes: number | null }): number {
+  return org.lowBalanceThresholdKes ?? DEFAULT_LOW_BALANCE_THRESHOLD_KES;
+}
+
+export async function updateLowBalanceThreshold(
+  organizationId: string,
+  thresholdKes: number | null
+) {
+  return prisma.organization.update({
+    where: { id: organizationId },
+    data: { lowBalanceThresholdKes: thresholdKes },
   });
 }
 

@@ -92,6 +92,10 @@ export function categoryForNotificationType(type: string): PreferenceKey | null 
       return 'securityAlerts';
     case 'product':
       return 'productUpdates';
+    // 'balance' is deliberately NOT mapped to a category — a low-balance alert
+    // must always reach the merchant regardless of notification preferences,
+    // since it directly predicts payout/refund failures. Falls through to the
+    // default case below (always delivered).
     default:
       return null;
   }

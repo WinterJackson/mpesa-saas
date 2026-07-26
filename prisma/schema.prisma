@@ -23,6 +23,7 @@ model Organization {
   billingContactEmail String? // invoice/dunning recipient; may differ from the owner's login email
   billingMpesaPhone   String? // M-Pesa number billed for the PaySwift subscription
   payoutApprovalThresholdKes Int? // null = use the platform default
+  lowBalanceThresholdKes Int? // null = use the platform default (see DEFAULT_LOW_BALANCE_THRESHOLD_KES in lib/pricing.ts)
   createdAt       DateTime @default(now())
 
   merchant         Merchant?

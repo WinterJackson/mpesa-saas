@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
 import { findDarajaCommandByOriginatorId } from '@/lib/repositories/daraja-commands';
-import { createBalanceSnapshot } from '@/lib/repositories/account-balance';
+import { createBalanceSnapshot, latestBalanceSnapshot } from '@/lib/repositories/account-balance';
+import { findOrganizationById, resolveLowBalanceThreshold } from '@/lib/repositories/organizations';
 
 vi.mock('@/lib/repositories/daraja-commands', () => ({
   findDarajaCommandByOriginatorId: vi.fn(),
@@ -9,9 +10,16 @@ vi.mock('@/lib/repositories/daraja-commands', () => ({
 }));
 vi.mock('@/lib/repositories/account-balance', async () => {
   const actual = await vi.importActual<typeof import('@/lib/repositories/account-balance')>('@/lib/repositories/account-balance');
-  return { ...actual, createBalanceSnapshot: vi.fn() };
+  return { ...actual, createBalanceSnapshot: vi.fn(), latestBalanceSnapshot: vi.fn() };
 });
 vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
+vi.mock('@/lib/repositories/organizations', () => ({
+  findOrganizationById: vi.fn(),
+  resolveLowBalanceThreshold: vi.fn(),
+}));
+vi.mock('@/lib/email/notifications', () => ({
+  notifyLowBalance: vi.fn(),
+}));
 
 function req(originator: string, resultCode: number, balance?: string) {
   return new Request('http://localhost/api/mpesa/account-balance/result', {
@@ -32,6 +40,10 @@ describe('POST /api/mpesa/account-balance/result', () => {
 
   it('snapshots the parsed working balance on success', async () => {
     vi.mocked(findDarajaCommandByOriginatorId).mockResolvedValueOnce({ id: 'c-1', organizationId: 'org-1', environment: 'live', type: 'account_balance', status: 'pending', targetPayoutId: null } as never);
+    vi.mocked(latestBalanceSnapshot).mockResolvedValueOnce(null);
+    vi.mocked(findOrganizationById).mockResolvedValueOnce({ id: 'org-1' } as never);
+    vi.mocked(resolveLowBalanceThreshold).mockReturnValueOnce(1000);
+
     const res = await POST(req('OC', 0, 'Working Account|KES|481000.00|481000.00|0.00|0.00'));
     expect(res.status).toBe(200);
     expect(createBalanceSnapshot).toHaveBeenCalledWith('org-1', expect.objectContaining({ workingBalance: 481000, environment: 'live' }));

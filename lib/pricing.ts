@@ -28,6 +28,7 @@ export interface PricingTier {
 
 export const ANNUAL_DISCOUNT = 0.15; // 15% off for annual, upfront billing (Growth & Scale)
 export const DEFAULT_PAYOUT_APPROVAL_THRESHOLD_KES = 10000;
+export const DEFAULT_LOW_BALANCE_THRESHOLD_KES = 1000;
 
 export const PRICING_TIERS: PricingTier[] = [
   {

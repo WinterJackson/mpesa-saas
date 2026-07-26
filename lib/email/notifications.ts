@@ -190,6 +190,26 @@ export function notifyReconciliationMismatches(count: number): Promise<void> {
   return safe('reconciliation', () => sendToStaff(t.staffReconciliationEmail({ count }), 'staff_reconciliation', 'recon:resolve'));
 }
 
+export function notifyLowBalance(organizationId: string, balanceKes: number, thresholdKes: number): Promise<void> {
+  // 'balance.low' has no matching prefix in categoryForNotificationType — this is
+  // deliberate (see notification-preferences.ts): a merchant must never be able to
+  // silence the one alert that tells them payouts are about to start failing.
+  recordNotification({
+    organizationId,
+    type: 'balance.low',
+    title: 'Low shortcode balance',
+    body: `Your working balance is ${kesText(balanceKes)}, below your ${kesText(thresholdKes)} threshold. Payouts and refunds may fail.`,
+    href: '/payouts',
+  });
+  return safe('low_balance', async () => {
+    const recipients = await resolveOrgRecipients(organizationId);
+    if (recipients) {
+      await sendToOrg(organizationId, (name) => t.lowBalanceAlertEmail({ businessName: name, balanceKes, thresholdKes }), 'low_balance');
+      await sendToStaff(t.staffLowBalanceAlertEmail({ businessName: recipients.businessName, balanceKes }), 'staff_low_balance', 'alerts:manage');
+    }
+  });
+}
+
 // ─── Platform admin invites ───────────────────────────────────────────────────
 // These target a single explicit recipient (the invited email), not org/staff
 // resolution. This is an internal STAFF-ACCESS notification, not a Clerk
