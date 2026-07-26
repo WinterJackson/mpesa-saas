@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { generateKeyPairSync, privateDecrypt, constants } from 'node:crypto';
+import { generateKeyPairSync } from 'node:crypto';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -12,7 +12,7 @@ import {
 // Generate an RSA keypair as PEM strings; hand the public PEM to the module as
 // if it were Safaricom's cert, then decrypt with the private key to prove the
 // round-trip.
-const { publicKey: publicPem, privateKey } = generateKeyPairSync('rsa', {
+const { publicKey: publicPem } = generateKeyPairSync('rsa', {
   modulusLength: 2048,
   publicKeyEncoding: { type: 'spki', format: 'pem' },
   privateKeyEncoding: { type: 'pkcs8', format: 'pem' },

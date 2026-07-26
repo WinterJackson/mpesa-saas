@@ -3,7 +3,7 @@ import { initiateB2C } from '@/lib/daraja-b2c';
 import { createPayout, setPayoutInitiation, markPayoutFailedOnInitiation } from '@/lib/repositories/payouts';
 import { createRefund, setRefundInitiation, markRefundFailedOnInitiation } from '@/lib/repositories/refunds';
 import { createAndInitiatePayout, createAndInitiateRefund } from './payouts';
-
+import { findOrganizationById } from '@/lib/repositories/organizations';
 vi.mock('@/lib/daraja-b2c', () => ({ initiateB2C: vi.fn() }));
 vi.mock('@/lib/repositories/payouts', () => ({
   createPayout: vi.fn(),
@@ -15,11 +15,15 @@ vi.mock('@/lib/repositories/refunds', () => ({
   setRefundInitiation: vi.fn(),
   markRefundFailedOnInitiation: vi.fn(),
 }));
+vi.mock('@/lib/repositories/organizations', () => ({
+  findOrganizationById: vi.fn(),
+}));
 
 describe('createAndInitiatePayout', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(createPayout).mockResolvedValue({ id: 'payout-1' } as never);
+    vi.mocked(findOrganizationById).mockResolvedValue({ id: 'org-1', payoutApprovalThresholdKes: 5000000 } as never);
   });
 
   it('persists Daraja correlation ids on success', async () => {
@@ -67,6 +71,7 @@ describe('createAndInitiateRefund', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(createRefund).mockResolvedValue({ id: 'refund-1' } as never);
+    vi.mocked(findOrganizationById).mockResolvedValue({ id: 'org-1', payoutApprovalThresholdKes: 5000000 } as never);
   });
 
   it('fires a B2C payout to the customer and records correlation ids', async () => {

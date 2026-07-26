@@ -40,6 +40,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/kyc-review" className="text-muted-foreground hover:text-foreground">KYC Review</Link>
           <Link href="/admin/billing" className="text-muted-foreground hover:text-foreground">Billing</Link>
           <Link href="/admin/reconciliation" className="text-muted-foreground hover:text-foreground">Reconciliation</Link>
+          <Link href="/admin/transactions" className="text-muted-foreground hover:text-foreground">Transactions</Link>
           {adminAuth.admin.role === 'superadmin' && (
             <Link href="/admin/admins" className="text-muted-foreground hover:text-foreground">Admins</Link>
           )}

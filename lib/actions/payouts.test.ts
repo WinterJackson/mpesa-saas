@@ -5,7 +5,7 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@/lib/repositories/organizations', () => ({ getOrganizationContext: vi.fn() }));
 vi.mock('@/lib/repositories/transactions', () => ({ findTransactionById: vi.fn() }));
 vi.mock('@/lib/payouts', () => ({ createAndInitiatePayout: vi.fn(), createAndInitiateRefund: vi.fn() }));
-vi.mock('@/lib/rbac', () => ({ requireRole: vi.fn() }));
+vi.mock('@/lib/rbac', () => ({ requireRole: vi.fn(), PAYOUT_ROLES: ['admin', 'owner', 'finance'] }));
 vi.mock('@/lib/repositories/audit-log', () => ({ writeAuditLog: vi.fn() }));
 vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
