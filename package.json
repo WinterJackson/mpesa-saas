@@ -22,7 +22,7 @@
     "@scalar/nextjs-api-reference": "^0.11.11",
     "@sentry/nextjs": "^10.67.0",
     "@tsparticles/react": "^3.0.0",
-    "@tsparticles/slim": "^3.9.1",
+    "@tsparticles/slim": "^4.3.2",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "@wrksz/themes": "^1.0.0",
