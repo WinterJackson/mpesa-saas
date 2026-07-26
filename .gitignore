@@ -54,11 +54,8 @@ ds-bundle/
 .design-sync/
 
 # Agent configuration files (local-only, not needed in repo)
-AGENTS.md
-CLAUDE.md
 DESIGN_SYSTEM.md
 .gemini/
 lint_output.txt
 .agents/
 .claude/
-.github/
