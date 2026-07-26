@@ -59,3 +59,6 @@ CLAUDE.md
 DESIGN_SYSTEM.md
 .gemini/
 lint_output.txt
+.agents/
+.claude/
+.github/
