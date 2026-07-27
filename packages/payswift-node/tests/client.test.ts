@@ -1,7 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PaySwiftClient, PaySwiftError } from '../src';
-import crypto from 'node:crypto';
-
 // Setup global fetch mock
 const fetchMock = vi.fn();
 global.fetch = fetchMock;

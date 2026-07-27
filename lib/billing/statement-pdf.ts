@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
-import { computeTaxBreakdown, platformKraPin } from '@/lib/billing/tax';
+import { platformKraPin } from '@/lib/billing/tax';
 
 const SELLER = {
   name: 'PaySwift',

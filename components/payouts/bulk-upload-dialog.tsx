@@ -126,7 +126,7 @@ export function BulkUploadDialog() {
       } else {
         toast.error(data.error || 'Upload failed');
       }
-    } catch (err) {
+    } catch {
       toast.error('An error occurred during bulk upload');
     } finally {
       setUploading(false);
@@ -201,7 +201,7 @@ export function BulkUploadDialog() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {rows.slice(0, 100).map((row, i) => (
+                      {rows.slice(0, 100).map((row) => (
                         <TableRow key={row.index}>
                           <TableCell>
                             {!row.valid ? (

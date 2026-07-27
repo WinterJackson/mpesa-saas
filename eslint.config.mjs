@@ -22,6 +22,8 @@ const eslintConfig = defineConfig([
     ".ds-sync/**",
     "ds-bundle/**",
     ".design-sync/**",
+    "packages/payswift-node/dist/**",
+    "packages/payswift-node/src/types.ts",
   ]),
 ]);
 

@@ -10,14 +10,13 @@ import type {
   TransactionListData,
   C2bRegisterUrlsData,
   SuccessResponse,
-  ErrorResponse,
 } from './types';
 
 export class PaySwiftError extends Error {
   public status?: number;
-  public details?: any;
+  public details?: unknown;
 
-  constructor(message: string, status?: number, details?: any) {
+  constructor(message: string, status?: number, details?: unknown) {
     super(message);
     this.name = 'PaySwiftError';
     this.status = status;
@@ -49,7 +48,7 @@ export class PaySwiftClient {
   private async request<T>(
     method: 'GET' | 'POST',
     path: string,
-    body?: any,
+    body?: unknown,
     options?: RequestOptions
   ): Promise<SuccessResponse<T>> {
     const url = `${this.baseUrl}${path}`;
@@ -80,22 +79,23 @@ export class PaySwiftClient {
           throw new Error(`Server returned ${response.status}`);
         }
 
-        const data = (await response.json()) as any;
+        const data = (await response.json()) as Record<string, unknown>;
 
         if (!response.ok || !data.success) {
           // 4xx errors are thrown immediately without retrying
-          throw new PaySwiftError(data.error || `HTTP ${response.status}`, response.status, data);
+          throw new PaySwiftError((data.error as string) || `HTTP ${response.status}`, response.status, data);
         }
 
         return data as SuccessResponse<T>;
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error instanceof PaySwiftError) {
           throw error;
         }
         
         if (attempt >= maxRetries) {
+          const errMsg = error instanceof Error ? error.message : String(error);
           throw new PaySwiftError(
-            `Request failed after ${maxRetries} retries: ${error.message}`,
+            `Request failed after ${maxRetries} retries: ${errMsg}`,
             undefined,
             error
           );

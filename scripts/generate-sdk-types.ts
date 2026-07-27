@@ -34,7 +34,8 @@ try {
 
   const generatedTypes = fs.readFileSync('temp-sdk-types.d.ts', 'utf8');
 
-  let output = `/**
+  let output = `/* eslint-disable */
+/**
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
  * 
  * This file is generated from the Zod schemas in the main application.
