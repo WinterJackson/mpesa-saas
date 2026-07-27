@@ -7,7 +7,7 @@ import type { HeatmapPoint } from '@/lib/repositories/analytics';
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export function PeakTimeHeatmap({ data }: { data: HeatmapPoint[] }) {
-  const { colors, isDark } = useChartTheme();
+  const { status, isDark } = useChartTheme();
 
   // Find max count to scale colors
   const maxCount = useMemo(() => {
@@ -16,7 +16,7 @@ export function PeakTimeHeatmap({ data }: { data: HeatmapPoint[] }) {
 
   // Use the primary theme color from useChartTheme as the base
   // We'll adjust opacity based on intensity
-  const baseColor = colors.success || '#0ca30c'; // default to success green if needed
+  const baseColor = status.good || '#0ca30c'; // default to success green if needed
   
   const getColor = (count: number) => {
     if (count === 0) return isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)';
