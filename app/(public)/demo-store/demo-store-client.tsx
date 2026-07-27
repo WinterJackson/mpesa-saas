@@ -49,6 +49,14 @@ export default function DemoStoreClient({ isSignedIn, businessName }: { isSigned
     setLogs([]);
     pollCountRef.current = 0;
 
+    let formattedPhone = phoneNumber.replace(/\s+/g, "");
+    if (formattedPhone.startsWith("+")) {
+      formattedPhone = formattedPhone.slice(1);
+    }
+    if (formattedPhone.startsWith("07") || formattedPhone.startsWith("01")) {
+      formattedPhone = "254" + formattedPhone.slice(1);
+    }
+
     const maskPhone = (phone: string) => {
       if (!phone || phone.length < 8) return phone;
       return `${phone.substring(0, 4)}***${phone.substring(phone.length - 4)}`;
@@ -60,7 +68,7 @@ export default function DemoStoreClient({ isSignedIn, businessName }: { isSigned
         id: crypto.randomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: "request",
-        content: `POST /api/demo/checkout  { phone: "${maskPhone(phoneNumber)}", amount: ${selectedProduct.price} }`,
+        content: `POST /api/demo/checkout  { phone: "${maskPhone(formattedPhone)}", amount: ${selectedProduct.price} }`,
       },
     ]);
 
@@ -69,7 +77,7 @@ export default function DemoStoreClient({ isSignedIn, businessName }: { isSigned
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone: phoneNumber,
+          phone: formattedPhone,
           amount: selectedProduct.price,
           orderReference: `ORD-${selectedProduct.id}`,
         }),
@@ -87,11 +95,11 @@ export default function DemoStoreClient({ isSignedIn, businessName }: { isSigned
           id: crypto.randomUUID(),
           timestamp: new Date().toLocaleTimeString(),
           type: "response",
-          content: `200 OK — STK push sent. CheckoutRequestID: ${data.data?.checkoutRequestId || data.data?.transactionId || data.checkoutRequestId}`,
+          content: `200 OK — STK push sent. CheckoutRequestID: ${data.checkoutRequestId || data.transaction?.id}`,
         },
       ]);
 
-      setTransactionId(data.data.transactionId);
+      setTransactionId(data.transaction?.id);
       setPaymentState("polling");
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "Unknown error");
