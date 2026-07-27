@@ -456,6 +456,7 @@ export async function getAdminBillingOverview() {
   return {
     mrr,
     activeCount,
+    payingCount: paying.length,
     atRiskCount: atRisk.length,
     totalSubscriptions: subs.length,
     byPlan: [...byPlanMap.values()].sort((a, b) => b.mrr - a.mrr),

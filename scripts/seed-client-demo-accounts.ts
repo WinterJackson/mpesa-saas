@@ -196,6 +196,86 @@ async function main() {
     });
   }
 
+  // 3. Provision Analytics Dummy Data (for Admin Billing page)
+  console.log('\n--- Provisioning Analytics Dummy Data ---');
+  const dummyOrgs = await prisma.organization.count({ where: { businessName: { startsWith: 'Dummy Analytics' } } });
+  if (dummyOrgs === 0) {
+    const plans = await prisma.plan.findMany();
+    if (plans.length > 0) {
+      const now = new Date();
+      // 2 months ago: 3 orgs, 2 active, 1 canceled
+      for (let i = 0; i < 3; i++) {
+        const createdAt = new Date(now.getFullYear(), now.getMonth() - 2, 15);
+        const org = await prisma.organization.create({
+          data: {
+            clerkOrgId: `dummy_clerk_${Date.now()}_${i}`,
+            businessName: `Dummy Analytics ${i}`,
+            createdAt,
+          },
+        });
+        const sub = await prisma.subscription.create({
+          data: {
+            organizationId: org.id,
+            planId: plans[0].id,
+            status: i < 2 ? 'active' : 'canceled',
+            createdAt,
+            updatedAt: i < 2 ? createdAt : new Date(now.getFullYear(), now.getMonth() - 1, 15),
+            currentPeriodEnd: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+          },
+        });
+        // Create an invoice with retries for one of them
+        if (i === 0) {
+          await prisma.invoice.create({
+            data: {
+              subscriptionId: sub.id,
+              amount: plans[0].monthlyFee,
+              status: 'paid',
+              attemptCount: 3,
+              issuedAt: createdAt,
+            },
+          });
+        } else if (i === 1) {
+          // One with retries that failed
+          await prisma.invoice.create({
+            data: {
+              subscriptionId: sub.id,
+              amount: plans[0].monthlyFee,
+              status: 'failed',
+              attemptCount: 2,
+              issuedAt: createdAt,
+            },
+          });
+        }
+      }
+
+      // 1 month ago: 2 orgs, 0 active, 1 no subscription
+      for (let i = 3; i < 5; i++) {
+        const createdAt = new Date(now.getFullYear(), now.getMonth() - 1, 10);
+        const org = await prisma.organization.create({
+          data: {
+            clerkOrgId: `dummy_clerk_${Date.now()}_${i}`,
+            businessName: `Dummy Analytics ${i}`,
+            createdAt,
+          },
+        });
+        if (i === 3) {
+          await prisma.subscription.create({
+            data: {
+              organizationId: org.id,
+              planId: plans[0].id,
+              status: 'canceled',
+              createdAt,
+              currentPeriodEnd: createdAt,
+            },
+          });
+        }
+      }
+      console.log('Created dummy analytics data for Cohort and Dunning-Recovery tests.');
+    }
+  } else {
+    console.log('Dummy analytics data already exists, skipping.');
+  }
+
   console.log('\n✅ Successfully seeded client demo accounts!');
   console.log('====================================================');
   console.log(' PASSWORD FOR ALL ACCOUNTS:', PASSWORD);

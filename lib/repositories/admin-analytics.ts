@@ -124,3 +124,93 @@ export async function getMrrAndChurn(scope: { since: Date; until: Date }): Promi
     churnMethod: 'transition',
   };
 }
+
+export interface ArpmResult {
+  arpm: number;
+  payingCount: number;
+}
+
+export async function getArpm(): Promise<ArpmResult> {
+  const overview = await getAdminBillingOverview();
+  const arpm = overview.payingCount > 0 ? Math.round(overview.mrr / overview.payingCount) : 0;
+  return { arpm, payingCount: overview.payingCount };
+}
+
+export interface CohortRow {
+  cohort: string;
+  totalOrganizations: number;
+  retained: number;
+  retentionPct: number | null;
+  cohortAgeMonths: number;
+}
+
+export async function getCohortRetention(): Promise<CohortRow[]> {
+  const orgs = await prismaReadonly.organization.findMany({
+    select: {
+      createdAt: true,
+      subscription: {
+        select: { status: true },
+      },
+    },
+  });
+
+  const cohorts = new Map<string, { total: number; retained: number }>();
+
+  for (const org of orgs) {
+    const month = org.createdAt.toISOString().slice(0, 7); // YYYY-MM
+    const current = cohorts.get(month) ?? { total: 0, retained: 0 };
+    current.total += 1;
+    
+    if (org.subscription?.status === 'active' || org.subscription?.status === 'past_due') {
+      current.retained += 1;
+    }
+    
+    cohorts.set(month, current);
+  }
+
+  const now = new Date();
+  
+  return Array.from(cohorts.entries())
+    .map(([cohort, data]) => {
+      const [year, month] = cohort.split('-').map(Number);
+      const cohortDate = new Date(year, month - 1);
+      
+      const yearsDiff = now.getFullYear() - cohortDate.getFullYear();
+      const monthsDiff = now.getMonth() - cohortDate.getMonth();
+      const cohortAgeMonths = yearsDiff * 12 + monthsDiff;
+
+      return {
+        cohort,
+        totalOrganizations: data.total,
+        retained: data.retained,
+        retentionPct: data.total > 0 ? (data.retained / data.total) * 100 : null,
+        cohortAgeMonths: Math.max(0, cohortAgeMonths), // Avoid negative if same month but slightly older date (handled by purely month-based math though)
+      };
+    })
+    .sort((a, b) => b.cohort.localeCompare(a.cohort)); // Newest first
+}
+
+export interface DunningRecovery {
+  invoicesWithRetries: number;
+  recovered: number;
+  recoveryRatePct: number | null;
+  method: 'attempt_count_approximation';
+}
+
+export async function getDunningRecoveryRate(): Promise<DunningRecovery> {
+  const [invoicesWithRetries, recovered] = await Promise.all([
+    prismaReadonly.invoice.count({
+      where: { attemptCount: { gt: 1 } },
+    }),
+    prismaReadonly.invoice.count({
+      where: { attemptCount: { gt: 1 }, status: 'paid' },
+    }),
+  ]);
+
+  return {
+    invoicesWithRetries,
+    recovered,
+    recoveryRatePct: invoicesWithRetries > 0 ? (recovered / invoicesWithRetries) * 100 : null,
+    method: 'attempt_count_approximation',
+  };
+}

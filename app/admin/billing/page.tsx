@@ -1,4 +1,5 @@
 import { listAllInvoices, getAdminBillingOverview } from '@/lib/repositories/billing';
+import { getArpm, getCohortRetention, getDunningRecoveryRate } from '@/lib/repositories/admin-analytics';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +14,13 @@ function kes(n: number): string {
 }
 
 export default async function AdminBillingPage() {
-  const [overview, invoices] = await Promise.all([getAdminBillingOverview(), listAllInvoices()]);
+  const [overview, invoices, arpm, cohortRetention, dunningRecovery] = await Promise.all([
+    getAdminBillingOverview(),
+    listAllInvoices(),
+    getArpm(),
+    getCohortRetention(),
+    getDunningRecoveryRate(),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -26,7 +33,7 @@ export default async function AdminBillingPage() {
       </div>
 
       {/* Headline metrics */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Monthly recurring revenue</CardDescription>
@@ -51,6 +58,15 @@ export default async function AdminBillingPage() {
             <CardTitle className="text-3xl">{overview.atRiskCount.toLocaleString('en-KE')}</CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">Past-due or suspended</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>ARPM (monthly)</CardDescription>
+            <CardTitle className="text-3xl">{kes(arpm.arpm)}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs text-muted-foreground">
+            MRR ÷ {arpm.payingCount} paying subscriptions
+          </CardContent>
         </Card>
       </div>
 
@@ -84,6 +100,67 @@ export default async function AdminBillingPage() {
               </TableBody>
             </Table>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Cohort Retention */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Cohort retention</CardTitle>
+          <CardDescription>
+            Retention to date, not a normalized N-month curve — cohorts of different ages aren&apos;t directly comparable.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {cohortRetention.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No organizations onboarded yet.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cohort</TableHead>
+                  <TableHead className="text-right">Signed up</TableHead>
+                  <TableHead className="text-right">Still active/past-due</TableHead>
+                  <TableHead className="text-right">Retention %</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cohortRetention.map((row) => (
+                  <TableRow key={row.cohort}>
+                    <TableCell className="font-medium">{row.cohort}</TableCell>
+                    <TableCell className="text-right">{row.totalOrganizations.toLocaleString('en-KE')}</TableCell>
+                    <TableCell className="text-right">{row.retained.toLocaleString('en-KE')}</TableCell>
+                    <TableCell className="text-right font-medium">
+                      {row.retentionPct !== null ? `${Math.round(row.retentionPct)}%` : '—'}
+                      <span className="ml-2 font-normal text-muted-foreground">
+                        ({row.cohortAgeMonths} mo. old cohort)
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dunning Recovery */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Dunning recovery</CardTitle>
+          <CardDescription>
+            Approximated from invoice retry counts (no per-attempt history is stored) — counts invoices that eventually succeeded after at least one failed attempt, not time-to-recovery.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-1">
+            <span className="text-3xl font-semibold">
+              {dunningRecovery.recoveryRatePct !== null ? `${Math.round(dunningRecovery.recoveryRatePct)}%` : '—'}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {dunningRecovery.recovered} recovered of {dunningRecovery.invoicesWithRetries} retried invoices
+            </span>
+          </div>
         </CardContent>
       </Card>
 
