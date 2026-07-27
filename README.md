@@ -2,33 +2,49 @@
 
 PaySwift is a production-ready, white-label Merchant SaaS platform that empowers businesses to seamlessly collect, monitor, and manage M-Pesa payments. Built on Next.js 16, Prisma, and Tailwind CSS, PaySwift offers a highly secure API integration layer, an interactive "Demo Store" for end-users to experience frictionless checkout, and a beautifully designed Dashboard for merchants to track their real-time transaction statuses via Webhooks.
 
-## ✨ Merchant integration & developer experience (Phase 3)
+## Table of Contents
+1. [Features](#features)
+2. [Quick Start & Setup](#quick-start--setup)
+3. [Demo & Reviewer Access](#demo--reviewer-access)
+4. [API Reference](#api-reference)
+5. [Shopify Integration](#shopify-integration)
+6. [Daraja API Suite Reference](#daraja-api-suite-reference)
+7. [Operations](#operations)
+8. [Detailed Manual QA & Testing](#detailed-manual-qa--testing)
+9. [Known Limitations](#known-limitations)
 
-PaySwift works for non-developers and developers alike:
+---
 
+## Features
+
+### Payments & Payment Links
 - **No-code Payment Links** — create a link in the dashboard (fixed or customer-set amount), share it, show its **QR code**, or paste the embeddable **"Pay with M-Pesa"** button on any site. Customers pay on a PaySwift-hosted checkout at `/pay/[slug]`.
-- **One-click Shopify** — connect a store from **Integrations** via OAuth; new orders automatically trigger an M-Pesa prompt and paid orders are marked paid. No manual app/webhook setup.
+- **Dashboard Sandbox/Live view filter** (a list-view filter, separate from the admin-gated payment-routing switch).
+
+### Developer API & Webhooks
 - **Frozen REST API** at `/api/v1` with an **OpenAPI 3.1** spec (`/api/v1/openapi.json`) and an interactive reference at **`/docs`**.
 - **Cursor pagination** (`GET /api/v1/transactions`, `{ data, nextCursor }`), **per-plan rate limits** (`X-RateLimit-*` headers, `429` + `Retry-After`).
 - **Webhooks** — a canonical event catalog (incl. `payout.reversed`), a **delivery inspector** at `/settings/webhooks` with payload viewer and one-click **redelivery**, and a signed **test event**. See `/docs/webhooks`.
-- **Dashboard Sandbox/Live view filter** (a list-view filter, separate from the admin-gated payment-routing switch).
 
-## 🛡️ Scale, observability & compliance (Phase 4)
-
+### Security & Compliance
 - **Database-level tenant isolation** — Postgres Row-Level Security on `WebhookDelivery`/`Refund` as defense-in-depth behind the repository-layer `organizationId` scoping. The app connects as a restricted `app_runtime` role (`DATABASE_APP_URL`) so RLS actually enforces; `DATABASE_URL` (owner) is migrations-only. See AGENTS.md.
 - **Rotatable encryption keys** — `ENCRYPTION_KEY` can rotate with `ENCRYPTION_KEY_PREVIOUS` bridging existing rows (no downtime, no backfill required).
+- **Compliance groundwork (Kenya DPA)** — self-service data export and an admin-reviewed data-deletion request flow (deletion is never auto-executed). Runbooks: `scripts/restore-drill.md` (Neon PITR DR) and `scripts/incident-response.md` (Sev scale + breach notification). Reliability/SLA docs at `/docs/reliability`.
+- **CI hardening** — gitleaks secret scanning and `npm audit` (critical) added, alongside the existing CodeQL + Dependabot.
+
+### Observability & Reliability
 - **Durable webhook delivery** via Inngest (optional; webhook-delivery only — cron stays on cron-job.org). Dormant until `INNGEST_EVENT_KEY`/`INNGEST_SIGNING_KEY` are set; falls back to direct delivery otherwise.
 - **Tracing** — Sentry spans around every outbound Daraja call and webhook dispatch, tagged per-organization (never PII).
 - **Public status page** at `/status`, backed by an `app/api/cron/health-check` self-check (DB, Redis, Daraja sandbox).
 - **Read-replica-ready** — read-heavy admin/reporting queries route through `prismaReadonly`; set `DATABASE_REPLICA_URL` to point them at a Neon replica when needed.
-- **Compliance groundwork (Kenya DPA)** — self-service data export and an admin-reviewed data-deletion request flow (deletion is never auto-executed). Runbooks: `scripts/restore-drill.md` (Neon PITR DR) and `scripts/incident-response.md` (Sev scale + breach notification). Reliability/SLA docs at `/docs/reliability`.
-- **CI hardening** — gitleaks secret scanning and `npm audit` (critical) added, alongside the existing CodeQL + Dependabot.
-- **Transactional email (Resend)** — branded business-workflow notifications across the lifecycle: onboarding, KYC (submitted/approved/rejected), go-live (requested/approved), payouts/refunds, invoices (issued/paid), security notices (API key created, webhook secret rotated), and Kenya-DPA data export/deletion — plus internal staff alerts (new KYC, go-live requested, reconciliation mismatches). Merchant addresses resolve from Clerk, staff from `AdminUser`. **Clerk still owns all identity/auth email** (password, verification, sign-in, team invites) — Resend never touches those. Optional and fail-open: dormant until `RESEND_API_KEY`/`EMAIL_FROM` are set, and email can never block a request or money movement.
+- **Transactional email (Resend)** — branded business-workflow notifications across the lifecycle. Clerk still owns all identity/auth email. Optional and fail-open.
 
-## 🚀 Quick Start & Setup
+---
+
+## Quick Start & Setup
 
 ### Prerequisites
-- Node.js v18+
+- Node.js v20.9+
 - A PostgreSQL database (e.g., Neon DB)
 - Clerk API keys (for Authentication)
 
@@ -68,7 +84,7 @@ UPSTASH_REDIS_REST_TOKEN="..."
 CRON_SECRET="..."
 NEXT_PUBLIC_SENTRY_DSN="https://..."
 
-# Only required if you complete Safaricom's Go-Live KYC process and want to enable Live mode
+# These are currently unused by the live credential-resolution path — live credentials are supplied per-organization via the onboarding Payment Setup step, not via global env vars.
 # MPESA_CONSUMER_KEY_LIVE=""
 # MPESA_CONSUMER_SECRET_LIVE=""
 # MPESA_PASSKEY_LIVE=""
@@ -155,8 +171,9 @@ npm run dev
 
 ---
 
-## 🔑 Reviewer / Test Login
+## Demo & Reviewer Access
 
+### Reviewer / Test Login
 To test the application without needing a real email address, you can use Clerk's test mode email bypass (enabled by default in development instances).
 
 1. Go to the sign-in or sign-up page (`/sign-in` or `/sign-up`).
@@ -167,10 +184,7 @@ To test the application without needing a real email address, you can use Clerk'
 
 > **Note:** This feature only works if the Clerk application has test mode/test email addresses enabled. You can enable this in the Clerk Dashboard under **Configure > Testing**.
 
----
-
-## 🧪 Testing the Full Payment Flow (Start to Finish)
-
+### Testing the Full Payment Flow (Start to Finish)
 1. Sign up for an account (or use the Reviewer Login credentials above).
 2. Complete onboarding by entering a business name.
 3. You'll land on your dashboard — currently empty for a new account.
@@ -185,247 +199,7 @@ Note: if you test the Demo Store while NOT signed in, transactions are recorded 
 
 ---
 
-## 🧪 End-to-End Testing (M-Pesa Callbacks)
-
-To test the full lifecycle of a payment—including the Safaricom STK Push and the automated backend Webhooks—you must expose your local server to the public internet so Safaricom's servers can reach it.
-
-### 1. Manual Idempotency Check (Local & Live)
-
-Because Vercel Serverless can retry functions, and Safaricom can double-deliver webhooks, idempotency is critical. The `/api/mpesa/callback` endpoint is designed to immediately ignore requests for transactions that are already `completed` or `failed`.
-
-To manually verify this behavior:
-
-1. **Seed a Test Transaction**  
-   Run `npx prisma studio`, open the `Transaction` table, and manually add a new row with these values:
-   - `merchantId`: (Copy an existing ID from the Merchant table)
-   - `amount`: `100`
-   - `phone`: `254700000000`
-   - `status`: `pending`
-   - `checkoutRequestId`: `ws_CO_TEST_SUCCESS_001`
-
-2. **Send the First Callback (Should Process)**  
-   ```bash
-   curl -X POST http://localhost:3000/api/mpesa/callback \
-     -H "Content-Type: application/json" \
-     -d '{
-     "Body": {
-       "stkCallback": {
-         "MerchantRequestID": "test-merchant-req-success",
-         "CheckoutRequestID": "ws_CO_TEST_SUCCESS_001",
-         "ResultCode": 0,
-         "ResultDesc": "The service request is processed successfully.",
-         "CallbackMetadata": {
-           "Item": [
-             { "Name": "Amount", "Value": 100 },
-             { "Name": "MpesaReceiptNumber", "Value": "TES1234567" },
-             { "Name": "TransactionDate", "Value": 20260717120000 },
-             { "Name": "PhoneNumber", "Value": 254700000000 }
-           ]
-         }
-       }
-     }
-   }'
-   ```
-   **Expected**: The transaction updates to `completed` in Prisma Studio.
-
-3. **Send the Same Callback Two More Times (Should Skip Both Times)**  
-   Run the exact same `curl` command twice more, back to back.  
-   **Expected**: Both calls should log that they skipped the transaction, and no field on the transaction record should change.
-
-**Verified Result (production-code test, run after the Neon/Turbopack connection fix):**
-
-| Field | Before Duplicate Calls | After 1st Duplicate | After 2nd Duplicate |
-|---|---|---|---|
-| status | `completed` | `completed` (unchanged) | `completed` (unchanged) |
-| resultCode | `0` | `0` (unchanged) | `0` (unchanged) |
-| resultDesc | `"The service request is processed successfully."` | unchanged | unchanged |
-| mpesaReceipt | `"TES1234567"` | unchanged | unchanged |
-| updatedAt | `2026-07-18T09:50:05.514Z` | unchanged | unchanged |
-
-**Server log output for both duplicate deliveries:**
-```
-[Callback] Transaction test_success_001 already in terminal state "completed". Skipping.
-```
-Both duplicate calls returned `{"success":true}` (HTTP 200) in ~1.0-1.05s, confirming Safaricom's retry mechanism is satisfied without any reprocessing occurring. The unchanged `updatedAt` timestamp across three total delivery attempts is direct proof the idempotency guard works correctly — a bug here would show up as a changed timestamp even if the response body looked identical.
-
-### 3. Asymmetric Trust & Failure-Path Testing
-
-PaySwift employs an **Asymmetric Trust** model for Daraja's Query API. Safaricom's Query API is documented as unreliable for failure states (it can return false failures for pending or genuinely successful transactions). Therefore, PaySwift *only* trusts the Query API when it returns a success (`ResultCode: 0`). Non-success results are ignored, and transactions are only marked as `expired` after a strict 30-minute timeout to prevent false positives.
-
-PaySwift maps every Daraja `ResultCode` from the callback to one of three terminal statuses. This is the complete mapping implemented in `/api/mpesa/callback`:
-
-| ResultCode | Daraja Meaning | PaySwift Status | CallbackMetadata Present? |
-|:---:|---|:---:|:---:|
-| `0` | Transaction successful | `completed` | ✅ Yes |
-| `1032` | Request cancelled by user | `cancelled` | ❌ No |
-| `1037` | DS timeout (user didn't enter PIN) | `failed` | ❌ No |
-| `2001` | Wrong PIN entered | `failed` | ❌ No |
-| `1` | Insufficient funds | `failed` | ❌ No |
-| Any other | Unrecognized failure | `failed` | ❌ No |
-
-> **Important:** Safaricom omits `CallbackMetadata` entirely on failure/cancellation callbacks. The `MpesaReceiptNumber` field only exists on `ResultCode: 0` (success). PaySwift's callback handler is built to handle this correctly.
-
-To simulate each failure path locally, first seed a pending transaction for each test (use unique `checkoutRequestId` values):
-
-**Step 1: Seed test transactions via Prisma Studio**
-
-Run `npx prisma studio`, open the `Transaction` table, and create the following rows (use any valid `merchantId` from your `Merchant` table):
-
-| checkoutRequestId | amount | phone | status |
-|---|:---:|---|:---:|
-| `ws_CO_TEST_CANCEL_001` | `100` | `254700000000` | `pending` |
-| `ws_CO_TEST_TIMEOUT_001` | `100` | `254700000000` | `pending` |
-| `ws_CO_TEST_WRONGPIN_001` | `100` | `254700000000` | `pending` |
-| `ws_CO_TEST_FUNDS_001` | `100` | `254700000000` | `pending` |
-| `ws_CO_TEST_SUCCESS_001` | `100` | `254700000000` | `pending` |
-
-**Step 2: Simulate each callback**
-
-#### Test A — User Cancellation (ResultCode 1032 → `cancelled`)
-```bash
-curl -X POST http://localhost:3000/api/mpesa/callback \
-  -H "Content-Type: application/json" \
-  -d '{
-  "Body": {
-    "stkCallback": {
-      "MerchantRequestID": "test-merchant-req-cancel",
-      "CheckoutRequestID": "ws_CO_TEST_CANCEL_001",
-      "ResultCode": 1032,
-      "ResultDesc": "Request cancelled by user"
-    }
-  }
-}'
-```
-**Expected:** Transaction status → `cancelled`, resultCode → `1032`, resultDesc → `"Request cancelled by user"`.
-
-#### Test B — DS Timeout (ResultCode 1037 → `failed`)
-```bash
-curl -X POST http://localhost:3000/api/mpesa/callback \
-  -H "Content-Type: application/json" \
-  -d '{
-  "Body": {
-    "stkCallback": {
-      "MerchantRequestID": "test-merchant-req-timeout",
-      "CheckoutRequestID": "ws_CO_TEST_TIMEOUT_001",
-      "ResultCode": 1037,
-      "ResultDesc": "DS timeout user cannot be reached"
-    }
-  }
-}'
-```
-**Expected:** Transaction status → `failed`, resultCode → `1037`, resultDesc → `"DS timeout user cannot be reached"`.
-
-#### Test C — Wrong PIN (ResultCode 2001 → `failed`)
-```bash
-curl -X POST http://localhost:3000/api/mpesa/callback \
-  -H "Content-Type: application/json" \
-  -d '{
-  "Body": {
-    "stkCallback": {
-      "MerchantRequestID": "test-merchant-req-wrongpin",
-      "CheckoutRequestID": "ws_CO_TEST_WRONGPIN_001",
-      "ResultCode": 2001,
-      "ResultDesc": "The initiator information is invalid"
-    }
-  }
-}'
-```
-**Expected:** Transaction status → `failed`, resultCode → `2001`, resultDesc → `"The initiator information is invalid"`.
-
-#### Test D — Insufficient Funds (ResultCode 1 → `failed`)
-```bash
-curl -X POST http://localhost:3000/api/mpesa/callback \
-  -H "Content-Type: application/json" \
-  -d '{
-  "Body": {
-    "stkCallback": {
-      "MerchantRequestID": "test-merchant-req-funds",
-      "CheckoutRequestID": "ws_CO_TEST_FUNDS_001",
-      "ResultCode": 1,
-      "ResultDesc": "The balance is insufficient for the transaction"
-    }
-  }
-}'
-```
-**Expected:** Transaction status → `failed`, resultCode → `1`, resultDesc → `"The balance is insufficient for the transaction"`.
-
-#### Test E — Successful Payment (ResultCode 0 → `completed`, control test)
-```bash
-curl -X POST http://localhost:3000/api/mpesa/callback \
-  -H "Content-Type: application/json" \
-  -d '{
-  "Body": {
-    "stkCallback": {
-      "MerchantRequestID": "test-merchant-req-success",
-      "CheckoutRequestID": "ws_CO_TEST_SUCCESS_001",
-      "ResultCode": 0,
-      "ResultDesc": "The service request is processed successfully.",
-      "CallbackMetadata": {
-        "Item": [
-          { "Name": "Amount", "Value": 100 },
-          { "Name": "MpesaReceiptNumber", "Value": "TES1234567" },
-          { "Name": "Balance" },
-          { "Name": "TransactionDate", "Value": 20260717120000 },
-          { "Name": "PhoneNumber", "Value": 254700000000 }
-        ]
-      }
-    }
-  }
-}'
-```
-**Expected:** Transaction status → `completed`, resultCode → `0`, mpesaReceipt → `"TES1234567"`.
-
-**Step 3: Verify results**
-
-Open Prisma Studio and confirm the final state of each transaction:
-
-| checkoutRequestId | Expected status | Expected resultCode | mpesaReceipt |
-|---|:---:|:---:|:---:|
-| `ws_CO_TEST_CANCEL_001` | `cancelled` | `1032` | `null` |
-| `ws_CO_TEST_TIMEOUT_001` | `failed` | `1037` | `null` |
-| `ws_CO_TEST_WRONGPIN_001` | `failed` | `2001` | `null` |
-| `ws_CO_TEST_FUNDS_001` | `failed` | `1` | `null` |
-| `ws_CO_TEST_SUCCESS_001` | `completed` | `0` | `TES1234567` |
-
-#### Demo Store UI Verification
-
-If you poll any of the failed/cancelled transactions via the status API, the Demo Store's checkout dialog will render the failure state with the `resultDesc` from the callback. To verify:
-
-1. After running curl Tests A–D above, call the status endpoint for each transaction:
-   ```bash
-   curl http://localhost:3000/api/v1/payments/status/TRANSACTION_ID \
-     -H "x-api-key: YOUR_API_KEY"
-   ```
-2. Confirm the response contains `"status": "cancelled"` or `"status": "failed"` with the matching `resultDesc`.
-
-#### Webhook Event Verification
-
-If the merchant has a `webhookUrl` configured, PaySwift fires outbound webhook events for every terminal status. The `event` field reflects the exact status:
-
-| ResultCode | Webhook Event |
-|:---:|---|
-| `0` | `payment.completed` |
-| `1032` | `payment.cancelled` |
-| Any other | `payment.failed` |
-
-### 4. Live Testing with Ngrok
-1. Download and install [Ngrok](https://ngrok.com/).
-2. Run Ngrok on port 3000:
-   ```bash
-   ngrok http 3000
-   ```
-3. Copy the public HTTPS URL provided by Ngrok (e.g., `https://a1b2-c3d4.ngrok-free.app`).
-4. Update `NEXT_PUBLIC_APP_URL` in your `.env.local` file to match this Ngrok URL.
-5. Restart your Next.js server.
-6. Test a payment using the Demo Store! 
-   - **Note:** If you're signed in with your own merchant account, transactions from the Demo Store will automatically appear on your dashboard in real time. If you're just browsing without an account, demo transactions use a shared test account instead.
-   - **Phone Number:** You can enter your own Safaricom number to receive a real STK Push prompt on your phone, or use Safaricom's shared sandbox test number `254708374149` if you prefer not to use your own.
-
-   When you send the prompt, Safaricom will send the success callback to your Ngrok URL, which forwards it to your local database, updating the Dashboard in real-time.
-
----
-
-## 📖 API Reference
+## API Reference
 
 Merchant websites securely communicate with PaySwift via the following endpoint:
 
@@ -447,18 +221,51 @@ x-api-key: YOUR_MERCHANT_API_KEY
 }
 ```
 
-**Success Response (200 OK):**
+**Success Response (201 Created):**
 ```json
 {
   "success": true,
-  "transactionId": "cm3r5xk9e...",
-  "message": "Payment prompt sent to user"
+  "data": {
+    "transactionId": "cm3r5xk9e...",
+    "checkoutRequestId": "ws_CO_TEST_SUCCESS_001",
+    "status": "pending",
+    "merchantRequestID": "test-merchant-req-success",
+    "customerMessage": "Success. Request accepted for processing"
+  }
 }
 ```
 
----
+### Developer SDK
 
-## ⚡ Webhook Payload Shape
+The official Node.js SDK for PaySwift is located at `packages/payswift-node` and strongly-types all interaction.
+
+```javascript
+const { PaySwiftClient } = require('payswift-node');
+
+const client = new PaySwiftClient(
+  'sk_test_123456789', // Your API key
+  'https://api.payswift.com' // Explicit base URL
+);
+
+async function processPayment() {
+  try {
+    // Initiating a payment auto-generates an Idempotency-Key UUID.
+    // Network errors and 5xx errors are automatically retried via exponential backoff.
+    const result = await client.payments.initiate({
+      phone: '254700000000',
+      amount: 1500,
+    });
+    
+    console.log('Payment initiated successfully:', result.data.transactionId);
+  } catch (error) {
+    // 4xx errors are thrown immediately
+    console.error('Failed to initiate payment:', error.message);
+  }
+}
+```
+The SDK provides types that are in sync with the backend schema validation.
+
+### Webhook Payload Shape
 
 When a payment succeeds or fails, PaySwift triggers an internal webhook to update the transaction record. If you are extending this to notify a merchant's external backend, the payload shape sent from PaySwift looks like this:
 
@@ -477,7 +284,7 @@ When a payment succeeds or fails, PaySwift triggers an internal webhook to updat
 }
 ```
 
-### Verifying Webhook Authenticity
+#### Verifying Webhook Authenticity
 
 PaySwift secures all outbound webhooks using HMAC-SHA256 signatures to ensure payloads are not tampered with and originate from PaySwift.
 
@@ -508,7 +315,18 @@ if (crypto.timingSafeEqual(Buffer.from(signatureHeader), Buffer.from(expectedSig
 
 ---
 
-## 🛍️ Shopify Integration Guide
+## Shopify Integration
+
+### 1-Click OAuth Connect (Primary Path)
+
+If your platform has `SHOPIFY_CLIENT_ID` and `SHOPIFY_CLIENT_SECRET` configured in `.env.local`:
+1. Merchants simply go to the `/integrations` tab on their Dashboard.
+2. They enter their `.myshopify.com` domain and click **Connect**.
+3. They approve the app on Shopify. They are redirected back already connected. No manual webhooks or app configuration is needed!
+
+### Manual Fallback
+
+If one-click connect isn't configured on this platform yet, or a merchant needs to connect a store manually, use this process instead:
 
 1. In Shopify Admin, go to **Settings → Apps and sales channels → Develop apps**. If an app already exists there from before 2026 with a visible API credentials tab, use it and skip to step 5 below — the old flow still works for that app.
 2. Otherwise you'll be sent to the **Dev Dashboard** to create a new app. Set Distribution to **Custom**, install target: this store. Grant scopes `read_orders` and `write_orders`.
@@ -529,54 +347,12 @@ if (crypto.timingSafeEqual(Buffer.from(signatureHeader), Buffer.from(expectedSig
 6. Copy the "Webhook URL to register in Shopify" value from that same card.
 7. In Shopify Admin → Settings → Notifications → Webhooks (or via the custom app's Webhooks subscription tab, depending on Shopify's current UI), add a new webhook: Event = `Order creation`, Format = JSON, URL = the copied URL from step 6, API version = `2026-07`.
 8. Place a test order in the Shopify store with a valid Kenyan phone number on the order (customer phone or shipping address phone) and a KES total. Confirm an M-Pesa STK prompt is sent to that number, and that once paid, the order in Shopify gets a note "Paid via M-Pesa — Receipt: XXXX" and an `mpesa-paid` tag.
-9. Note explicitly: this integration does NOT create a formal Shopify "payment gateway" entry in checkout — it triggers payment AFTER an order is created via any existing checkout/payment method Shopify already supports (e.g. "Cash on Delivery" or a manual payment method), and then confirms M-Pesa payment on top. This is intentional: building a true Shopify Payments App requires Shopify's formal review process, which is out of scope for this MVP.
 
-### Simulating a Shopify Webhook Locally
-
-To verify your Shopify webhook receiver locally without a real Shopify store, you can simulate a payload and its HMAC signature using `curl` and `openssl`.
-
-1. Generate a valid HMAC signature for your test payload:
-```bash
-# Replace YOUR_WEBHOOK_SECRET with your configured test secret
-echo -n '{"id": 999999, "name": "#1001", "currency": "KES", "total_price": "100.00", "phone": "254700000000"}' | openssl dgst -sha256 -hmac "YOUR_WEBHOOK_SECRET" -binary | base64
-```
-
-2. Send the simulated webhook with the generated signature:
-```bash
-curl -X POST http://localhost:3000/api/integrations/shopify/webhook \
-  -H "Content-Type: application/json" \
-  -H "X-Shopify-Topic: orders/create" \
-  -H "X-Shopify-Shop-Domain: your-store.myshopify.com" \
-  -H "X-Shopify-Hmac-Sha256: THE_BASE64_SIGNATURE_FROM_ABOVE" \
-  -d '{"id": 999999, "name": "#1001", "currency": "KES", "total_price": "100.00", "phone": "254700000000"}'
-```
+> **Note explicitly:** this integration does NOT create a formal Shopify "payment gateway" entry in checkout — it triggers payment AFTER an order is created via any existing checkout/payment method Shopify already supports (e.g. "Cash on Delivery" or a manual payment method), and then confirms M-Pesa payment on top. This is intentional: building a true Shopify Payments App requires Shopify's formal review process, which is out of scope for this MVP.
 
 ---
 
-## ⏰ Scheduled Jobs (cron-job.org)
-
-Cron is run by an **external scheduler ([cron-job.org](https://cron-job.org))**, not Vercel Cron (there is no `vercel.json`). Each job is a `GET` endpoint authorized by an `Authorization: Bearer <CRON_SECRET>` header — the auth **fails closed**, so `CRON_SECRET` MUST be set in the production environment or every cron call is rejected.
-
-| Endpoint | Schedule | Purpose |
-|---|---|---|
-| `GET /api/cron/reconcile-transactions` | every 2 min (`*/2 * * * *`) | STK self-heal for pending transactions |
-| `GET /api/cron/reconcile-ledger` | daily 02:00 | Surface unresolved payouts/transactions/commands for admin review |
-| `GET /api/cron/aggregate-usage` | daily 03:00 | Aggregate usage → invoices, advance billing periods |
-
-**Setup:** create one cron-job.org job per row above, pointing at your deployed URL, method `GET`, with a request header `Authorization: Bearer <your CRON_SECRET>`. Set the daily jobs' timezone to Africa/Nairobi. (Full step-by-step is in the deploy notes.)
-
-## 🛠️ Maintenance Scripts
-
-The repository includes utility scripts for operational maintenance:
-
-- `npm run db:seed` (via `scripts/seed-transactions.ts`): Safely seeds mock transactions into a local development database.
-- `npx tsx scripts/backfill-webhook-secrets.ts`: Operational script to backfill `webhookSecret` fields for existing merchants who registered prior to HMAC signature enforcement.
-- `npx tsx scripts/backfill-organizations.ts`: One-off Phase 1 migration script — creates a matching Clerk Organization + local Organization/Membership for every pre-Phase-1 Merchant and cascades `organizationId` onto its existing ApiKey/Transaction rows. Must be run (and its zero-NULL verification confirmed) before the follow-up migration that makes `organizationId` `NOT NULL`.
-- `npx tsx scripts/seed-qa-organization.ts`: Idempotent — provisions a permanent, clearly-labeled QA Organization (with pooled sandbox Daraja credentials) for Playwright/CI use, so E2E runs don't have to create a fresh Clerk user and walk the onboarding wizard every time.
-- `npx tsx scripts/repair-onboarding.ts`: Idempotent, non-destructive — completes onboarding for any existing merchant whose provisioning is incomplete (seeds pooled sandbox credentials, ensures a Starter trial subscription, sets the Clerk `onboarded` flag). Fixes merchants left partial by a failed onboarding attempt and the Phase-1-backfilled orgs.
-- `npx tsx scripts/daraja-sandbox-smoke.ts <organizationId> [stk|b2c|balance]`: **Manual** smoke test against Safaricom's real sandbox for one organization. Never run in CI — it depends on live sandbox availability. Use during go-live prep to confirm the full chain end-to-end.
-
-## 💸 Daraja API Suite (Phase 2)
+## Daraja API Suite Reference
 
 Every call resolves the initiating organization's own encrypted credentials (Model B):
 
@@ -594,7 +370,42 @@ B2C / Reversal / Account Balance require the org's **initiator name + password**
 
 ---
 
-## ⚠️ Known Limitations
+## Operations
+
+### Scheduled Jobs (cron-job.org)
+
+Cron is run by an **external scheduler ([cron-job.org](https://cron-job.org))**, not Vercel Cron (there is no `vercel.json`). Each job is a `GET` endpoint authorized by an `Authorization: Bearer <CRON_SECRET>` header — the auth **fails closed**, so `CRON_SECRET` MUST be set in the production environment or every cron call is rejected.
+
+| Endpoint | Schedule | Purpose |
+|---|---|---|
+| `GET /api/cron/process-billing` | every few hours | Executes the dunning operational flow (retry/suspension) for past-due SaaS subscriptions. |
+| `GET /api/cron/health-check` | every few minutes | Validates the operational status of Redis and the Database for the public status page. |
+| `GET /api/cron/reconcile-transactions` | every 2 min (`*/2 * * * *`) | STK self-heal for pending transactions |
+| `GET /api/cron/reconcile-ledger` | daily 02:00 | Surface unresolved payouts/transactions/commands for admin review |
+| `GET /api/cron/aggregate-usage` | daily 03:00 | Aggregate usage → invoices, advance billing periods |
+
+**Setup:** create one cron-job.org job per row above, pointing at your deployed URL, method `GET`, with a request header `Authorization: Bearer <your CRON_SECRET>`. Set the daily jobs' timezone to Africa/Nairobi. (Full step-by-step is in the deploy notes.)
+
+### Maintenance Scripts
+
+The repository includes utility scripts for operational maintenance:
+
+- `npx tsx scripts/seed-transactions.ts`: Safely seeds mock transactions into a local development database.
+- `npx tsx scripts/backfill-webhook-secrets.ts`: Operational script to backfill `webhookSecret` fields for existing merchants who registered prior to HMAC signature enforcement.
+- `npx tsx scripts/backfill-organizations.ts`: One-off Phase 1 migration script — creates a matching Clerk Organization + local Organization/Membership for every pre-Phase-1 Merchant and cascades `organizationId` onto its existing ApiKey/Transaction rows. Must be run (and its zero-NULL verification confirmed) before the follow-up migration that makes `organizationId` `NOT NULL`.
+- `npx tsx scripts/seed-qa-organization.ts`: Idempotent — provisions a permanent, clearly-labeled QA Organization (with pooled sandbox Daraja credentials) for Playwright/CI use, so E2E runs don't have to create a fresh Clerk user and walk the onboarding wizard every time.
+- `npx tsx scripts/repair-onboarding.ts`: Idempotent, non-destructive — completes onboarding for any existing merchant whose provisioning is incomplete (seeds pooled sandbox credentials, ensures a Starter trial subscription, sets the Clerk `onboarded` flag). Fixes merchants left partial by a failed onboarding attempt and the Phase-1-backfilled orgs.
+- `npx tsx scripts/daraja-sandbox-smoke.ts <organizationId> [stk|b2c|balance]`: **Manual** smoke test against Safaricom's real sandbox for one organization. Never run in CI — it depends on live sandbox availability. Use during go-live prep to confirm the full chain end-to-end.
+
+---
+
+## Detailed Manual QA & Testing
+
+For an extensive walk-through of idempotency testing and manually verifying the Daraja callbacks and various failure states (Insufficient Funds, Cancellation, etc.), see the dedicated **[TESTING.md](TESTING.md)** document.
+
+---
+
+## Known Limitations
 - **Sandbox Environment Only:** The platform is currently hardcoded to use the Safaricom Daraja Sandbox environment. 
 - **Production Verification:** To move to production, you must update the Daraja endpoints from `sandbox.safaricom.co.ke` to `api.safaricom.co.ke` and complete Safaricom's rigorous Go-Live KYC process.
 - **Demo Store:** The included Demo Store is a mock frontend designed strictly to demonstrate integration workflow. It does not replace a functional e-commerce backend (like Shopify) which should manage order fulfillment independently.

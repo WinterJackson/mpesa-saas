@@ -1,0 +1,237 @@
+# End-to-End Testing (M-Pesa Callbacks)
+
+To test the full lifecycle of a payment—including the Safaricom STK Push and the automated backend Webhooks—you must expose your local server to the public internet so Safaricom's servers can reach it.
+
+## 1. Manual Idempotency Check (Local & Live)
+
+Because Vercel Serverless can retry functions, and Safaricom can double-deliver webhooks, idempotency is critical. The `/api/mpesa/callback` endpoint is designed to immediately ignore requests for transactions that are already `completed` or `failed`.
+
+To manually verify this behavior:
+
+1. **Seed a Test Transaction**  
+   Run `npx prisma studio`, open the `Transaction` table, and manually add a new row with these values:
+   - `merchantId`: (Copy an existing ID from the Merchant table)
+   - `amount`: `100`
+   - `phone`: `254700000000`
+   - `status`: `pending`
+   - `checkoutRequestId`: `ws_CO_TEST_SUCCESS_001`
+
+2. **Send the First Callback (Should Process)**  
+   ```bash
+   curl -X POST http://localhost:3000/api/mpesa/callback \
+     -H "Content-Type: application/json" \
+     -d '{
+     "Body": {
+       "stkCallback": {
+         "MerchantRequestID": "test-merchant-req-success",
+         "CheckoutRequestID": "ws_CO_TEST_SUCCESS_001",
+         "ResultCode": 0,
+         "ResultDesc": "The service request is processed successfully.",
+         "CallbackMetadata": {
+           "Item": [
+             { "Name": "Amount", "Value": 100 },
+             { "Name": "MpesaReceiptNumber", "Value": "TES1234567" },
+             { "Name": "TransactionDate", "Value": 20260717120000 },
+             { "Name": "PhoneNumber", "Value": 254700000000 }
+           ]
+         }
+       }
+     }
+   }'
+   ```
+   **Expected**: The transaction updates to `completed` in Prisma Studio.
+
+3. **Send the Same Callback Two More Times (Should Skip Both Times)**  
+   Run the exact same `curl` command twice more, back to back.  
+   **Expected**: Both calls should log that they skipped the transaction, and no field on the transaction record should change.
+
+**Verified Result (production-code test, run after the Neon/Turbopack connection fix):**
+
+| Field | Before Duplicate Calls | After 1st Duplicate | After 2nd Duplicate |
+|---|---|---|---|
+| status | `completed` | `completed` (unchanged) | `completed` (unchanged) |
+| resultCode | `0` | `0` (unchanged) | `0` (unchanged) |
+| resultDesc | `"The service request is processed successfully."` | unchanged | unchanged |
+| mpesaReceipt | `"TES1234567"` | unchanged | unchanged |
+| updatedAt | `2026-07-18T09:50:05.514Z` | unchanged | unchanged |
+
+**Server log output for both duplicate deliveries:**
+```
+[Callback] Transaction test_success_001 already in terminal state "completed". Skipping.
+```
+Both duplicate calls returned `{"success":true}` (HTTP 200) in ~1.0-1.05s, confirming Safaricom's retry mechanism is satisfied without any reprocessing occurring. The unchanged `updatedAt` timestamp across three total delivery attempts is direct proof the idempotency guard works correctly — a bug here would show up as a changed timestamp even if the response body looked identical.
+
+## 2. Asymmetric Trust & Failure-Path Testing
+
+PaySwift employs an **Asymmetric Trust** model for Daraja's Query API. Safaricom's Query API is documented as unreliable for failure states (it can return false failures for pending or genuinely successful transactions). Therefore, PaySwift *only* trusts the Query API when it returns a success (`ResultCode: 0`). Non-success results are ignored, and transactions are only marked as `expired` after a strict 30-minute timeout to prevent false positives.
+
+PaySwift maps every Daraja `ResultCode` from the callback to one of three terminal statuses. This is the complete mapping implemented in `/api/mpesa/callback`:
+
+| ResultCode | Daraja Meaning | PaySwift Status | CallbackMetadata Present? |
+|:---:|---|:---:|:---:|
+| `0` | Transaction successful | `completed` | ✅ Yes |
+| `1032` | Request cancelled by user | `cancelled` | ❌ No |
+| `1037` | DS timeout (user didn't enter PIN) | `failed` | ❌ No |
+| `2001` | Wrong PIN entered | `failed` | ❌ No |
+| `1` | Insufficient funds | `failed` | ❌ No |
+| Any other | Unrecognized failure | `failed` | ❌ No |
+
+> **Important:** Safaricom omits `CallbackMetadata` entirely on failure/cancellation callbacks. The `MpesaReceiptNumber` field only exists on `ResultCode: 0` (success). PaySwift's callback handler is built to handle this correctly.
+
+To simulate each failure path locally, first seed a pending transaction for each test (use unique `checkoutRequestId` values):
+
+**Step 1: Seed test transactions via Prisma Studio**
+
+Run `npx prisma studio`, open the `Transaction` table, and create the following rows (use any valid `merchantId` from your `Merchant` table):
+
+| checkoutRequestId | amount | phone | status |
+|---|:---:|---|:---:|
+| `ws_CO_TEST_CANCEL_001` | `100` | `254700000000` | `pending` |
+| `ws_CO_TEST_TIMEOUT_001` | `100` | `254700000000` | `pending` |
+| `ws_CO_TEST_WRONGPIN_001` | `100` | `254700000000` | `pending` |
+| `ws_CO_TEST_FUNDS_001` | `100` | `254700000000` | `pending` |
+| `ws_CO_TEST_SUCCESS_001` | `100` | `254700000000` | `pending` |
+
+**Step 2: Simulate each callback**
+
+#### Test A — User Cancellation (ResultCode 1032 → `cancelled`)
+```bash
+curl -X POST http://localhost:3000/api/mpesa/callback \
+  -H "Content-Type: application/json" \
+  -d '{
+  "Body": {
+    "stkCallback": {
+      "MerchantRequestID": "test-merchant-req-cancel",
+      "CheckoutRequestID": "ws_CO_TEST_CANCEL_001",
+      "ResultCode": 1032,
+      "ResultDesc": "Request cancelled by user"
+    }
+  }
+}'
+```
+**Expected:** Transaction status → `cancelled`, resultCode → `1032`, resultDesc → `"Request cancelled by user"`.
+
+#### Test B — DS Timeout (ResultCode 1037 → `failed`)
+```bash
+curl -X POST http://localhost:3000/api/mpesa/callback \
+  -H "Content-Type: application/json" \
+  -d '{
+  "Body": {
+    "stkCallback": {
+      "MerchantRequestID": "test-merchant-req-timeout",
+      "CheckoutRequestID": "ws_CO_TEST_TIMEOUT_001",
+      "ResultCode": 1037,
+      "ResultDesc": "DS timeout user cannot be reached"
+    }
+  }
+}'
+```
+**Expected:** Transaction status → `failed`, resultCode → `1037`, resultDesc → `"DS timeout user cannot be reached"`.
+
+#### Test C — Wrong PIN (ResultCode 2001 → `failed`)
+```bash
+curl -X POST http://localhost:3000/api/mpesa/callback \
+  -H "Content-Type: application/json" \
+  -d '{
+  "Body": {
+    "stkCallback": {
+      "MerchantRequestID": "test-merchant-req-wrongpin",
+      "CheckoutRequestID": "ws_CO_TEST_WRONGPIN_001",
+      "ResultCode": 2001,
+      "ResultDesc": "The initiator information is invalid"
+    }
+  }
+}'
+```
+**Expected:** Transaction status → `failed`, resultCode → `2001`, resultDesc → `"The initiator information is invalid"`.
+
+#### Test D — Insufficient Funds (ResultCode 1 → `failed`)
+```bash
+curl -X POST http://localhost:3000/api/mpesa/callback \
+  -H "Content-Type: application/json" \
+  -d '{
+  "Body": {
+    "stkCallback": {
+      "MerchantRequestID": "test-merchant-req-funds",
+      "CheckoutRequestID": "ws_CO_TEST_FUNDS_001",
+      "ResultCode": 1,
+      "ResultDesc": "The balance is insufficient for the transaction"
+    }
+  }
+}'
+```
+**Expected:** Transaction status → `failed`, resultCode → `1`, resultDesc → `"The balance is insufficient for the transaction"`.
+
+#### Test E — Successful Payment (ResultCode 0 → `completed`, control test)
+```bash
+curl -X POST http://localhost:3000/api/mpesa/callback \
+  -H "Content-Type: application/json" \
+  -d '{
+  "Body": {
+    "stkCallback": {
+      "MerchantRequestID": "test-merchant-req-success",
+      "CheckoutRequestID": "ws_CO_TEST_SUCCESS_001",
+      "ResultCode": 0,
+      "ResultDesc": "The service request is processed successfully.",
+      "CallbackMetadata": {
+        "Item": [
+          { "Name": "Amount", "Value": 100 },
+          { "Name": "MpesaReceiptNumber", "Value": "TES1234567" },
+          { "Name": "Balance" },
+          { "Name": "TransactionDate", "Value": 20260717120000 },
+          { "Name": "PhoneNumber", "Value": 254700000000 }
+        ]
+      }
+    }
+  }
+}'
+```
+**Expected:** Transaction status → `completed`, resultCode → `0`, mpesaReceipt → `"TES1234567"`.
+
+**Step 3: Verify results**
+
+Open Prisma Studio and confirm the final state of each transaction:
+
+| checkoutRequestId | Expected status | Expected resultCode | mpesaReceipt |
+|---|:---:|:---:|:---:|
+| `ws_CO_TEST_CANCEL_001` | `cancelled` | `1032` | `null` |
+| `ws_CO_TEST_TIMEOUT_001` | `failed` | `1037` | `null` |
+| `ws_CO_TEST_WRONGPIN_001` | `failed` | `2001` | `null` |
+| `ws_CO_TEST_FUNDS_001` | `failed` | `1` | `null` |
+| `ws_CO_TEST_SUCCESS_001` | `completed` | `0` | `TES1234567` |
+
+#### Demo Store UI Verification
+
+If you poll any of the failed/cancelled transactions via the status API, the Demo Store's checkout dialog will render the failure state with the `resultDesc` from the callback. To verify:
+
+1. After running curl Tests A–D above, call the status endpoint for each transaction:
+   ```bash
+   curl http://localhost:3000/api/v1/payments/status/TRANSACTION_ID \
+     -H "x-api-key: YOUR_API_KEY"
+   ```
+2. Confirm the response contains `"status": "cancelled"` or `"status": "failed"` with the matching `resultDesc`.
+
+#### Webhook Event Verification
+
+If the merchant has a `webhookUrl` configured, PaySwift fires outbound webhook events for every terminal status. The `event` field reflects the exact status:
+
+| ResultCode | Webhook Event |
+|:---:|---|
+| `0` | `payment.completed` |
+| `1032` | `payment.cancelled` |
+| Any other | `payment.failed` |
+
+## 3. Live Testing with Ngrok
+1. Download and install [Ngrok](https://ngrok.com/).
+2. Run Ngrok on port 3000:
+   ```bash
+   ngrok http 3000
+   ```
+3. Copy the public HTTPS URL provided by Ngrok (e.g., `https://a1b2-c3d4.ngrok-free.app`).
+4. Update `NEXT_PUBLIC_APP_URL` in your `.env.local` file to match this Ngrok URL.
+5. Restart your Next.js server.
+6. Test a payment using the Demo Store! 
+   - **Note:** If you're signed in with your own merchant account, transactions from the Demo Store will automatically appear on your dashboard in real time. If you're just browsing without an account, demo transactions use a shared test account instead.
+   - **Phone Number:** You can enter your own Safaricom number to receive a real STK Push prompt on your phone, or use Safaricom's shared sandbox test number `254708374149` if you prefer not to use your own.
+
+   When you send the prompt, Safaricom will send the success callback to your Ngrok URL, which forwards it to your local database, updating the Dashboard in real-time.
