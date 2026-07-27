@@ -1,0 +1,150 @@
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
+import { computeTaxBreakdown, platformKraPin } from '@/lib/billing/tax';
+
+const SELLER = {
+  name: 'PaySwift',
+  addressLines: ['Nairobi, Kenya'],
+  email: 'billing@payswift.co.ke',
+} as const;
+
+const GREEN = rgb(0.07, 0.4, 0.13);
+const MUTED = rgb(0.42, 0.45, 0.5);
+const DARK = rgb(0.11, 0.13, 0.15);
+const LINE = rgb(0.85, 0.87, 0.89);
+
+export interface StatementInvoiceRow {
+  invoiceNumber: string;
+  issuedAt: Date;
+  amount: number; // VAT inclusive
+  status: string;
+}
+
+export interface StatementPdfData {
+  year: number;
+  generatedAt: Date;
+  buyerName: string;
+  buyerKraPin: string | null;
+  invoices: StatementInvoiceRow[];
+}
+
+function money(n: number): string {
+  return `KES ${n.toLocaleString('en-KE')}`;
+}
+
+function fmtDate(d: Date): string {
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function drawRule(page: PDFPage, x1: number, yy: number, x2: number, color: ReturnType<typeof rgb>) {
+  page.drawLine({ start: { x: x1, y: yy }, end: { x: x2, y: yy }, thickness: 0.75, color });
+}
+
+export async function buildStatementPdf(data: StatementPdfData): Promise<Uint8Array> {
+  const sellerPin = platformKraPin();
+  const doc = await PDFDocument.create();
+  
+  let page = doc.addPage([595.28, 841.89]);
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const { width, height } = page.getSize();
+  const M = 50;
+  let y = height - M;
+
+  const text = (
+    s: string,
+    x: number,
+    yy: number,
+    opts: { size?: number; font?: PDFFont; color?: ReturnType<typeof rgb> } = {}
+  ) => page.drawText(s, { x, y: yy, size: opts.size ?? 10, font: opts.font ?? font, color: opts.color ?? DARK });
+
+  const rightText = (s: string, xRight: number, yy: number, opts: { size?: number; font?: PDFFont; color?: ReturnType<typeof rgb> } = {}) => {
+    const size = opts.size ?? 10;
+    const f = opts.font ?? font;
+    text(s, xRight - f.widthOfTextAtSize(s, size), yy, opts);
+  };
+
+  // Header
+  text(SELLER.name, M, y, { size: 22, font: bold, color: GREEN });
+  rightText('ANNUAL STATEMENT', width - M, y, { size: 20, font: bold, color: DARK });
+  y -= 18;
+  rightText(`Year: ${data.year}`, width - M, y, { size: 10, color: MUTED });
+  y -= 14;
+  for (const line of SELLER.addressLines) {
+    text(line, M, y, { size: 9, color: MUTED });
+    rightText(`Generated: ${fmtDate(data.generatedAt)}`, width - M, y, { size: 9, color: MUTED });
+    y -= 12;
+  }
+  text(SELLER.email, M, y, { size: 9, color: MUTED });
+  if (sellerPin) rightText(`PIN: ${sellerPin}`, width - M, y, { size: 9, color: MUTED });
+  
+  // Bill to
+  y -= 36;
+  text('STATEMENT FOR', M, y, { size: 9, font: bold, color: MUTED });
+  y -= 15;
+  text(data.buyerName, M, y, { size: 12, font: bold });
+  if (data.buyerKraPin) {
+    y -= 13;
+    text(`KRA PIN: ${data.buyerKraPin}`, M, y, { size: 9, color: MUTED });
+  }
+
+  // Summary
+  let totalBilled = 0;
+  let totalPaid = 0;
+  
+  for (const inv of data.invoices) {
+    totalBilled += inv.amount;
+    if (inv.status === 'paid') totalPaid += inv.amount;
+  }
+  
+  const totalDue = totalBilled - totalPaid;
+
+  y -= 34;
+  text(`Total Billed: ${money(totalBilled)}`, M, y, { size: 10 });
+  y -= 16;
+  text(`Total Paid: ${money(totalPaid)}`, M, y, { size: 10, color: GREEN });
+  y -= 16;
+  text(`Balance Due: ${money(Math.max(0, totalDue))}`, M, y, { size: 10, font: bold, color: totalDue > 0 ? rgb(0.8, 0.1, 0.1) : DARK });
+
+  // Table Header
+  y -= 34;
+  drawRule(page, M, y + 14, width - M, LINE);
+  text('DATE', M, y, { size: 9, font: bold, color: MUTED });
+  text('INVOICE NO', M + 80, y, { size: 9, font: bold, color: MUTED });
+  text('STATUS', M + 200, y, { size: 9, font: bold, color: MUTED });
+  rightText('AMOUNT', width - M, y, { size: 9, font: bold, color: MUTED });
+  y -= 8;
+  drawRule(page, M, y, width - M, LINE);
+  y -= 16;
+
+  // Table rows
+  if (data.invoices.length === 0) {
+    text('No invoices found for this year.', M, y, { size: 10, color: MUTED });
+  } else {
+    for (const inv of data.invoices) {
+      if (y < M + 50) {
+        // New page
+        page = doc.addPage([595.28, 841.89]);
+        y = height - M;
+      }
+      
+      text(fmtDate(inv.issuedAt), M, y, { size: 10 });
+      text(inv.invoiceNumber, M + 80, y, { size: 10 });
+      
+      const statusColor = inv.status === 'paid' ? GREEN : inv.status === 'failed' ? rgb(0.8, 0.1, 0.1) : MUTED;
+      text(inv.status.toUpperCase(), M + 200, y, { size: 9, font: bold, color: statusColor });
+      
+      rightText(money(inv.amount), width - M, y, { size: 10 });
+      y -= 16;
+    }
+  }
+
+  y -= 8;
+  drawRule(page, M, y, width - M, LINE);
+
+  // Footer
+  drawRule(page, M, M + 24, width - M, LINE);
+  text('Thank you for your business.', M, M + 10, { size: 8, color: MUTED });
+  rightText('Generated by PaySwift', width - M, M + 10, { size: 8, color: MUTED });
+
+  return doc.save();
+}

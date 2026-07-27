@@ -233,8 +233,14 @@ export default async function BillingPage({
 
           {/* Invoices */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-4">
               <CardTitle className="text-base">Invoices</CardTitle>
+              <a
+                href={`/api/merchant/billing/statement/pdf?year=${new Date().getFullYear()}`}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline shrink-0"
+              >
+                <Download className="size-4" /> {new Date().getFullYear()} Statement
+              </a>
             </CardHeader>
             <CardContent>
               {subscription.invoices.length === 0 ? (

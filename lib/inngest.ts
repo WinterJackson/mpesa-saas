@@ -20,6 +20,19 @@ export interface WebhookDeliverEventData {
 
 export const WEBHOOK_DELIVER_EVENT = 'webhook/deliver' as const;
 
+export interface BulkPayoutProcessEventData {
+  organizationId: string;
+  payoutId: string;
+  environment: 'sandbox' | 'live';
+  amount: number;
+  phone: string;
+  commandId?: string;
+  remarks?: string;
+  occasion?: string;
+}
+
+export const BULK_PAYOUT_PROCESS_EVENT = 'payout/bulk-process' as const;
+
 export const inngest = new Inngest({ id: 'payswift' });
 
 /** Whether Inngest is configured to actually send/receive events in this environment. */

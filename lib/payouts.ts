@@ -24,6 +24,12 @@ import { DEFAULT_PAYOUT_APPROVAL_THRESHOLD_KES } from '@/lib/pricing';
 import { updatePayoutApprovalStatus, findPayoutById } from '@/lib/repositories/payouts';
 import { requireRole, PAYOUT_ROLES } from '@/lib/rbac';
 
+export async function getPayoutApprovalRequirement(organizationId: string, amount: number) {
+  const org = await findOrganizationById(organizationId);
+  const threshold = org?.payoutApprovalThresholdKes ?? DEFAULT_PAYOUT_APPROVAL_THRESHOLD_KES;
+  return { requiresApproval: amount >= threshold, threshold };
+}
+
 /**
  * Creates a pending Payout, fires the B2C request, and persists Daraja's
  * correlation ids. Mirrors lib/payments.ts's createAndInitiatePayment. Terminal
@@ -42,9 +48,7 @@ export async function createAndInitiatePayout(params: {
 }): Promise<InitiatePayoutResult> {
   const { organizationId, merchantId, environment, amount, phone, commandId, remarks, occasion, initiatedByUserId } = params;
 
-  const org = await findOrganizationById(organizationId);
-  const threshold = org?.payoutApprovalThresholdKes ?? DEFAULT_PAYOUT_APPROVAL_THRESHOLD_KES;
-  const requiresApproval = amount >= threshold;
+  const { requiresApproval } = await getPayoutApprovalRequirement(organizationId, amount);
 
   const payout = await createPayout(organizationId, {
     merchantId,
@@ -67,7 +71,7 @@ export async function createAndInitiatePayout(params: {
     };
   }
 
-  return _initiateAndPersistPayoutB2C(organizationId, payout.id, {
+  return initiateAndPersistPayoutB2C(organizationId, payout.id, {
     environment,
     amount,
     phone,
@@ -81,7 +85,7 @@ export async function createAndInitiatePayout(params: {
  * Shared helper for the actual B2C daraja call, used by initial creation (if below threshold)
  * and by approval.
  */
-async function _initiateAndPersistPayoutB2C(
+export async function initiateAndPersistPayoutB2C(
   organizationId: string,
   payoutId: string,
   opts: {
@@ -146,7 +150,7 @@ export async function approvePayout(
     approvedAt: new Date(),
   });
 
-  return _initiateAndPersistPayoutB2C(organizationId, payoutId, {
+  return initiateAndPersistPayoutB2C(organizationId, payoutId, {
     environment: payout.environment as 'sandbox' | 'live',
     amount: payout.amount,
     phone: payout.phone,

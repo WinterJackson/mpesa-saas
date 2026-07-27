@@ -9,6 +9,7 @@ import {
   getFailureBreakdown,
   getFunnel,
   getNewVsRepeatCustomers,
+  getPeakTimeHeatmap,
 } from '@/lib/repositories/analytics';
 
 const ALLOWED_RANGES = [7, 30, 90] as const;
@@ -35,17 +36,18 @@ export async function GET(request: Request) {
   const scope = { environment, since, until: now };
   const orgId2 = context.organization.id;
 
-  const [kpis, trend, sourceMix, failures, funnel, customers] = await Promise.all([
+  const [kpis, trend, sourceMix, failures, funnel, customers, heatmap] = await Promise.all([
     getKpiComparison(orgId2, { environment, windowDays: range, now }),
     getRevenueTrend(orgId2, scope),
     getSourceMix(orgId2, scope),
     getFailureBreakdown(orgId2, scope),
     getFunnel(orgId2, scope),
     getNewVsRepeatCustomers(orgId2, scope),
+    getPeakTimeHeatmap(orgId2, scope),
   ]);
 
   return NextResponse.json({
     success: true,
-    data: { range, environment, kpis, trend, sourceMix, failures, funnel, customers },
+    data: { range, environment, kpis, trend, sourceMix, failures, funnel, customers, heatmap },
   });
 }

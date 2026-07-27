@@ -266,3 +266,44 @@ export async function getNewVsRepeatCustomers(
   const repeatCustomers = prior.length;
   return { newCustomers: phones.length - repeatCustomers, repeatCustomers };
 }
+
+// ─── Peak-time Heatmap (transaction volume by hour/day) ───────────────────────
+
+export interface HeatmapPoint {
+  dayOfWeek: number; // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  hourOfDay: number; // 0-23
+  count: number;
+}
+
+export async function getPeakTimeHeatmap(
+  organizationId: string,
+  scope: Scope
+): Promise<HeatmapPoint[]> {
+  const rows = await prismaReadonly.transaction.findMany({
+    where: { ...baseWhere(organizationId, scope), status: 'completed' },
+    select: { createdAt: true },
+    take: 50_000,
+  });
+
+  // Africa/Nairobi is UTC+3 permanently (no DST).
+  // Applying this fixed offset lets us safely use fast UTC date methods to bucket.
+  const offsetMs = 3 * 60 * 60 * 1000;
+  
+  const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+
+  for (const r of rows) {
+    const localTime = new Date(r.createdAt.getTime() + offsetMs);
+    const day = localTime.getUTCDay();
+    const hour = localTime.getUTCHours();
+    matrix[day][hour]++;
+  }
+
+  const out: HeatmapPoint[] = [];
+  for (let d = 0; d < 7; d++) {
+    for (let h = 0; h < 24; h++) {
+      out.push({ dayOfWeek: d, hourOfDay: h, count: matrix[d][h] });
+    }
+  }
+
+  return out;
+}

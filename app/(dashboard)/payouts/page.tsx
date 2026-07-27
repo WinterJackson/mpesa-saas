@@ -7,6 +7,7 @@ import { listTransactionsPage } from '@/lib/repositories/transactions';
 import { latestBalanceSnapshot } from '@/lib/repositories/account-balance';
 import { getViewEnvironment } from '@/lib/view-env';
 import { PayoutsView } from '@/components/payouts/payouts-view';
+import { BulkUploadDialog } from '@/components/payouts/bulk-upload-dialog';
 
 export const metadata = {
   title: 'Payouts & Refunds - PaySwift',
@@ -45,11 +46,16 @@ export default async function PayoutsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Payouts &amp; Refunds</h1>
-        <p className="text-muted-foreground mt-1">
-          Send money to any M-Pesa number, or refund a customer&apos;s payment.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Payouts &amp; Refunds</h1>
+          <p className="text-muted-foreground mt-1">
+            Send money to any M-Pesa number, or refund a customer&apos;s payment.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <BulkUploadDialog />
+        </div>
       </div>
 
       <PayoutsView

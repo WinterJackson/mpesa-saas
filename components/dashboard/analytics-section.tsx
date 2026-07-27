@@ -8,6 +8,7 @@ import { RevenueTrend } from "@/components/charts/revenue-trend";
 import { ShareBar } from "@/components/charts/share-bar";
 import { MiniFunnel } from "@/components/charts/mini-funnel";
 import { FailureList } from "@/components/charts/failure-list";
+import { PeakTimeHeatmap } from "@/components/charts/heatmap";
 import { sourceLabel } from "@/lib/charts/palette";
 import { cn } from "@/lib/utils";
 import { useVisibleInterval } from "@/hooks/use-visible-interval";
@@ -17,6 +18,7 @@ import type {
   SourceMixRow,
   Funnel,
   CustomerSplit,
+  HeatmapPoint,
 } from "@/lib/repositories/analytics";
 import type { FailureReasonCount } from "@/lib/metrics/failure-reasons";
 
@@ -28,6 +30,7 @@ export interface AnalyticsBundle {
   failures: FailureReasonCount[];
   funnel: Funnel;
   customers: CustomerSplit;
+  heatmap: HeatmapPoint[];
 }
 
 export interface PlanUsage {
@@ -147,14 +150,26 @@ export function AnalyticsSection({
       </div>
 
       {/* Revenue trend */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Revenue over time</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RevenueTrend data={bundle.trend} />
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Revenue over time</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RevenueTrend data={bundle.trend} />
+          </CardContent>
+        </Card>
+
+        {/* Peak-time heatmap */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Peak time (EAT)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PeakTimeHeatmap data={bundle.heatmap} />
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Distribution row */}
       <div className="grid gap-4 lg:grid-cols-3">

@@ -1,4 +1,6 @@
-import { inngest, WEBHOOK_DELIVER_EVENT, type WebhookDeliverEventData } from '@/lib/inngest';
+import { inngest, WEBHOOK_DELIVER_EVENT, type WebhookDeliverEventData, BULK_PAYOUT_PROCESS_EVENT, type BulkPayoutProcessEventData } from '@/lib/inngest';
+import { initiateAndPersistPayoutB2C } from '@/lib/payouts';
+import type { B2CCommandID } from '@/lib/daraja-b2c';
 import { deliverWebhook } from '@/lib/webhook';
 import { recordDelivery } from '@/lib/repositories/webhook-deliveries';
 
@@ -38,4 +40,26 @@ export const deliverWebhookFn = inngest.createFunction(
   handleWebhookDeliver
 );
 
-export const inngestFunctions = [deliverWebhookFn];
+export async function handleBulkPayoutProcess({ event }: { event: { data: BulkPayoutProcessEventData } }) {
+  const data = event.data;
+  const result = await initiateAndPersistPayoutB2C(data.organizationId, data.payoutId, {
+    environment: data.environment,
+    amount: data.amount,
+    phone: data.phone,
+    commandId: data.commandId as B2CCommandID | undefined,
+    remarks: data.remarks,
+    occasion: data.occasion,
+  });
+
+  if (!result.success) {
+    throw new Error(result.error); // Allow Inngest to retry on transient failures
+  }
+  return result;
+}
+
+export const processBulkPayoutFn = inngest.createFunction(
+  { id: 'payout-bulk-process', retries: 2, triggers: [{ event: BULK_PAYOUT_PROCESS_EVENT }] },
+  handleBulkPayoutProcess
+);
+
+export const inngestFunctions = [deliverWebhookFn, processBulkPayoutFn];

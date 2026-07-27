@@ -9,6 +9,7 @@ import {
   getFailureBreakdown,
   getFunnel,
   getNewVsRepeatCustomers,
+  getPeakTimeHeatmap,
 } from "@/lib/repositories/analytics";
 import { getPlanUsage } from "@/lib/repositories/billing";
 import { listPaymentLinks } from "@/lib/repositories/payment-links";
@@ -37,7 +38,7 @@ export default async function DashboardPage() {
   const since = new Date(now.getTime() - DEFAULT_RANGE * 24 * 60 * 60 * 1000);
   const scope = { environment, since, until: now };
 
-  const [kpis, trend, sourceMix, failures, funnel, customers, transactions, planUsageRaw, links] =
+  const [kpis, trend, sourceMix, failures, funnel, customers, heatmap, transactions, planUsageRaw, links] =
     await Promise.all([
       getKpiComparison(orgIdResolved, { environment, windowDays: DEFAULT_RANGE, now }),
       getRevenueTrend(orgIdResolved, scope),
@@ -45,12 +46,13 @@ export default async function DashboardPage() {
       getFailureBreakdown(orgIdResolved, scope),
       getFunnel(orgIdResolved, scope),
       getNewVsRepeatCustomers(orgIdResolved, scope),
+      getPeakTimeHeatmap(orgIdResolved, scope),
       listTransactions(orgIdResolved, { take: 50, environment }),
       getPlanUsage(orgIdResolved),
       listPaymentLinks(orgIdResolved, { environment }),
     ]);
 
-  const analytics: AnalyticsBundle = { range: DEFAULT_RANGE, kpis, trend, sourceMix, failures, funnel, customers };
+  const analytics: AnalyticsBundle = { range: DEFAULT_RANGE, kpis, trend, sourceMix, failures, funnel, customers, heatmap };
 
   const planUsage: PlanUsage = planUsageRaw
     ? {
