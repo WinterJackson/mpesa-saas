@@ -3,6 +3,7 @@ import { getOrganizationContext } from '@/lib/repositories/organizations';
 import { prisma } from '@/lib/db';
 import { buildStatementPdf } from '@/lib/billing/statement-pdf';
 import { logger } from '@/lib/logger';
+import { requireRole, BILLING_ROLES } from '@/lib/rbac';
 
 /**
  * GET /api/merchant/billing/statement/pdf
@@ -16,6 +17,11 @@ export async function GET(request: Request) {
 
     const context = await getOrganizationContext(userId, orgId);
     if (!context) return new Response('Organization not found', { status: 404 });
+
+    const rbac = await requireRole(context.organization.id, userId, BILLING_ROLES);
+    if (!rbac.allowed) {
+      return new Response(rbac.error, { status: 403 });
+    }
 
     const url = new URL(request.url);
     const yearParam = url.searchParams.get('year');

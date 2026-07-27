@@ -145,11 +145,11 @@ export function BulkUploadDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (!val) reset(); }}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
+      <DialogTrigger>
+        <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 gap-2">
           <Upload className="size-4" />
           Bulk Upload CSV
-        </Button>
+        </div>
       </DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
@@ -205,7 +205,7 @@ export function BulkUploadDialog() {
                         <TableRow key={row.index}>
                           <TableCell>
                             {!row.valid ? (
-                              <XCircle className="size-4 text-destructive" title={row.errors.join(', ')} />
+                              <span title={row.errors.join(', ')}><XCircle className="size-4 text-destructive" /></span>
                             ) : row.outcome === 'queued' ? (
                               <Loader2 className="size-4 text-muted-foreground animate-spin" />
                             ) : row.outcome === 'approval_pending' ? (

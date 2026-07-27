@@ -24,9 +24,13 @@ import { DEFAULT_PAYOUT_APPROVAL_THRESHOLD_KES } from '@/lib/pricing';
 import { updatePayoutApprovalStatus, findPayoutById } from '@/lib/repositories/payouts';
 import { requireRole, PAYOUT_ROLES } from '@/lib/rbac';
 
-export async function getPayoutApprovalRequirement(organizationId: string, amount: number) {
+export async function resolvePayoutApprovalThreshold(organizationId: string): Promise<number> {
   const org = await findOrganizationById(organizationId);
-  const threshold = org?.payoutApprovalThresholdKes ?? DEFAULT_PAYOUT_APPROVAL_THRESHOLD_KES;
+  return org?.payoutApprovalThresholdKes ?? DEFAULT_PAYOUT_APPROVAL_THRESHOLD_KES;
+}
+
+export async function getPayoutApprovalRequirement(organizationId: string, amount: number) {
+  const threshold = await resolvePayoutApprovalThreshold(organizationId);
   return { requiresApproval: amount >= threshold, threshold };
 }
 
