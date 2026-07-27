@@ -59,7 +59,7 @@
     "dotenv": "^17.4.2",
     "dts-bundle-generator": "^9.5.1",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "16.2.12",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "typescript": "^5",
