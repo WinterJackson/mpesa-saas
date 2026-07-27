@@ -204,16 +204,18 @@ export default function DemoStoreClient({ isSignedIn, businessName }: { isSigned
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-16">
       {/* Floating Header Wrapper */}
       <div className="sticky top-0 z-50 w-full pt-floating-header pl-[15px] md:pl-[30px] pr-0 pb-6">
-        <header className="w-full rounded-l-[40px] rounded-r-none bg-background text-foreground backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(19,42,19,0.25)] dark:shadow-[0_10px_40px_-10px_rgba(19,42,19,0.6)]">
+        <header className="w-full rounded-l-[40px] rounded-r-none bg-primary text-primary-foreground backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(19,42,19,0.25)] dark:shadow-[0_10px_40px_-10px_rgba(19,42,19,0.6)]">
           <div className="flex h-20 w-full items-center justify-between px-4 md:px-6">
             <div className="flex items-center gap-2">
-              <ShoppingBag className="size-6 text-primary dark:text-white" />
+              <ShoppingBag className="size-6 text-primary-foreground" />
               <span className="text-xl font-bold tracking-tight">DemoTech Store</span>
             </div>
-            <nav className="flex items-center gap-4">
-              <ThemeToggle />
+            <nav className="flex items-center gap-4 text-primary-foreground">
+              <div className="[&>button]:hover:bg-primary-foreground/10 [&>button]:hover:text-primary-foreground">
+                <ThemeToggle />
+              </div>
               <Link href="/">
-                <Button variant="outline" size="sm">
+                <Button variant="secondary" size="sm" className="font-medium">
                   Back to PaySwift
                 </Button>
               </Link>
