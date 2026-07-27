@@ -28,13 +28,11 @@ export default async function Home() {
               {/* Left Side - Text */}
               <div className="flex-1 flex flex-col gap-6 text-left max-w-2xl">
                 <h1 className="text-4xl md:text-5xl lg:text-7xl font-extrabold font-heading tracking-tight text-balance leading-[1.15]">
-                  Get paid on M-Pesa, <br className="hidden md:block" />
-                  <span className="text-foreground">the easy way</span>
+                  Get paid. Track revenue. <br className="hidden md:block" />
+                  <span className="text-foreground">Run your business.</span>
                 </h1>
                 <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-[65ch]">
-                  Share a payment link, add a &ldquo;Pay with M-Pesa&rdquo; button, or connect your online
-                  store. Your customers pay with M-Pesa, and every shilling lands in one simple dashboard.
-                  No coding needed to get started.
+                  Share a payment link, add a checkout button, or connect your online store — every transaction lands straight in one dashboard built for your business, with M-Pesa built in. No coding needed to get started.
                 </p>
               </div>
               

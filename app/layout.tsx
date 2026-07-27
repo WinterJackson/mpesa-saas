@@ -42,7 +42,13 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        elements: {
+          footerActionLink: "dark:!text-white hover:opacity-80 transition-opacity"
+        }
+      }}
+    >
       <html
         lang="en"
         suppressHydrationWarning

@@ -9,23 +9,25 @@ export async function SiteHeader() {
 
   return (
     <div className="fixed top-0 z-50 w-full pt-floating-header pl-[15px] md:pl-[30px] pr-0">
-      <header className="w-full rounded-l-[40px] rounded-r-none bg-background text-foreground backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(19,42,19,0.25)] dark:shadow-[0_10px_40px_-10px_rgba(19,42,19,0.6)]">
+      <header className="w-full rounded-l-[40px] rounded-r-none bg-primary text-primary-foreground backdrop-blur-md shadow-[0_10px_40px_-10px_rgba(19,42,19,0.25)] dark:shadow-[0_10px_40px_-10px_rgba(19,42,19,0.6)]">
         <div className="flex h-20 w-full items-center justify-between px-4 md:px-6">
           <Logo href="/" />
-          <nav className="flex items-center gap-4">
-            <Link href="/pricing" className="text-sm font-medium hover:text-primary transition-colors hidden sm:block">Pricing</Link>
-            <Link href="/docs" className="text-sm font-medium hover:text-primary transition-colors hidden sm:block">Docs</Link>
-            <ThemeToggle />
+          <nav className="flex items-center gap-4 text-primary-foreground">
+            <Link href="/pricing" className="text-sm font-medium hover:opacity-80 transition-opacity hidden sm:block">Pricing</Link>
+            <Link href="/docs" className="text-sm font-medium hover:opacity-80 transition-opacity hidden sm:block">Docs</Link>
+            <div className="[&>button]:hover:bg-primary-foreground/10 [&>button]:hover:text-primary-foreground">
+              <ThemeToggle />
+            </div>
             {userId ? (
               <Link href="/dashboard">
-                <Button variant="outline" size="sm">
+                <Button variant="secondary" size="sm" className="font-medium">
                   Dashboard
                 </Button>
               </Link>
             ) : (
               <>
                 <Link href="/sign-in">
-                  <Button size="sm" className="font-medium">
+                  <Button variant="secondary" size="sm" className="font-medium">
                     Sign In
                   </Button>
                 </Link>
