@@ -18,6 +18,7 @@ export function clerkThemeVariables(isDark: boolean) {
     colorMutedForeground: isDark ? "oklch(0.708 0 0)" : "oklch(0.556 0 0)",
     colorInput: isDark ? "oklch(0.145 0 0)" : "oklch(1 0 0)",
     colorInputForeground: isDark ? "oklch(0.985 0 0)" : "oklch(0.145 0 0)",
+    colorWarning: isDark ? "white" : "#132a13",
     borderRadius: "0.625rem",
   };
 }
