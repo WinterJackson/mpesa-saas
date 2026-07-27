@@ -1,0 +1,119 @@
+/**
+ * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
+ *
+ * This file is generated from the Zod schemas in the main application.
+ * To update these types, run `npx tsx scripts/generate-sdk-types.ts`
+ * from the root of the repository.
+ */
+import { z } from 'zod';
+declare const paymentInitiateRequestSchema: z.ZodObject<{
+    phone: z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>;
+    amount: z.ZodPipe<z.ZodUnion<readonly [
+        z.ZodNumber,
+        z.ZodString
+    ]>, z.ZodTransform<number, string | number>>;
+    orderReference: z.ZodPipe<z.ZodNullable<z.ZodOptional<z.ZodString>>, z.ZodTransform<string | null, string | null | undefined>>;
+}, z.core.$strip>;
+declare const paymentInitiateDataSchema: z.ZodObject<{
+    transactionId: z.ZodString;
+    checkoutRequestId: z.ZodNullable<z.ZodString>;
+    status: z.ZodString;
+    merchantRequestID: z.ZodString;
+    customerMessage: z.ZodString;
+}, z.core.$strip>;
+declare const paymentStatusDataSchema: z.ZodObject<{
+    transactionId: z.ZodString;
+    status: z.ZodString;
+    amount: z.ZodNumber;
+    phone: z.ZodString;
+    mpesaReceipt: z.ZodNullable<z.ZodString>;
+    resultCode: z.ZodNullable<z.ZodNumber>;
+    resultDesc: z.ZodNullable<z.ZodString>;
+    orderReference: z.ZodNullable<z.ZodString>;
+    createdAt: z.ZodString;
+    updatedAt: z.ZodString;
+}, z.core.$strip>;
+declare const payoutCreateRequestSchema: z.ZodObject<{
+    phone: z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>;
+    amount: z.ZodPipe<z.ZodUnion<readonly [
+        z.ZodNumber,
+        z.ZodString
+    ]>, z.ZodTransform<number, string | number>>;
+    commandId: z.ZodOptional<z.ZodEnum<{
+        BusinessPayment: "BusinessPayment";
+        SalaryPayment: "SalaryPayment";
+        PromotionPayment: "PromotionPayment";
+    }>>;
+    remarks: z.ZodPipe<z.ZodNullable<z.ZodOptional<z.ZodString>>, z.ZodTransform<string | null, string | null | undefined>>;
+    occasion: z.ZodPipe<z.ZodNullable<z.ZodOptional<z.ZodString>>, z.ZodTransform<string | null, string | null | undefined>>;
+}, z.core.$strip>;
+declare const payoutCreateDataSchema: z.ZodObject<{
+    payoutId: z.ZodString;
+    status: z.ZodString;
+    conversationId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    originatorConversationId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
+declare const refundCreateRequestSchema: z.ZodObject<{
+    transactionId: z.ZodString;
+    amount: z.ZodOptional<z.ZodPipe<z.ZodUnion<readonly [
+        z.ZodNumber,
+        z.ZodString
+    ]>, z.ZodTransform<number, string | number>>>;
+    reason: z.ZodPipe<z.ZodNullable<z.ZodOptional<z.ZodString>>, z.ZodTransform<string | null, string | null | undefined>>;
+}, z.core.$strip>;
+declare const refundCreateDataSchema: z.ZodObject<{
+    refundId: z.ZodString;
+    status: z.ZodString;
+    amount: z.ZodNumber;
+    conversationId: z.ZodNullable<z.ZodString>;
+    originatorConversationId: z.ZodNullable<z.ZodString>;
+}, z.core.$strip>;
+declare const transactionResourceSchema: z.ZodObject<{
+    id: z.ZodString;
+    amount: z.ZodNumber;
+    phone: z.ZodString;
+    status: z.ZodString;
+    orderReference: z.ZodNullable<z.ZodString>;
+    environment: z.ZodString;
+    source: z.ZodString;
+    mpesaReceipt: z.ZodNullable<z.ZodString>;
+    createdAt: z.ZodString;
+    updatedAt: z.ZodString;
+}, z.core.$strip>;
+declare const transactionListDataSchema: z.ZodObject<{
+    transactions: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        amount: z.ZodNumber;
+        phone: z.ZodString;
+        status: z.ZodString;
+        orderReference: z.ZodNullable<z.ZodString>;
+        environment: z.ZodString;
+        source: z.ZodString;
+        mpesaReceipt: z.ZodNullable<z.ZodString>;
+        createdAt: z.ZodString;
+        updatedAt: z.ZodString;
+    }, z.core.$strip>>;
+    nextCursor: z.ZodNullable<z.ZodString>;
+}, z.core.$strip>;
+export type PaymentInitiateRequest = z.infer<typeof paymentInitiateRequestSchema>;
+export type PaymentInitiateData = z.infer<typeof paymentInitiateDataSchema>;
+export type PaymentStatusData = z.infer<typeof paymentStatusDataSchema>;
+export type PayoutCreateRequest = z.infer<typeof payoutCreateRequestSchema>;
+export type PayoutCreateData = z.infer<typeof payoutCreateDataSchema>;
+export type RefundCreateRequest = z.infer<typeof refundCreateRequestSchema>;
+export type RefundCreateData = z.infer<typeof refundCreateDataSchema>;
+export type Transaction = z.infer<typeof transactionResourceSchema>;
+export type TransactionListData = z.infer<typeof transactionListDataSchema>;
+export {};
+export type C2bRegisterUrlsData = {
+    responseDescription: string;
+};
+export type SuccessResponse<T> = {
+    success: true;
+    data: T;
+};
+export type ErrorResponse = {
+    success: false;
+    error: string;
+};
+//# sourceMappingURL=types.d.ts.map
