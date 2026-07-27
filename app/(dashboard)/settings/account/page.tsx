@@ -14,7 +14,7 @@ export default async function AccountSettingsPage() {
   if (!userId) redirect("/sign-in");
 
   const context = await getOrganizationContext(userId, orgId);
-  if (!context || !context.merchant) redirect("/onboarding");
+  if (!context?.merchant) redirect("/onboarding");
 
   const businessName = context.merchant.businessName ?? context.organization.businessName;
   const canEditBusiness = ["owner", "admin"].includes(context.membership.role);

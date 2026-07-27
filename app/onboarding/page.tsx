@@ -1,7 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import { getOrganizationContext } from '@/lib/repositories/organizations';
-import { reconcileMembershipFromClerk } from '@/lib/membership-sync';
+import { resolveUserLanding } from '@/lib/auth-routing';
 import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard';
 import { CreditCard } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -27,26 +26,12 @@ export default async function OnboardingPage({
     redirect('/sign-in');
   }
 
-  // 2. Database source-of-truth check: if the user already belongs to an
-  // Organization, skip onboarding. This handles edge cases where
-  // publicMetadata is out of sync (e.g. fresh login before the session
-  // token refreshes with the new claim).
-  const existingContext = await getOrganizationContext(userId, orgId);
-
-  if (existingContext) {
-    redirect('/dashboard');
+  const landing = await resolveUserLanding(userId, orgId);
+  if (landing.destination === '/admin') {
+    redirect('/admin');
   }
-
-  // 2b. Invited-teammate guard: a user who accepted a Clerk org invite may reach
-  // here BEFORE the membership-sync webhook creates their local Membership. If
-  // they already belong to a known Clerk org, reconcile it now and send them to
-  // the dashboard — never show them the create-your-organization wizard (which
-  // would spin up a duplicate org and make them its owner).
-  if (orgId) {
-    const reconciled = await reconcileMembershipFromClerk(userId, orgId);
-    if (reconciled) {
-      redirect('/dashboard');
-    }
+  if (landing.destination === '/dashboard') {
+    redirect('/dashboard');
   }
 
   // 3. Render the client-side onboarding wizard

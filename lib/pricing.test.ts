@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { estimateComparisonCost, DEFAULT_PERCENTAGE_PROVIDER_RATE } from './pricing';
+import { estimateComparisonCost } from './pricing';
 
 describe('estimateComparisonCost', () => {
   it('calculates 3% of the total volume correctly', () => {

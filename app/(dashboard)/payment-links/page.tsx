@@ -15,7 +15,8 @@ export default async function PaymentLinksPage() {
   if (!userId) redirect('/sign-in');
 
   const context = await getOrganizationContext(userId, orgId);
-  if (!context) redirect('/onboarding');
+  if (!context) return null;
+
 
   const viewEnv = await getViewEnvironment(context.merchant?.environment);
   const links = await listPaymentLinks(context.organization.id, { environment: viewEnv });

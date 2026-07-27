@@ -14,7 +14,7 @@ export default async function NotificationSettingsPage() {
   if (!userId) redirect("/sign-in");
 
   const context = await getOrganizationContext(userId, orgId);
-  if (!context || !context.merchant) redirect("/onboarding");
+  if (!context?.merchant) redirect("/onboarding");
 
   const prefs = await getNotificationPreferences(context.organization.id);
   const canEdit = ["owner", "admin"].includes(context.membership.role);

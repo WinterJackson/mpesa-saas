@@ -14,7 +14,7 @@ export default async function WebhookDeliveriesPage() {
   if (!userId) redirect('/sign-in');
 
   const context = await getOrganizationContext(userId, orgId);
-  if (!context || !context.merchant) redirect('/onboarding');
+  if (!context?.merchant) redirect('/onboarding');
 
   const page = await listDeliveries(context.organization.id, { limit: 25 });
   const canManage = ['owner', 'admin'].includes(context.membership.role);

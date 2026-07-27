@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getOrganizationContext } from "@/lib/repositories/organizations";
-import { reconcileMembershipFromClerk } from "@/lib/membership-sync";
+import { resolveUserLanding } from "@/lib/auth-routing";
 import { getSubscriptionStatus } from "@/lib/repositories/billing";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -22,22 +21,15 @@ export default async function DashboardLayout({
     redirect("/sign-in");
   }
 
-  // Ensure the org/merchant exists (if they bypassed onboarding)
-  let context = await getOrganizationContext(userId, orgId);
-
-  // Invited teammate whose local Membership hasn't synced yet: reconcile it from
-  // Clerk before falling back to onboarding, so they never bounce through the
-  // create-org wizard (which would create a duplicate org).
-  if (!context && orgId) {
-    const reconciled = await reconcileMembershipFromClerk(userId, orgId);
-    if (reconciled) {
-      context = await getOrganizationContext(userId, orgId);
-    }
+  const landing = await resolveUserLanding(userId, orgId);
+  if (landing.destination === '/admin') {
+    redirect('/admin');
+  }
+  if (landing.destination === '/onboarding' || !landing.context) {
+    redirect('/onboarding');
   }
 
-  if (!context) {
-    redirect("/onboarding");
-  }
+  const context = landing.context;
 
   const businessName = context.merchant?.businessName ?? context.organization.businessName;
   const viewEnv = await getViewEnvironment(context.merchant?.environment);

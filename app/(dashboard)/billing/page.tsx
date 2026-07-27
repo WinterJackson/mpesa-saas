@@ -31,7 +31,8 @@ export default async function BillingPage({
   if (!userId) redirect('/sign-in');
 
   const context = await getOrganizationContext(userId, orgId);
-  if (!context) redirect('/onboarding');
+  if (!context) return null;
+
 
   const { plan: planParam } = await searchParams;
 

@@ -17,7 +17,8 @@ export default async function TransactionsPage() {
   if (!userId) redirect("/sign-in");
 
   const context = await getOrganizationContext(userId, orgId);
-  if (!context) redirect("/onboarding");
+  if (!context) return null;
+
 
   const viewEnv = await getViewEnvironment(context.merchant?.environment);
   const { data: transactions, nextCursor } = await listTransactionsPage(context.organization.id, {

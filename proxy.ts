@@ -18,7 +18,7 @@ import { paymentInitiateRateLimit, paymentStatusRateLimit, callbackRateLimit, ge
  * to enforce access control close to the resource.
  */
 export default clerkMiddleware(async (auth, req) => {
-  const { userId, sessionClaims } = await auth();
+  const { userId } = await auth();
   const pathname = req.nextUrl.pathname;
 
   // Rate Limiting for all /api/* routes
@@ -84,25 +84,9 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  // Only enforce onboarding flow for authenticated users
-  if (userId) {
-    // Read the onboarded flag from Clerk session claims (publicMetadata).
-    // This requires the Clerk Dashboard Session Token to include:
-    //   { "publicMetadata": "{{user.public_metadata}}" }
-    const onboarded = (sessionClaims?.publicMetadata as { onboarded?: boolean } | undefined)
-      ?.onboarded;
-    const justOnboarded = req.cookies.get('payswift_just_onboarded');
-
-    // Authenticated + NOT onboarded + NOT on /onboarding → redirect to onboarding
-    if (!onboarded && !justOnboarded && pathname !== '/onboarding') {
-      return NextResponse.redirect(new URL('/onboarding', req.url));
-    }
-
-    // Authenticated + ALREADY onboarded + ON /onboarding → redirect to dashboard
-    if (onboarded && pathname === '/onboarding') {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
-    }
-  }
+  // Onboarding enforcement has been moved to app/(dashboard)/layout.tsx
+  // and app/onboarding/page.tsx to prevent Next.js client-router double-redirect bugs
+  // where a middleware 307 conflicts with an RSC redirect.
 
   return NextResponse.next();
 });

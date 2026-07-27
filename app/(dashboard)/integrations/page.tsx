@@ -17,7 +17,7 @@ export default async function IntegrationsPage() {
   if (!userId) redirect('/sign-in');
 
   const context = await getOrganizationContext(userId, orgId);
-  if (!context || !context.merchant) redirect('/onboarding');
+  if (!context?.merchant) redirect('/onboarding');
 
   const merchant = context.merchant;
   const currentRole = context.membership.role;

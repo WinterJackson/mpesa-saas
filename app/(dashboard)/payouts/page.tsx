@@ -20,7 +20,8 @@ export default async function PayoutsPage() {
   if (!userId) redirect('/sign-in');
 
   const context = await getOrganizationContext(userId, orgId);
-  if (!context) redirect('/onboarding');
+  if (!context) return null;
+
 
   // Payouts move money out — owner/admin/finance only (developer uses the API).
   if (!PAYOUT_ROLES.includes(context.membership.role)) {

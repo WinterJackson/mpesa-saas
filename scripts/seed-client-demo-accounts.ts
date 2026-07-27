@@ -38,7 +38,7 @@ const adminEmails: Record<AdminRole, string> = {
   superadmin: 'superadmin+clerk_test@payswift.co.ke',
 };
 
-async function getOrCreateClerkUser(email: string, client: any) {
+async function getOrCreateClerkUser(email: string, client: ReturnType<typeof createClerkClient>) {
   const users = await client.users.getUserList({ emailAddress: [email] });
   if (users.data.length > 0) {
     // Delete existing user for idempotency to ensure clean state
@@ -55,7 +55,7 @@ async function main() {
   const client = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! });
 
   console.log('🌱 Starting client demo accounts provisioning...');
-  
+  console.log(`📡 Connecting to database target: ${new URL(connectionString!).hostname}`);
   // 1. Provision Merchant Accounts
   console.log('\n--- Provisioning Merchant Accounts ---');
   let clerkOrgId: string | null = null;
@@ -75,9 +75,43 @@ async function main() {
       clerkOrgId = clerkOrg.id;
 
       // Clean up existing local org if re-running
-      const existingOrg = await prisma.organization.findUnique({ where: { clerkOrgId } });
+      const existingOrg = await prisma.organization.findFirst({ where: { businessName: ORG_NAME } });
       if (existingOrg) {
-        await prisma.organization.delete({ where: { id: existingOrg.id } });
+        try {
+          await client.organizations.deleteOrganization(existingOrg.clerkOrgId);
+        } catch {
+          // Ignore if it doesn't exist in Clerk anymore
+        }
+
+        const orgId = existingOrg.id;
+        
+        // Manual Cascade Delete (19 tables, from leaves to root)
+        await prisma.refund.deleteMany({ where: { organizationId: orgId } });
+        await prisma.payout.deleteMany({ where: { organizationId: orgId } });
+        await prisma.transaction.deleteMany({ where: { organizationId: orgId } });
+        await prisma.paymentLink.deleteMany({ where: { organizationId: orgId } });
+        
+        await prisma.webhookDelivery.deleteMany({ where: { organizationId: orgId } });
+        await prisma.apiKey.deleteMany({ where: { organizationId: orgId } });
+        await prisma.idempotencyRecord.deleteMany({ where: { organizationId: orgId } });
+        await prisma.reconciliationMismatch.deleteMany({ where: { organizationId: orgId } });
+        await prisma.accountBalanceSnapshot.deleteMany({ where: { organizationId: orgId } });
+        await prisma.darajaCommand.deleteMany({ where: { organizationId: orgId } });
+        
+        await prisma.subscription.deleteMany({ where: { organizationId: orgId } });
+        await prisma.notificationPreference.deleteMany({ where: { organizationId: orgId } });
+        await prisma.notification.deleteMany({ where: { organizationId: orgId } });
+        await prisma.dataDeletionRequest.deleteMany({ where: { organizationId: orgId } });
+        await prisma.kycDocument.deleteMany({ where: { organizationId: orgId } });
+        await prisma.auditLog.deleteMany({ where: { organizationId: orgId } });
+        await prisma.adminAlert.deleteMany({ where: { organizationId: orgId } });
+        
+        await prisma.organizationDarajaCredential.deleteMany({ where: { organizationId: orgId } });
+        await prisma.membership.deleteMany({ where: { organizationId: orgId } });
+        await prisma.merchant.deleteMany({ where: { organizationId: orgId } });
+        
+        // Finally, delete the organization
+        await prisma.organization.delete({ where: { id: orgId } });
       }
 
       const organization = await prisma.organization.create({
@@ -146,10 +180,13 @@ async function main() {
     console.log(`Creating admin user: ${email} (${role})...`);
     const user = await getOrCreateClerkUser(email, client);
 
-    await prisma.adminUser.upsert({
-      where: { clerkUserId: user.id },
-      update: { role, email, status: 'active' },
-      create: {
+    const existingAdmin = await prisma.adminUser.findFirst({ where: { email } });
+    if (existingAdmin) {
+      await prisma.adminUser.delete({ where: { id: existingAdmin.id } });
+    }
+
+    await prisma.adminUser.create({
+      data: {
         clerkUserId: user.id,
         role,
         email,

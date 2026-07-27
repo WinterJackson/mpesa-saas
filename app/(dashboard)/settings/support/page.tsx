@@ -13,7 +13,8 @@ export default async function SupportSettingsPage() {
   if (!userId) redirect("/sign-in");
 
   const context = await getOrganizationContext(userId, orgId);
-  if (!context) redirect("/onboarding");
+  if (!context) return null;
+
 
   return (
     <div className="space-y-6">

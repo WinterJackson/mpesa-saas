@@ -28,7 +28,8 @@ export default async function DashboardPage() {
   if (!userId) redirect("/sign-in");
 
   const context = await getOrganizationContext(userId, orgId);
-  if (!context) redirect("/onboarding");
+  if (!context) return null;
+
 
   const environment = await getViewEnvironment(context.merchant?.environment);
   const orgIdResolved = context.organization.id;

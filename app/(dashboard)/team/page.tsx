@@ -13,7 +13,8 @@ export default async function TeamPage() {
   if (!userId) redirect('/sign-in');
 
   const context = await getOrganizationContext(userId, orgId);
-  if (!context) redirect('/onboarding');
+  if (!context) return null;
+
 
   const memberships = await listMemberships(context.organization.id);
 

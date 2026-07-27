@@ -45,7 +45,7 @@ export default async function SettingsPage() {
 
   const context = await getOrganizationContext(userId, orgId);
 
-  if (!context || !context.merchant) {
+  if (!context?.merchant) {
     redirect("/onboarding");
   }
 

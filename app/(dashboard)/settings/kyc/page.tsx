@@ -18,7 +18,8 @@ export default async function KycSettingsPage() {
   if (!userId) redirect('/sign-in');
 
   const context = await getOrganizationContext(userId, orgId);
-  if (!context) redirect('/onboarding');
+  if (!context) return null;
+
 
   const documents = await listKycDocuments(context.organization.id);
   const credentialSummary = await getCredentialSummary(context.organization.id);
