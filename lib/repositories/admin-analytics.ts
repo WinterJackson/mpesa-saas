@@ -130,8 +130,7 @@ export interface ArpmResult {
   payingCount: number;
 }
 
-export async function getArpm(): Promise<ArpmResult> {
-  const overview = await getAdminBillingOverview();
+export function getArpm(overview: { mrr: number; payingCount: number }): ArpmResult {
   const arpm = overview.payingCount > 0 ? Math.round(overview.mrr / overview.payingCount) : 0;
   return { arpm, payingCount: overview.payingCount };
 }

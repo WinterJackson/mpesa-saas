@@ -94,25 +94,21 @@ describe('admin-analytics', () => {
 
   describe('getArpm', () => {
     it('computes ARPM based on getAdminBillingOverview', async () => {
-      vi.mocked(getAdminBillingOverview).mockResolvedValue({
+      const { getArpm } = await import('./admin-analytics');
+      const result = getArpm({
         mrr: 1500,
         payingCount: 3,
-      } as never);
-
-      const { getArpm } = await import('./admin-analytics');
-      const result = await getArpm();
+      });
       expect(result.arpm).toBe(500);
       expect(result.payingCount).toBe(3);
     });
 
     it('handles zero paying count', async () => {
-      vi.mocked(getAdminBillingOverview).mockResolvedValue({
+      const { getArpm } = await import('./admin-analytics');
+      const result = getArpm({
         mrr: 0,
         payingCount: 0,
-      } as never);
-
-      const { getArpm } = await import('./admin-analytics');
-      const result = await getArpm();
+      });
       expect(result.arpm).toBe(0);
       expect(result.payingCount).toBe(0);
     });

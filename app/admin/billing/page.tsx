@@ -14,13 +14,14 @@ function kes(n: number): string {
 }
 
 export default async function AdminBillingPage() {
-  const [overview, invoices, arpm, cohortRetention, dunningRecovery] = await Promise.all([
+  const [overview, invoices, cohortRetention, dunningRecovery] = await Promise.all([
     getAdminBillingOverview(),
     listAllInvoices(),
-    getArpm(),
     getCohortRetention(),
     getDunningRecoveryRate(),
   ]);
+
+  const arpm = getArpm(overview);
 
   return (
     <div className="space-y-8">
